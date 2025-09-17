@@ -127,6 +127,22 @@ llm-cpp-toolkit/
 
 See `docs/QUICKSTART.md` for command examples. Artifacts land under `exports/` for easy parsing.
 
+## Install
+
+- One-line install (installs to `~/.local/share/llm-cpp-toolkit` and wrapper `~/.local/bin/llmtk`):
+
+```
+curl -sSL https://raw.githubusercontent.com/gregvw/llm-cpp-toolkit/main/install.sh | bash -s -- --yes
+```
+
+- Options:
+  - `--prefix DIR` to change the wrapper prefix (default `~/.local`).
+  - `--dir DIR` to change install dir (default `~/.local/share/llm-cpp-toolkit`).
+  - `--no-deps` to skip package manager installs.
+  - `--branch BRANCH` to select a different git branch.
+
+After install, ensure `~/.local/bin` is in your `PATH`.
+
 ## Reference
 
 - See `docs/REFERENCE.md` for an auto-generated list of tools and commands derived from the manifests.
