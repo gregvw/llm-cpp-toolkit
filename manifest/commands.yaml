@@ -3,7 +3,14 @@ commands:
   doctor:
     description: Inspect environment and report tool availability.
     outputs:
-      - "exports/doctor.json"
+      - path: "exports/doctor.json"
+        schema:
+          _meta:
+            generated_at: string
+          tool:
+            found: bool
+            path: string|null
+            version_line: string|null
 
   context-export:
     description: Collect artifacts LLMs rely on.
@@ -11,8 +18,15 @@ commands:
       - "modules/compile_db.sh"
       - "modules/cmake_introspect.sh"
     outputs:
-      - "exports/compile_commands.json"
-      - "exports/cmake-file-api/*.json"
+      - path: "exports/compile_commands.json"
+      - path: "exports/cmake-file-api/*.json"
+      - path: "exports/context.json"
+        schema:
+          compile_commands: string|null
+          cmake_file_api:
+            dir: string
+            files: [string]
+          generated_at: string
     json_summary: "exports/context.json"
 
   analyze:
@@ -23,9 +37,48 @@ commands:
     runs:
       - "modules/analyze.sh"
     outputs:
-      - "exports/reports/clang-tidy.json"
-      - "exports/reports/iwyu.json"
-      - "exports/reports/cppcheck.json"
+      - path: "exports/reports/clang-tidy.json"
+        schema:
+          available: bool
+          version: string|null
+          inputs: [string]
+          diagnostics:
+            - file: string
+              line: int
+              col: int
+              severity: string
+              msg: string
+              check: string|null
+          fixes:
+            - file: string
+              message: string
+              file_offset: int
+              replacements:
+                - file: string
+                  offset: int
+                  length: int
+                  replacement: string
+      - path: "exports/reports/iwyu.json"
+        schema:
+          available: bool
+          version: string|null
+          suggestions:
+            - file: string
+              add: [string]
+              remove: [string]
+      - path: "exports/reports/cppcheck.json"
+        schema:
+          available: bool
+          version: string|null
+          diagnostics:
+            - id: string
+              severity: string
+              msg: string
+              verbose: string
+              locations:
+                - file: string
+                  line: int
+                  column: int
 
   reduce:
     description: Minimize a failing repro with cvise.
@@ -35,6 +88,9 @@ commands:
     runs:
       - "modules/reduce.sh"
     outputs:
-      - "exports/repros/minimized.cpp"
-      - "exports/repros/report.json"
-
+      - path: "exports/repros/minimized.cpp"
+      - path: "exports/repros/report.json"
+        schema:
+          cvise_available: bool
+          exit_code: int|null
+          input: string

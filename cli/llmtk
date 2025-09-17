@@ -91,7 +91,24 @@ def generate_reference_md(out_path: pathlib.Path):
             runs = c.get("runs") or []
             if runs: lines.append(f"  - runs: {', '.join(runs)}")
             outs = c.get("outputs") or []
-            if outs: lines.append(f"  - outputs: {', '.join(outs)}")
+            if outs:
+                for o in outs:
+                    if isinstance(o, str):
+                        lines.append(f"  - output: {o}")
+                    elif isinstance(o, dict):
+                        p = o.get("path") or o.get("file") or "(unknown)"
+                        lines.append(f"  - output: {p}")
+                        schema = o.get("schema")
+                        if schema is not None:
+                            try:
+                                rendered = json.dumps(schema, indent=2)
+                            except Exception:
+                                rendered = str(schema)
+                            lines.append("    schema:")
+                            lines.append("    ```json")
+                            for l in rendered.splitlines():
+                                lines.append("    " + l)
+                            lines.append("    ```")
             if c.get("json_summary"): lines.append(f"  - json_summary: {c['json_summary']}")
     else:
         try:
@@ -116,7 +133,7 @@ def cmd_doctor(_):
         "cmake","ninja","clangd","clang-tidy","clang-format",
         "include-what-you-use","cppcheck","rg","fd","jq","yq","bear","ccache","mold"
     ]
-    report = {"generated_at": datetime.datetime.utcnow().isoformat()+"Z", "tools":{}}
+    report = {"_meta": {"generated_at": datetime.datetime.utcnow().isoformat()+"Z"}}
     for t in tools:
         path = shutil.which(t)
         info = {"found": bool(path), "path": path or None}
@@ -126,7 +143,7 @@ def cmd_doctor(_):
                 info["version_line"] = out[0] if out else None
             except Exception:
                 info["version_line"] = None
-        report["tools"][t] = info
+        report[t] = info
     out = EXPORTS / "doctor.json"
     write_json(out, report)
     print(str(out))
@@ -138,7 +155,8 @@ def cmd_context_export(args):
     # Compile DB
     try:
         run(["cmake","-S",".","-B",str(build),"-G","Ninja","-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"], check=True)
-        (EXPORTS/"compile_commands.json").write_bytes((build/"compile_commands.json").read_bytes())
+        if (build/"compile_commands.json").exists():
+            (EXPORTS/"compile_commands.json").write_bytes((build/"compile_commands.json").read_bytes())
     except Exception as e:
         # If compile_commands missing, try bear as a fallback
         bear = shutil.which("bear")
@@ -149,6 +167,9 @@ def cmd_context_export(args):
                     (EXPORTS/"compile_commands.json").write_bytes((build/"compile_commands.json").read_bytes())
             except Exception:
                 pass
+    # If still missing but project root has a compile_commands.json, copy it
+    if not (EXPORTS/"compile_commands.json").exists() and (pathlib.Path.cwd()/"compile_commands.json").exists():
+        (EXPORTS/"compile_commands.json").write_bytes((pathlib.Path.cwd()/"compile_commands.json").read_bytes())
 
     # CMake File API codemodel
     q = build/".cmake"/"api"/"v1"/"query"; q.mkdir(parents=True, exist_ok=True)
@@ -162,7 +183,10 @@ def cmd_context_export(args):
 
     summary = {
         "compile_commands": "exports/compile_commands.json" if (EXPORTS/"compile_commands.json").exists() else None,
-        "cmake_file_api": "exports/cmake-file-api/" if (EXPORTS/"cmake-file-api").exists() else None,
+        "cmake_file_api": {
+            "dir": "exports/cmake-file-api/",
+            "files": sorted([p.name for p in (EXPORTS/"cmake-file-api").iterdir()]) if (EXPORTS/"cmake-file-api").exists() else []
+        } if (EXPORTS/"cmake-file-api").exists() else None,
         "generated_at": datetime.datetime.utcnow().isoformat()+"Z"
     }
     write_json(EXPORTS/"context.json", summary)
@@ -205,9 +229,9 @@ def cmd_analyze(args):
     def run_proc(cmd, cwd=None):
         return subprocess.run(cmd, cwd=cwd, text=True, capture_output=True)
 
-    # clang-tidy
+    # clang-tidy with export-fixes
     clang_tidy_path = shutil.which("clang-tidy")
-    clang_tidy_report = {"available": bool(clang_tidy_path), "diagnostics": [], "version": None, "inputs": []}
+    clang_tidy_report = {"available": bool(clang_tidy_path), "diagnostics": [], "fixes": [], "version": None, "inputs": []}
     if clang_tidy_path:
         try:
             v = run_proc([clang_tidy_path, "--version"]).stdout.splitlines()
@@ -218,7 +242,8 @@ def cmd_analyze(args):
         target_files = files_in_db
         clang_tidy_report["inputs"] = target_files[:50]  # cap in report
         tidy_diags = []
-        diag_re = re.compile(r"^(?P<file>[^:]+):(?P<line>\d+):(?P<col>\d+): (?P<severity>warning|error|note): (?P<msg>.*?)(?: \[(?P<check>[A-Za-z0-9_.\-]+)\])?$")
+        tidy_fixes = []
+        diag_re = re.compile(r"^(?P<file>[^:]+):(?P<line>\d+):(?!\d+:)\s*(?P<col>\d+): (?P<severity>warning|error|note): (?P<msg>.*?)(?: \[(?P<check>[A-Za-z0-9_.\-]+)\])?$")
         # If no compile DB, still try on explicit paths
         if not target_files and paths:
             # restrict to common C/C++ extensions
@@ -233,7 +258,11 @@ def cmd_analyze(args):
                             target_files.append(str(f))
         # Analyze (best-effort, sequential to keep simple)
         for f in target_files[:200]:  # prevent runaway
-            cmd = [clang_tidy_path, f]
+            fixes_yaml = pathlib.Path(tempfile.gettempdir())/f"llmtk_tidy_{abs(hash(f))}.yaml"
+            if fixes_yaml.exists():
+                try: fixes_yaml.unlink()
+                except Exception: pass
+            cmd = [clang_tidy_path, f, "-quiet", f"-export-fixes={fixes_yaml}"]
             if compile_db.exists():
                 # clang-tidy accepts directory or file to -p; pass dir containing the DB
                 cmd.extend(["-p", str(compile_db.parent.resolve())])
@@ -244,13 +273,38 @@ def cmd_analyze(args):
                     d = m.groupdict()
                     d["line"] = int(d["line"]); d["col"] = int(d["col"])
                     tidy_diags.append(d)
+            # Parse export-fixes YAML (if any)
+            if fixes_yaml.exists():
+                content = load_yaml(fixes_yaml)
+                if content and isinstance(content, dict):
+                    # content has Diagnostics: [{DiagnosticMessage:{Message,FilePath,FileOffset}, Replacements:[{FilePath,Offset,Length,ReplacementText}]}]
+                    diags = content.get("Diagnostics") or []
+                    for item in diags:
+                        dm = item.get("DiagnosticMessage") or {}
+                        repl = item.get("Replacements") or []
+                        tidy_fixes.append({
+                            "file": dm.get("FilePath"),
+                            "message": dm.get("Message"),
+                            "file_offset": dm.get("FileOffset"),
+                            "replacements": [
+                                {
+                                    "file": r.get("FilePath"),
+                                    "offset": r.get("Offset"),
+                                    "length": r.get("Length"),
+                                    "replacement": r.get("ReplacementText"),
+                                } for r in repl if isinstance(r, dict)
+                            ],
+                        })
+                try: fixes_yaml.unlink()
+                except Exception: pass
         clang_tidy_report["diagnostics"] = tidy_diags
+        clang_tidy_report["fixes"] = tidy_fixes
     write_json(reports/"clang-tidy.json", clang_tidy_report)
 
     # include-what-you-use (IWYU)
     iwyu_bin = shutil.which("include-what-you-use")
     iwyu_tool = shutil.which("iwyu-tool")
-    iwyu_report = {"available": bool(iwyu_bin or iwyu_tool), "version": None, "raw": None}
+    iwyu_report = {"available": bool(iwyu_bin or iwyu_tool), "version": None, "suggestions": []}
     if iwyu_bin or iwyu_tool:
         # Try to get version line
         try:
@@ -272,8 +326,32 @@ def cmd_analyze(args):
                 res = run_proc([iwyu_bin, f])
                 collected.append((res.stdout or "") + "\n" + (res.stderr or ""))
             out = "\n".join(collected)
+        def parse_iwyu(text: str):
+            suggestions = {}
+            current = None
+            mode = None  # 'add' or 'remove'
+            for raw in text.splitlines():
+                line = raw.strip()
+                if not line:
+                    mode = None
+                    continue
+                m_add = re.search(r"^(.*) should add these lines:", line)
+                m_rem = re.search(r"^(.*) should remove these lines:", line)
+                if m_add or m_rem:
+                    current = (m_add or m_rem).group(1).strip()
+                    entry = suggestions.setdefault(current, {"add": [], "remove": []})
+                    mode = 'add' if m_add else 'remove'
+                    continue
+                if line.startswith("The full include-list for "):
+                    current = None
+                    mode = None
+                    continue
+                if mode in ('add','remove') and (line.startswith('#include') or line.startswith('namespace') or line.startswith('using')):
+                    # IWYU annotates with comments; keep the include text as-is
+                    suggestions.setdefault(current, {"add": [], "remove": []})[mode].append(line)
+            return [{"file": f, **v} for f, v in suggestions.items()]
         if out:
-            iwyu_report["raw"] = out[:200000]
+            iwyu_report["suggestions"] = parse_iwyu(out)[:200]
     write_json(reports/"iwyu.json", iwyu_report)
 
     # cppcheck

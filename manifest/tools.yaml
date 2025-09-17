@@ -1,74 +1,204 @@
 schema: 1
 tools:
+  # Core
   cmake:
-    version: ">=3.22"
+    role: core
+    min_version: ">=3.22"
     provides: ["build", "configure"]
     check:
       cmd: ["cmake", "--version"]
   ninja:
-    version: ">=1.10"
+    role: core
+    min_version: ">=1.10"
     provides: ["build-backend"]
     check:
       cmd: ["ninja", "--version"]
+  bear:
+    role: core
+    min_version: ">=3"
+    provides: ["compile-db"]
+    check:
+      cmd: ["bear", "--version"]
   clangd:
-    version: "18.1.8"
+    role: core
+    min_version: ">=17"
     provides: ["lsp", "xref", "refactor"]
     check:
       cmd: ["clangd", "--version"]
-      expect: "clangd version 18"
-  clang-tidy:
-    version: ">=17"
-    provides: ["lint", "analysis"]
-    check:
-      cmd: ["clang-tidy", "--version"]
   clang-format:
-    version: ">=17"
+    role: core
+    min_version: ">=17"
     provides: ["format"]
     check:
       cmd: ["clang-format", "--version"]
-  iwyu:
-    version: ">=0.20"
-    provides: ["include-analysis"]
+  clang-tidy:
+    role: core
+    min_version: ">=17"
+    provides: ["lint", "analysis"]
     check:
-      cmd: ["include-what-you-use", "--version"]
-  cppcheck:
-    version: ">=2.9"
-    provides: ["static-analysis"]
-    check:
-      cmd: ["cppcheck", "--version"]
+      cmd: ["clang-tidy", "--version"]
   rg:
-    version: ">=13"
+    role: core
+    min_version: ">=13"
     provides: ["search"]
     check:
       cmd: ["rg", "--version"]
   fd:
-    version: ">=8"
+    role: core
+    min_version: ">=8"
     provides: ["file-find"]
     check:
       cmd: ["fd", "--version"]
   jq:
-    version: ">=1.6"
+    role: core
+    min_version: ">=1.6"
     provides: ["json"]
     check:
       cmd: ["jq", "--version"]
   yq:
-    version: ">=4"
+    role: core
+    min_version: ">=4"
     provides: ["yaml"]
     check:
       cmd: ["yq", "--version"]
-  bear:
-    version: ">=3"
-    provides: ["compile-db"]
-    check:
-      cmd: ["bear", "--version"]
   ccache:
-    version: ">=4"
+    role: core
+    min_version: ">=4"
     provides: ["cache"]
+    fallbacks: ["sccache"]
     check:
       cmd: ["ccache", "--version"]
   mold:
-    version: ">=2"
+    role: core
+    min_version: ">=2"
     provides: ["linker"]
+    fallbacks: ["lld"]
     check:
       cmd: ["mold", "--version"]
 
+  # Recommended
+  include-what-you-use:
+    role: recommended
+    min_version: ">=0.20"
+    provides: ["include-analysis"]
+    check:
+      cmd: ["include-what-you-use", "--version"]
+  iwyu-tool:
+    role: recommended
+    min_version: ">=0.20"
+    provides: ["include-analysis"]
+    check:
+      cmd: ["iwyu-tool", "--version"]
+  cppcheck:
+    role: recommended
+    min_version: ">=2.9"
+    provides: ["static-analysis"]
+    check:
+      cmd: ["cppcheck", "--version"]
+  universal-ctags:
+    role: recommended
+    min_version: ">=6.0.0"
+    provides: ["indexing"]
+    check:
+      cmd: ["ctags", "--version"]
+  fzf:
+    role: recommended
+    min_version: ">=0.35"
+    provides: ["fuzzy-find"]
+    check:
+      cmd: ["fzf", "--version"]
+  zoxide:
+    role: recommended
+    min_version: ">=0.9"
+    provides: ["jump"]
+    check:
+      cmd: ["zoxide", "-V"]
+  bat:
+    role: recommended
+    min_version: ">=0.23"
+    provides: ["pager"]
+    check:
+      cmd: ["bat", "--version"]
+  tokei:
+    role: recommended
+    min_version: ">=12"
+    provides: ["code-stats"]
+    check:
+      cmd: ["tokei", "--version"]
+  hyperfine:
+    role: recommended
+    min_version: ">=1.15"
+    provides: ["benchmark"]
+    check:
+      cmd: ["hyperfine", "--version"]
+  entr:
+    role: recommended
+    min_version: ">=5.0"
+    provides: ["watch"]
+    fallbacks: ["watchexec"]
+    check:
+      cmd: ["entr", "-v"]
+  pre-commit:
+    role: recommended
+    min_version: ">=3"
+    provides: ["hooks"]
+    check:
+      cmd: ["pre-commit", "--version"]
+
+  # Optional
+  eza:
+    role: optional
+    min_version: ">=0.18"
+    provides: ["ls"]
+    check:
+      cmd: ["eza", "--version"]
+    fallbacks: ["exa", "lsd"]
+  tree:
+    role: optional
+    min_version: ">=1.8"
+    provides: ["tree"]
+    check:
+      cmd: ["tree", "--version"]
+  procs:
+    role: optional
+    min_version: ">=0.12"
+    provides: ["ps"]
+    check:
+      cmd: ["procs", "--version"]
+  bottom:
+    role: optional
+    min_version: ">=0.9"
+    provides: ["monitor"]
+    check:
+      cmd: ["btm", "--version"]
+  httpie:
+    role: optional
+    min_version: ">=3"
+    provides: ["http-client"]
+    check:
+      cmd: ["http", "--version"]
+    fallbacks: ["xh"]
+  tldr:
+    role: optional
+    min_version: ">=1.2"
+    provides: ["docs"]
+    check:
+      cmd: ["tldr", "--version"]
+  cheat:
+    role: optional
+    min_version: ">=4.4"
+    provides: ["cheatsheets"]
+    check:
+      cmd: ["cheat", "--version"]
+  difftastic:
+    role: optional
+    min_version: ">=0.55"
+    provides: ["diff"]
+    check:
+      cmd: ["difft", "--version"]
+  delta:
+    role: optional
+    min_version: ">=0.12"
+    provides: ["git-pager"]
+    check:
+      cmd: ["delta", "--version"]

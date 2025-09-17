@@ -1,81 +1,235 @@
 # Toolkit Reference
 
-Generated from manifests on 2025-09-17T18:30:25.222668Z.
+Generated from manifests on 2025-09-17T18:44:10.235048Z.
 
 ## Tools
+- bat
+  - provides: pager
+  - check: `bat --version`
 - bear
-  - version: >=3
   - provides: compile-db
   - check: `bear --version`
+- bottom
+  - provides: monitor
+  - check: `btm --version`
 - ccache
-  - version: >=4
   - provides: cache
   - check: `ccache --version`
+- cheat
+  - provides: cheatsheets
+  - check: `cheat --version`
 - clang-format
-  - version: >=17
   - provides: format
   - check: `clang-format --version`
 - clang-tidy
-  - version: >=17
   - provides: lint, analysis
   - check: `clang-tidy --version`
 - clangd
-  - version: 18.1.8
   - provides: lsp, xref, refactor
   - check: `clangd --version`
 - cmake
-  - version: >=3.22
   - provides: build, configure
   - check: `cmake --version`
 - cppcheck
-  - version: >=2.9
   - provides: static-analysis
   - check: `cppcheck --version`
+- delta
+  - provides: git-pager
+  - check: `delta --version`
+- difftastic
+  - provides: diff
+  - check: `difft --version`
+- entr
+  - provides: watch
+  - check: `entr -v`
+- eza
+  - provides: ls
+  - check: `eza --version`
 - fd
-  - version: >=8
   - provides: file-find
   - check: `fd --version`
-- iwyu
-  - version: >=0.20
+- fzf
+  - provides: fuzzy-find
+  - check: `fzf --version`
+- httpie
+  - provides: http-client
+  - check: `http --version`
+- hyperfine
+  - provides: benchmark
+  - check: `hyperfine --version`
+- include-what-you-use
   - provides: include-analysis
   - check: `include-what-you-use --version`
+- iwyu-tool
+  - provides: include-analysis
+  - check: `iwyu-tool --version`
 - jq
-  - version: >=1.6
   - provides: json
   - check: `jq --version`
 - mold
-  - version: >=2
   - provides: linker
   - check: `mold --version`
 - ninja
-  - version: >=1.10
   - provides: build-backend
   - check: `ninja --version`
+- pre-commit
+  - provides: hooks
+  - check: `pre-commit --version`
+- procs
+  - provides: ps
+  - check: `procs --version`
 - rg
-  - version: >=13
   - provides: search
   - check: `rg --version`
+- tldr
+  - provides: docs
+  - check: `tldr --version`
+- tokei
+  - provides: code-stats
+  - check: `tokei --version`
+- tree
+  - provides: tree
+  - check: `tree --version`
+- universal-ctags
+  - provides: indexing
+  - check: `ctags --version`
 - yq
-  - version: >=4
   - provides: yaml
   - check: `yq --version`
+- zoxide
+  - provides: jump
+  - check: `zoxide -V`
 
 ## Commands
 - analyze
   - description: Run clang-tidy + IWYU + cppcheck with JSON reports.
   - args: paths (variadic)
   - runs: modules/analyze.sh
-  - outputs: exports/reports/clang-tidy.json, exports/reports/iwyu.json, exports/reports/cppcheck.json
+  - output: exports/reports/clang-tidy.json
+    schema:
+    ```json
+    {
+      "available": "bool",
+      "version": "string|null",
+      "inputs": [
+        "string"
+      ],
+      "diagnostics": [
+        {
+          "file": "string",
+          "line": "int",
+          "col": "int",
+          "severity": "string",
+          "msg": "string",
+          "check": "string|null"
+        }
+      ],
+      "fixes": [
+        {
+          "file": "string",
+          "message": "string",
+          "file_offset": "int",
+          "replacements": [
+            {
+              "file": "string",
+              "offset": "int",
+              "length": "int",
+              "replacement": "string"
+            }
+          ]
+        }
+      ]
+    }
+    ```
+  - output: exports/reports/iwyu.json
+    schema:
+    ```json
+    {
+      "available": "bool",
+      "version": "string|null",
+      "suggestions": [
+        {
+          "file": "string",
+          "add": [
+            "string"
+          ],
+          "remove": [
+            "string"
+          ]
+        }
+      ]
+    }
+    ```
+  - output: exports/reports/cppcheck.json
+    schema:
+    ```json
+    {
+      "available": "bool",
+      "version": "string|null",
+      "diagnostics": [
+        {
+          "id": "string",
+          "severity": "string",
+          "msg": "string",
+          "verbose": "string",
+          "locations": [
+            {
+              "file": "string",
+              "line": "int",
+              "column": "int"
+            }
+          ]
+        }
+      ]
+    }
+    ```
 - context-export
   - description: Collect artifacts LLMs rely on.
   - runs: modules/compile_db.sh, modules/cmake_introspect.sh
-  - outputs: exports/compile_commands.json, exports/cmake-file-api/*.json
+  - output: exports/compile_commands.json
+  - output: exports/cmake-file-api/*.json
+  - output: exports/context.json
+    schema:
+    ```json
+    {
+      "compile_commands": "string|null",
+      "cmake_file_api": {
+        "dir": "string",
+        "files": [
+          "string"
+        ]
+      },
+      "generated_at": "string"
+    }
+    ```
   - json_summary: exports/context.json
 - doctor
   - description: Inspect environment and report tool availability.
-  - outputs: exports/doctor.json
+  - output: exports/doctor.json
+    schema:
+    ```json
+    {
+      "_meta": {
+        "generated_at": "string"
+      },
+      "tool": {
+        "found": "bool",
+        "path": "string|null",
+        "version_line": "string|null"
+      }
+    }
+    ```
 - reduce
   - description: Minimize a failing repro with cvise.
   - args: input (required), test_cmd (required)
   - runs: modules/reduce.sh
-  - outputs: exports/repros/minimized.cpp, exports/repros/report.json
+  - output: exports/repros/minimized.cpp
+  - output: exports/repros/report.json
+    schema:
+    ```json
+    {
+      "cvise_available": "bool",
+      "exit_code": "int|null",
+      "input": "string"
+    }
+    ```
