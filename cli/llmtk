@@ -1,0 +1,366 @@
+#!/usr/bin/env python3
+import argparse, json, os, shutil, subprocess, sys, pathlib, datetime, re, tempfile, textwrap
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+EXPORTS = ROOT / "exports"
+MODULES = ROOT / "modules"
+EXPORTS.mkdir(exist_ok=True)
+
+def run(cmd, cwd=None, check=True):
+    return subprocess.run(cmd, cwd=cwd, text=True, capture_output=True, check=check)
+
+def write_json(path: pathlib.Path, data):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2))
+
+def load_yaml(path: pathlib.Path):
+    # Try PyYAML, then yq, else return None
+    try:
+        import yaml  # type: ignore
+        with open(path, 'r') as f:
+            return yaml.safe_load(f)
+    except Exception:
+        pass
+    if shutil.which("yq"):
+        try:
+            conv = subprocess.run(["yq", "-o=json", str(path)], text=True, capture_output=True)
+            if conv.returncode == 0 and conv.stdout:
+                return json.loads(conv.stdout)
+        except Exception:
+            pass
+    return None
+
+def generate_reference_md(out_path: pathlib.Path):
+    tools_manifest = ROOT/"manifest"/"tools.yaml"
+    commands_manifest = ROOT/"manifest"/"commands.yaml"
+    tools = load_yaml(tools_manifest)
+    commands = load_yaml(commands_manifest)
+
+    now = datetime.datetime.utcnow().isoformat()+"Z"
+    lines = []
+    lines.append("# Toolkit Reference")
+    lines.append("")
+    lines.append(f"Generated from manifests on {now}.")
+    lines.append("")
+
+    # Tools
+    lines.append("## Tools")
+    if tools and isinstance(tools, dict) and "tools" in tools:
+        for name in sorted(tools["tools"].keys()):
+            t = tools["tools"][name] or {}
+            version = t.get("version")
+            provides = t.get("provides") or []
+            check = None
+            if isinstance(t.get("check"), dict):
+                check = " ".join(map(str, t["check"].get("cmd", [])))
+            lines.append(f"- {name}")
+            if version: lines.append(f"  - version: {version}")
+            if provides: lines.append(f"  - provides: {', '.join(provides)}")
+            if check: lines.append(f"  - check: `{check}`")
+    else:
+        # Fallback: embed raw YAML for visibility
+        try:
+            raw = tools_manifest.read_text()
+            lines.append("````yaml")
+            lines.append(raw.rstrip())
+            lines.append("````")
+        except Exception:
+            lines.append("(tools manifest not found)")
+
+    lines.append("")
+    lines.append("## Commands")
+    if commands and isinstance(commands, dict) and "commands" in commands:
+        for name in sorted(commands["commands"].keys()):
+            c = commands["commands"][name] or {}
+            lines.append(f"- {name}")
+            if c.get("description"): lines.append(f"  - description: {c['description']}")
+            args = c.get("args") or []
+            if args:
+                arg_summaries = []
+                for a in args:
+                    if isinstance(a, dict):
+                        nm = a.get("name")
+                        req = a.get("required", False)
+                        var = a.get("variadic", False)
+                        frag = nm or "arg"
+                        if req: frag += " (required)"
+                        if var: frag += " (variadic)"
+                        arg_summaries.append(frag)
+                if arg_summaries:
+                    lines.append(f"  - args: {', '.join(arg_summaries)}")
+            runs = c.get("runs") or []
+            if runs: lines.append(f"  - runs: {', '.join(runs)}")
+            outs = c.get("outputs") or []
+            if outs: lines.append(f"  - outputs: {', '.join(outs)}")
+            if c.get("json_summary"): lines.append(f"  - json_summary: {c['json_summary']}")
+    else:
+        try:
+            raw = commands_manifest.read_text()
+            lines.append("````yaml")
+            lines.append(raw.rstrip())
+            lines.append("````")
+        except Exception:
+            lines.append("(commands manifest not found)")
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text("\n".join(lines) + "\n")
+
+def cmd_docs(_):
+    out = ROOT/"docs"/"REFERENCE.md"
+    generate_reference_md(out)
+    print(str(out))
+
+def cmd_doctor(_):
+    # Keep in sync with manifest/tools.yaml (no YAML dep here)
+    tools = [
+        "cmake","ninja","clangd","clang-tidy","clang-format",
+        "include-what-you-use","cppcheck","rg","fd","jq","yq","bear","ccache","mold"
+    ]
+    report = {"generated_at": datetime.datetime.utcnow().isoformat()+"Z", "tools":{}}
+    for t in tools:
+        path = shutil.which(t)
+        info = {"found": bool(path), "path": path or None}
+        if path:
+            try:
+                out = run([t, "--version"], check=False).stdout.splitlines()
+                info["version_line"] = out[0] if out else None
+            except Exception:
+                info["version_line"] = None
+        report["tools"][t] = info
+    out = EXPORTS / "doctor.json"
+    write_json(out, report)
+    print(str(out))
+
+def cmd_context_export(args):
+    build = pathlib.Path(args.build)
+    build.mkdir(exist_ok=True)
+
+    # Compile DB
+    try:
+        run(["cmake","-S",".","-B",str(build),"-G","Ninja","-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"], check=True)
+        (EXPORTS/"compile_commands.json").write_bytes((build/"compile_commands.json").read_bytes())
+    except Exception as e:
+        # If compile_commands missing, try bear as a fallback
+        bear = shutil.which("bear")
+        if bear:
+            try:
+                run([bear, "--", "cmake", "--build", str(build)], check=False)
+                if (build/"compile_commands.json").exists():
+                    (EXPORTS/"compile_commands.json").write_bytes((build/"compile_commands.json").read_bytes())
+            except Exception:
+                pass
+
+    # CMake File API codemodel
+    q = build/".cmake"/"api"/"v1"/"query"; q.mkdir(parents=True, exist_ok=True)
+    (q/"codemodel-v2").write_text("")
+    run(["cmake","--build",str(build)], check=False)
+    reply = build/".cmake"/"api"/"v1"/"reply"
+    if reply.exists():
+        (EXPORTS/"cmake-file-api").mkdir(exist_ok=True)
+        for p in reply.iterdir():
+            (EXPORTS/"cmake-file-api"/p.name).write_bytes(p.read_bytes())
+
+    summary = {
+        "compile_commands": "exports/compile_commands.json" if (EXPORTS/"compile_commands.json").exists() else None,
+        "cmake_file_api": "exports/cmake-file-api/" if (EXPORTS/"cmake-file-api").exists() else None,
+        "generated_at": datetime.datetime.utcnow().isoformat()+"Z"
+    }
+    write_json(EXPORTS/"context.json", summary)
+    print(str(EXPORTS/"context.json"))
+
+def cmd_analyze(args):
+    reports = EXPORTS/"reports"; reports.mkdir(exist_ok=True)
+    compile_db = EXPORTS/"compile_commands.json"
+    paths = args.paths or []
+
+    def read_compile_db_files():
+        files = []
+        if compile_db.exists():
+            try:
+                data = json.loads(compile_db.read_text())
+                files = [entry.get("file") for entry in data if entry.get("file")]
+            except Exception:
+                files = []
+        # Filter by user-provided paths if any
+        if paths:
+            keep = []
+            for f in files:
+                for p in paths:
+                    if pathlib.Path(f).is_absolute():
+                        if str(f).startswith(str(pathlib.Path(p).resolve())) or str(f).find("/"+p+"/") != -1:
+                            keep.append(f); break
+                    else:
+                        if str(f).startswith(p):
+                            keep.append(f); break
+            files = keep
+        # Dedup while preserving order
+        seen = set(); uniq = []
+        for f in files:
+            if f not in seen:
+                seen.add(f); uniq.append(f)
+        return uniq
+
+    files_in_db = read_compile_db_files()
+
+    def run_proc(cmd, cwd=None):
+        return subprocess.run(cmd, cwd=cwd, text=True, capture_output=True)
+
+    # clang-tidy
+    clang_tidy_path = shutil.which("clang-tidy")
+    clang_tidy_report = {"available": bool(clang_tidy_path), "diagnostics": [], "version": None, "inputs": []}
+    if clang_tidy_path:
+        try:
+            v = run_proc([clang_tidy_path, "--version"]).stdout.splitlines()
+            clang_tidy_report["version"] = v[0] if v else None
+        except Exception:
+            pass
+        # Choose files to analyze
+        target_files = files_in_db
+        clang_tidy_report["inputs"] = target_files[:50]  # cap in report
+        tidy_diags = []
+        diag_re = re.compile(r"^(?P<file>[^:]+):(?P<line>\d+):(?P<col>\d+): (?P<severity>warning|error|note): (?P<msg>.*?)(?: \[(?P<check>[A-Za-z0-9_.\-]+)\])?$")
+        # If no compile DB, still try on explicit paths
+        if not target_files and paths:
+            # restrict to common C/C++ extensions
+            exts = (".c", ".cc", ".cxx", ".cpp", ".h", ".hh", ".hpp", ".hxx")
+            for p in paths:
+                pp = pathlib.Path(p)
+                if pp.is_file() and pp.suffix in exts:
+                    target_files.append(str(pp))
+                elif pp.is_dir():
+                    for f in pp.rglob("*"):
+                        if f.suffix in exts:
+                            target_files.append(str(f))
+        # Analyze (best-effort, sequential to keep simple)
+        for f in target_files[:200]:  # prevent runaway
+            cmd = [clang_tidy_path, f]
+            if compile_db.exists():
+                # clang-tidy accepts directory or file to -p; pass dir containing the DB
+                cmd.extend(["-p", str(compile_db.parent.resolve())])
+            res = run_proc(cmd)
+            for line in (res.stdout + "\n" + res.stderr).splitlines():
+                m = diag_re.match(line.strip())
+                if m:
+                    d = m.groupdict()
+                    d["line"] = int(d["line"]); d["col"] = int(d["col"])
+                    tidy_diags.append(d)
+        clang_tidy_report["diagnostics"] = tidy_diags
+    write_json(reports/"clang-tidy.json", clang_tidy_report)
+
+    # include-what-you-use (IWYU)
+    iwyu_bin = shutil.which("include-what-you-use")
+    iwyu_tool = shutil.which("iwyu-tool")
+    iwyu_report = {"available": bool(iwyu_bin or iwyu_tool), "version": None, "raw": None}
+    if iwyu_bin or iwyu_tool:
+        # Try to get version line
+        try:
+            if iwyu_bin:
+                vv = run_proc([iwyu_bin, "--version"]).stdout.splitlines()
+                iwyu_report["version"] = vv[0] if vv else None
+        except Exception:
+            pass
+        out = None
+        if iwyu_tool and compile_db.exists():
+            # Run across the compilation database
+            res = run_proc([iwyu_tool, "-p", str(compile_db.parent.resolve())])
+            out = res.stdout or res.stderr
+        elif iwyu_bin and files_in_db:
+            # Try first few files using compile DB path; IWYU will discover flags via -Xiwyu?
+            # We fallback to plain invocation which may be noisy
+            collected = []
+            for f in files_in_db[:20]:
+                res = run_proc([iwyu_bin, f])
+                collected.append((res.stdout or "") + "\n" + (res.stderr or ""))
+            out = "\n".join(collected)
+        if out:
+            iwyu_report["raw"] = out[:200000]
+    write_json(reports/"iwyu.json", iwyu_report)
+
+    # cppcheck
+    cppcheck_bin = shutil.which("cppcheck")
+    cppcheck_report = {"available": bool(cppcheck_bin), "version": None, "diagnostics": []}
+    if cppcheck_bin:
+        try:
+            vv = run_proc([cppcheck_bin, "--version"]).stdout.splitlines()
+            cppcheck_report["version"] = vv[0] if vv else None
+        except Exception:
+            pass
+        xml_tmp = pathlib.Path(tempfile.gettempdir())/"llmtk_cppcheck.xml"
+        cmd = [cppcheck_bin, "--enable=all", "--inconclusive", "--quiet", "--xml", "--xml-version=2"]
+        if compile_db.exists():
+            cmd.extend(["--project", str(compile_db)])
+        else:
+            # Fall back to paths list or current dir
+            search_paths = paths or ["."]
+            cmd.extend(search_paths)
+        res = subprocess.run(cmd, text=True, capture_output=True)
+        # cppcheck writes XML to stderr
+        xml_data = res.stderr
+        diags = []
+        try:
+            import xml.etree.ElementTree as ET
+            root = ET.fromstring(xml_data)
+            for error in root.iterfind('.//errors/error'):
+                ed = error.attrib
+                locs = []
+                for loc in error.iterfind('location'):
+                    locs.append({
+                        "file": loc.attrib.get("file"),
+                        "line": int(loc.attrib.get("line", "0")),
+                        "column": int(loc.attrib.get("column", "0"))
+                    })
+                diags.append({
+                    "id": ed.get("id"),
+                    "severity": ed.get("severity"),
+                    "msg": ed.get("msg"),
+                    "verbose": ed.get("verbose"),
+                    "locations": locs
+                })
+        except Exception:
+            # If XML parsing fails, include raw for inspection
+            diags = [{"raw": xml_data[:200000]}]
+        cppcheck_report["diagnostics"] = diags
+    write_json(reports/"cppcheck.json", cppcheck_report)
+
+    print(str(reports))
+
+def cmd_reduce(args):
+    repros = EXPORTS/"repros"; repros.mkdir(exist_ok=True)
+    cvise = shutil.which("cvise")
+    report = {"input": args.input, "test_cmd": args.test_cmd, "cvise_available": bool(cvise)}
+    if not cvise:
+        report["note"] = "cvise not found; skip"
+        write_json(repros/"report.json", report)
+        print(str(repros/"report.json"))
+        return
+    # Minimal shell-out; users can expand
+    try:
+        run([cvise, args.input, "--", "bash", "-lc", args.test_cmd], check=False)
+        report["note"] = "cvise run attempted"
+    except Exception as e:
+        report["error"] = str(e)
+    write_json(repros/"report.json", report)
+    print(str(repros/"report.json"))
+
+def main():
+    ap = argparse.ArgumentParser(prog="llmtk", description="LLM-friendly C++/CMake toolkit")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("doctor").set_defaults(fn=cmd_doctor)
+
+    cx = sub.add_parser("context", help="context commands").add_subparsers(dest="sub", required=True)
+    cx_exp = cx.add_parser("export"); cx_exp.add_argument("--build", default="build"); cx_exp.set_defaults(fn=cmd_context_export)
+
+    an = sub.add_parser("analyze"); an.add_argument("paths", nargs="*"); an.set_defaults(fn=cmd_analyze)
+
+    rd = sub.add_parser("reduce"); rd.add_argument("input"); rd.add_argument("test_cmd"); rd.set_defaults(fn=cmd_reduce)
+
+    sub.add_parser("docs").set_defaults(fn=cmd_docs)
+
+    args = ap.parse_args()
+    # map nested subcommand
+    if getattr(args, "sub", None):
+        return args.fn(args)
+    return args.fn(args)
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,70 @@
+{
+  "generated_at": "2025-09-17T18:21:32.344254Z",
+  "tools": {
+    "cmake": {
+      "found": true,
+      "path": "/usr/bin/cmake",
+      "version_line": "cmake version 3.28.3"
+    },
+    "ninja": {
+      "found": true,
+      "path": "/usr/bin/ninja",
+      "version_line": "1.11.1"
+    },
+    "clangd": {
+      "found": false,
+      "path": null
+    },
+    "clang-tidy": {
+      "found": true,
+      "path": "/usr/bin/clang-tidy",
+      "version_line": "Ubuntu LLVM version 18.1.3"
+    },
+    "clang-format": {
+      "found": true,
+      "path": "/usr/bin/clang-format",
+      "version_line": "Ubuntu clang-format version 18.1.3 (1ubuntu1)"
+    },
+    "include-what-you-use": {
+      "found": false,
+      "path": null
+    },
+    "cppcheck": {
+      "found": false,
+      "path": null
+    },
+    "rg": {
+      "found": true,
+      "path": "/home/greg/.nvm/versions/node/v22.18.0/lib/node_modules/@openai/codex/node_modules/@vscode/ripgrep/bin/rg",
+      "version_line": "ripgrep 13.0.0 (rev af6b6c543b)"
+    },
+    "fd": {
+      "found": false,
+      "path": null
+    },
+    "jq": {
+      "found": true,
+      "path": "/usr/bin/jq",
+      "version_line": "jq-1.7"
+    },
+    "yq": {
+      "found": true,
+      "path": "/usr/bin/yq",
+      "version_line": "yq 0.0.0"
+    },
+    "bear": {
+      "found": true,
+      "path": "/usr/bin/bear",
+      "version_line": "bear 3.1.3"
+    },
+    "ccache": {
+      "found": true,
+      "path": "/usr/bin/ccache",
+      "version_line": "ccache version 4.9.1"
+    },
+    "mold": {
+      "found": false,
+      "path": null
+    }
+  }
+}

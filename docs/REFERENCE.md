@@ -1,0 +1,81 @@
+# Toolkit Reference
+
+Generated from manifests on 2025-09-17T18:30:25.222668Z.
+
+## Tools
+- bear
+  - version: >=3
+  - provides: compile-db
+  - check: `bear --version`
+- ccache
+  - version: >=4
+  - provides: cache
+  - check: `ccache --version`
+- clang-format
+  - version: >=17
+  - provides: format
+  - check: `clang-format --version`
+- clang-tidy
+  - version: >=17
+  - provides: lint, analysis
+  - check: `clang-tidy --version`
+- clangd
+  - version: 18.1.8
+  - provides: lsp, xref, refactor
+  - check: `clangd --version`
+- cmake
+  - version: >=3.22
+  - provides: build, configure
+  - check: `cmake --version`
+- cppcheck
+  - version: >=2.9
+  - provides: static-analysis
+  - check: `cppcheck --version`
+- fd
+  - version: >=8
+  - provides: file-find
+  - check: `fd --version`
+- iwyu
+  - version: >=0.20
+  - provides: include-analysis
+  - check: `include-what-you-use --version`
+- jq
+  - version: >=1.6
+  - provides: json
+  - check: `jq --version`
+- mold
+  - version: >=2
+  - provides: linker
+  - check: `mold --version`
+- ninja
+  - version: >=1.10
+  - provides: build-backend
+  - check: `ninja --version`
+- rg
+  - version: >=13
+  - provides: search
+  - check: `rg --version`
+- yq
+  - version: >=4
+  - provides: yaml
+  - check: `yq --version`
+
+## Commands
+- analyze
+  - description: Run clang-tidy + IWYU + cppcheck with JSON reports.
+  - args: paths (variadic)
+  - runs: modules/analyze.sh
+  - outputs: exports/reports/clang-tidy.json, exports/reports/iwyu.json, exports/reports/cppcheck.json
+- context-export
+  - description: Collect artifacts LLMs rely on.
+  - runs: modules/compile_db.sh, modules/cmake_introspect.sh
+  - outputs: exports/compile_commands.json, exports/cmake-file-api/*.json
+  - json_summary: exports/context.json
+- doctor
+  - description: Inspect environment and report tool availability.
+  - outputs: exports/doctor.json
+- reduce
+  - description: Minimize a failing repro with cvise.
+  - args: input (required), test_cmd (required)
+  - runs: modules/reduce.sh
+  - outputs: exports/repros/minimized.cpp, exports/repros/report.json

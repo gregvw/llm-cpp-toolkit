@@ -1,0 +1,40 @@
+schema: 1
+commands:
+  doctor:
+    description: Inspect environment and report tool availability.
+    outputs:
+      - "exports/doctor.json"
+
+  context-export:
+    description: Collect artifacts LLMs rely on.
+    runs:
+      - "modules/compile_db.sh"
+      - "modules/cmake_introspect.sh"
+    outputs:
+      - "exports/compile_commands.json"
+      - "exports/cmake-file-api/*.json"
+    json_summary: "exports/context.json"
+
+  analyze:
+    description: Run clang-tidy + IWYU + cppcheck with JSON reports.
+    args:
+      - name: paths
+        variadic: true
+    runs:
+      - "modules/analyze.sh"
+    outputs:
+      - "exports/reports/clang-tidy.json"
+      - "exports/reports/iwyu.json"
+      - "exports/reports/cppcheck.json"
+
+  reduce:
+    description: Minimize a failing repro with cvise.
+    args:
+      - { name: input, required: true }
+      - { name: test_cmd, required: true }
+    runs:
+      - "modules/reduce.sh"
+    outputs:
+      - "exports/repros/minimized.cpp"
+      - "exports/repros/report.json"
+

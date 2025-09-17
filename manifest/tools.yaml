@@ -1,0 +1,74 @@
+schema: 1
+tools:
+  cmake:
+    version: ">=3.22"
+    provides: ["build", "configure"]
+    check:
+      cmd: ["cmake", "--version"]
+  ninja:
+    version: ">=1.10"
+    provides: ["build-backend"]
+    check:
+      cmd: ["ninja", "--version"]
+  clangd:
+    version: "18.1.8"
+    provides: ["lsp", "xref", "refactor"]
+    check:
+      cmd: ["clangd", "--version"]
+      expect: "clangd version 18"
+  clang-tidy:
+    version: ">=17"
+    provides: ["lint", "analysis"]
+    check:
+      cmd: ["clang-tidy", "--version"]
+  clang-format:
+    version: ">=17"
+    provides: ["format"]
+    check:
+      cmd: ["clang-format", "--version"]
+  iwyu:
+    version: ">=0.20"
+    provides: ["include-analysis"]
+    check:
+      cmd: ["include-what-you-use", "--version"]
+  cppcheck:
+    version: ">=2.9"
+    provides: ["static-analysis"]
+    check:
+      cmd: ["cppcheck", "--version"]
+  rg:
+    version: ">=13"
+    provides: ["search"]
+    check:
+      cmd: ["rg", "--version"]
+  fd:
+    version: ">=8"
+    provides: ["file-find"]
+    check:
+      cmd: ["fd", "--version"]
+  jq:
+    version: ">=1.6"
+    provides: ["json"]
+    check:
+      cmd: ["jq", "--version"]
+  yq:
+    version: ">=4"
+    provides: ["yaml"]
+    check:
+      cmd: ["yq", "--version"]
+  bear:
+    version: ">=3"
+    provides: ["compile-db"]
+    check:
+      cmd: ["bear", "--version"]
+  ccache:
+    version: ">=4"
+    provides: ["cache"]
+    check:
+      cmd: ["ccache", "--version"]
+  mold:
+    version: ">=2"
+    provides: ["linker"]
+    check:
+      cmd: ["mold", "--version"]
+
