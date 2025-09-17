@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <rect width="256" height="256" fill="#2E86AB" rx="16"/>
+  <text x="128" y="130" font-family="monospace" font-size="40" fill="white" text-anchor="middle" font-weight="bold">LLM</text>
+  <text x="128" y="170" font-family="monospace" font-size="20" fill="white" text-anchor="middle">C++ Toolkit</text>
+  <circle cx="64" cy="64" r="8" fill="#A23B72"/>
+  <circle cx="128" cy="64" r="8" fill="#F18F01"/>
+  <circle cx="192" cy="64" r="8" fill="#C73E1D"/>
+</svg>

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=LLM C++ Toolkit
+Comment=A comprehensive toolkit for working with LLM C++ implementations
+Exec=llmtk
+Icon=io.github.gregvw.llm-cpp-toolkit
+Categories=Development;
+Terminal=true
+StartupNotify=true

@@ -1,0 +1,27 @@
+# Build directories
+build/
+.git/
+.github/
+
+# Distribution packaging
+appimage/
+snap/
+flatpak/
+homebrew/
+
+# Development files
+*.log
+.DS_Store
+.vscode/
+*.swp
+*.swo
+*~
+
+# Documentation that's not needed in the package
+docs/
+*.md
+!README.md
+
+# Temporary files
+tmp/
+temp/

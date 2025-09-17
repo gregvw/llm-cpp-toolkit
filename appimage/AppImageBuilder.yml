@@ -1,0 +1,48 @@
+version: 1
+
+script:
+  # Remove any previous build
+  - rm -rf $TARGET_APPDIR  || true
+  # Make usr and usr/bin dirs
+  - mkdir -p $TARGET_APPDIR/usr/bin
+  - mkdir -p $TARGET_APPDIR/usr/lib
+  - mkdir -p $TARGET_APPDIR/usr/share
+
+AppDir:
+  path: ./AppDir
+
+  app_info:
+    id: io.github.gregvw.llm-cpp-toolkit
+    name: llm-cpp-toolkit
+    icon: llmtk
+    version: !ENV ${VERSION}
+    exec: usr/bin/llmtk
+    exec_args: $@
+
+  apt:
+    arch: amd64
+    sources:
+      - sourceline: 'deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ jammy main restricted universe multiverse'
+        key_url: 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x871920D1991BC93C'
+
+    include:
+      - python3
+      - python3-pip
+      - python3-setuptools
+      - python3-distutils
+      - libc6
+
+  files:
+    include:
+      - usr/bin/llmtk
+      - usr/share/llm-cpp-toolkit
+
+  runtime:
+    env:
+      PATH: '${APPDIR}/usr/bin:${PATH}'
+      PYTHONPATH: '${APPDIR}/usr/lib/python3/dist-packages:${PYTHONPATH}'
+
+AppImage:
+  update-information: 'gh-releases-zsync|gregvw|llm-cpp-toolkit|latest|llm-cpp-toolkit-*x86_64.AppImage.zsync'
+  sign-key: None
+  arch: x86_64

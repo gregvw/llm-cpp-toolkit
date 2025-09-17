@@ -1,0 +1,108 @@
+name: Build and Release Packages
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build'
+        required: false
+        default: 'latest'
+
+jobs:
+  build-packages:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y snapd flatpak-builder
+          sudo snap install snapcraft --classic
+
+      - name: Set up Flatpak
+        run: |
+          sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak install -y flathub org.freedesktop.Platform//23.08 org.freedesktop.Sdk//23.08
+
+      - name: Get version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            VERSION="${{ github.event.release.tag_name }}"
+            VERSION=${VERSION#v}  # Remove 'v' prefix if present
+          else
+            VERSION=$(cat VERSION)
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+
+      - name: Update version in files
+        run: |
+          echo "${{ steps.version.outputs.version }}" > VERSION
+          sed -i 's/"version": ".*"/"version": "${{ steps.version.outputs.version }}"/' package.json
+
+      - name: Build npm package
+        run: |
+          npm pack
+
+      - name: Build AppImage
+        run: |
+          cd appimage
+          pip3 install --user appimage-builder
+          ./build-appimage.sh
+
+      - name: Build Snap
+        run: |
+          cd snap
+          snapcraft --use-lxd
+
+      - name: Build Flatpak
+        run: |
+          cd flatpak
+          flatpak-builder build-dir io.github.gregvw.llm-cpp-toolkit.yml --force-clean --install-deps-from=flathub
+          flatpak build-export repo build-dir
+          flatpak build-bundle repo llm-cpp-toolkit.flatpak io.github.gregvw.llm-cpp-toolkit
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: |
+            *.tgz
+            appimage/*.AppImage
+            snap/*.snap
+            flatpak/*.flatpak
+
+      - name: Publish to npm
+        if: github.event_name == 'release'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish
+
+      - name: Upload release assets
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            *.tgz
+            appimage/*.AppImage
+            snap/*.snap
+            flatpak/*.flatpak
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

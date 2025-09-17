@@ -1,0 +1,48 @@
+name: llm-cpp-toolkit
+base: core22
+version: git
+summary: A comprehensive toolkit for working with LLM C++ implementations
+description: |
+  The LLM C++ Toolkit provides utilities for building, managing, and working
+  with Large Language Model implementations in C++. It includes build management,
+  preset configurations, and modular components for LLM development.
+
+grade: stable
+confinement: strict
+
+architectures:
+  - build-on: amd64
+
+apps:
+  llmtk:
+    command: bin/llmtk
+    plugs:
+      - home
+      - network
+      - network-bind
+      - removable-media
+      - process-control
+
+parts:
+  llm-cpp-toolkit:
+    plugin: dump
+    source: .
+    source-type: local
+    organize:
+      cli/llmtk: bin/llmtk
+      build_manager.py: lib/llm-cpp-toolkit/build_manager.py
+      modules/: lib/llm-cpp-toolkit/modules/
+      presets/: lib/llm-cpp-toolkit/presets/
+      manifest/: lib/llm-cpp-toolkit/manifest/
+      VERSION: lib/llm-cpp-toolkit/VERSION
+    stage-packages:
+      - python3
+      - python3-pip
+      - python3-setuptools
+      - python3-distutils
+    override-build: |
+      craftctl default
+      # Make the main script executable
+      chmod +x $CRAFT_PART_INSTALL/bin/llmtk
+      # Update the script to use the correct paths
+      sed -i "s|ROOT = pathlib.Path(__file__).resolve().parent.parent|ROOT = pathlib.Path('/snap/llm-cpp-toolkit/current/lib/llm-cpp-toolkit')|" $CRAFT_PART_INSTALL/bin/llmtk
