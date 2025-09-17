@@ -133,21 +133,80 @@ Check version:
 llmtk --version
 ```
 
-## Install
+## Installation
 
-- One-line install (installs to `~/.local/share/llm-cpp-toolkit` and wrapper `~/.local/bin/llmtk`):
+The LLM C++ Toolkit can be installed through multiple package managers and distribution methods:
 
+### Package Managers (Recommended)
+
+#### npm (Cross-platform)
+```bash
+# Install globally
+npm install -g llm-cpp-toolkit
+
+# Or use directly without installing
+npx llm-cpp-toolkit --version
 ```
+
+#### Homebrew (macOS/Linux)
+```bash
+# Add the tap and install
+brew tap gregvw/llm-cpp-toolkit
+brew install llm-cpp-toolkit
+```
+
+#### Snap (Linux)
+```bash
+# Install from Snap Store
+sudo snap install llm-cpp-toolkit
+
+# Run the tool
+llmtk --version
+```
+
+#### Flatpak (Linux)
+```bash
+# Install from Flathub
+flatpak install flathub io.github.gregvw.llm-cpp-toolkit
+
+# Run the tool
+flatpak run io.github.gregvw.llm-cpp-toolkit --version
+```
+
+### Portable/Manual Installation
+
+#### AppImage (Linux)
+```bash
+# Download the latest AppImage from releases
+wget https://github.com/gregvw/llm-cpp-toolkit/releases/latest/download/llm-cpp-toolkit-x86_64.AppImage
+chmod +x llm-cpp-toolkit-x86_64.AppImage
+./llm-cpp-toolkit-x86_64.AppImage --version
+```
+
+#### One-line Script Install
+Installs to `~/.local/share/llm-cpp-toolkit` with wrapper at `~/.local/bin/llmtk`:
+
+```bash
 curl -sSL https://raw.githubusercontent.com/gregvw/llm-cpp-toolkit/main/install.sh | bash -s -- --yes
 ```
 
-- Options:
-  - `--prefix DIR` to change the wrapper prefix (default `~/.local`).
-  - `--dir DIR` to change install dir (default `~/.local/share/llm-cpp-toolkit`).
-  - `--no-deps` to skip package manager installs.
-  - `--branch BRANCH` to select a different git branch.
+Options:
+- `--prefix DIR` - Change wrapper prefix (default `~/.local`)
+- `--dir DIR` - Change install directory (default `~/.local/share/llm-cpp-toolkit`)
+- `--no-deps` - Skip package manager dependency installation
+- `--branch BRANCH` - Install from specific git branch
 
-After install, ensure `~/.local/bin` is in your `PATH`.
+After script installation, ensure `~/.local/bin` is in your `PATH`.
+
+### Verifying Installation
+
+After installation with any method:
+```bash
+llmtk --version
+llmtk doctor  # Check system dependencies
+```
+
+See `DISTRIBUTION.md` for detailed build and packaging instructions.
 
 ## Reference
 

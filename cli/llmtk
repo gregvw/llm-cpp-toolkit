@@ -17,7 +17,8 @@ def get_version() -> str:
     except Exception:
         pass
     return "0.0.0+unknown"
-EXPORTS = ROOT / "exports"
+# Always write artifacts under the current working directory
+EXPORTS = pathlib.Path.cwd() / "exports"
 MODULES = ROOT / "modules"
 EXPORTS.mkdir(exist_ok=True)
 

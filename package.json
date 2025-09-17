@@ -43,7 +43,8 @@
     "manifest/",
     "build_manager.py",
     "VERSION",
-    "LICENSE"
+    "LICENSE",
+    "README.md"
   ],
   "preferGlobal": true
 }

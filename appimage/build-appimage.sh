@@ -19,6 +19,9 @@ mkdir -p AppDir/usr/share/llm-cpp-toolkit
 cp ../cli/llmtk AppDir/usr/bin/llmtk
 chmod +x AppDir/usr/bin/llmtk
 
+# Point ROOT inside the script to packaged share directory
+sed -i "s|ROOT = pathlib.Path(__file__).resolve().parent.parent|ROOT = pathlib.Path('/usr/share/llm-cpp-toolkit')|" AppDir/usr/bin/llmtk
+
 # Copy supporting files
 cp -r ../modules AppDir/usr/share/llm-cpp-toolkit/
 cp -r ../presets AppDir/usr/share/llm-cpp-toolkit/
