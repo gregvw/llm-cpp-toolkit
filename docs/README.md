@@ -127,6 +127,12 @@ llm-cpp-toolkit/
 
 See `docs/QUICKSTART.md` for command examples. Artifacts land under `exports/` for easy parsing.
 
+Check version:
+
+```
+llmtk --version
+```
+
 ## Install
 
 - One-line install (installs to `~/.local/share/llm-cpp-toolkit` and wrapper `~/.local/bin/llmtk`):

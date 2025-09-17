@@ -2,6 +2,21 @@
 import argparse, json, os, shutil, subprocess, sys, pathlib, datetime, re, tempfile, textwrap
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+def get_version() -> str:
+    try:
+        vfile = ROOT / "VERSION"
+        if vfile.exists():
+            return vfile.read_text().strip()
+    except Exception:
+        pass
+    try:
+        res = subprocess.run(["git", "-C", str(ROOT), "describe", "--tags", "--always"], text=True, capture_output=True)
+        if res.returncode == 0 and res.stdout.strip():
+            return res.stdout.strip()
+    except Exception:
+        pass
+    return "0.0.0+unknown"
 EXPORTS = ROOT / "exports"
 MODULES = ROOT / "modules"
 EXPORTS.mkdir(exist_ok=True)
@@ -422,6 +437,7 @@ def cmd_reduce(args):
 
 def main():
     ap = argparse.ArgumentParser(prog="llmtk", description="LLM-friendly C++/CMake toolkit")
+    ap.add_argument("--version", action="version", version=f"llmtk {get_version()}")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("doctor").set_defaults(fn=cmd_doctor)
 
