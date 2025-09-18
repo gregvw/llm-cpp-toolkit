@@ -479,14 +479,28 @@ def install_tool_with_package_manager(tool_name, tool_config, pm):
 
     try:
         if pm == "apt":
-            # Handle apt's compound command
-            run(["sudo", "apt-get", "update"], check=True)
-            run(["sudo", "apt-get", "install", "-y"] + packages, check=True)
+            # Handle apt's compound command - don't capture output for sudo commands
+            print("Running: sudo apt-get update")
+            result = subprocess.run(["sudo", "apt-get", "update"], check=True, text=True)
+            print(f"Running: sudo apt-get install -y {' '.join(packages)}")
+            result = subprocess.run(["sudo", "apt-get", "install", "-y"] + packages, check=True, text=True)
+        elif pm in ["dnf", "pacman"]:
+            # Don't capture output for sudo commands
+            print(f"Running: {' '.join(cmd)}")
+            result = subprocess.run(cmd, check=True, text=True)
         else:
-            run(cmd, check=True)
+            # For brew/nix, these don't need sudo so we can still capture output for better error reporting
+            print(f"Running: {' '.join(cmd)}")
+            result = subprocess.run(cmd, check=True, text=True, capture_output=True)
         return True
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
         print(f"Failed to install {tool_name} via {pm}")
+        print(f"Command failed with return code: {e.returncode}")
+        if hasattr(e, 'stderr') and e.stderr:
+            print(f"Error output: {e.stderr}")
+        elif hasattr(e, 'stdout') and e.stdout:
+            print(f"Command output: {e.stdout}")
+        print(f"You can try installing manually with: {' '.join(cmd) if pm not in ['apt'] else f'sudo apt-get update && sudo apt-get install -y {\" \".join(packages)}'}")
         return False
 
 def install_tool_locally(tool_name, tool_config, local_bin):
