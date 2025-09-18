@@ -70,7 +70,8 @@ llmtk init my-cpp-project
 # Or adopt an existing project without touching sources
 llmtk init --existing path/to/project
 ```
-This drops a `CMakeLists.txt` template for new projects or produces an adoption report for existing ones.
+This drops a `CMakeLists.txt` template for new projects or produces an adoption report for existing ones, copying any
+existing `compile_commands.json` into `exports/` for immediate LLM use.
 
 ### 3. Generate Context for Your Project
 ```bash

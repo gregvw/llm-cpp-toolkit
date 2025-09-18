@@ -37,6 +37,9 @@ llmtk analyze src/ include/
 llmtk reduce test.cpp "gcc test.cpp && ./a.out"
 ```
 
+When adopting an existing workspace, `llmtk init --existing` also copies any top-level `compile_commands.json` into
+`exports/compile_commands.json` so downstream commands and agents can consume it immediately.
+
 ## 🎯 Key Features
 
 - **🔍 System Health Check** - Verify development tool installation and versions

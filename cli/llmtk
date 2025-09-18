@@ -213,6 +213,8 @@ def adopt_existing_project(project_dir: pathlib.Path, project_name: str) -> int:
 
     cmake_validation = validate_cmake_guidance(project_dir)
     compile_db = project_dir / "compile_commands.json"
+    exported_compile_db = None
+    compile_db_copy_error = None
     build_dir_candidates = []
     for candidate in ["build", "cmake-build-debug", "cmake-build-release"]:
         bdir = project_dir / candidate
@@ -231,7 +233,19 @@ def adopt_existing_project(project_dir: pathlib.Path, project_name: str) -> int:
     if not compile_db.exists():
         recommendations.append("Generate compile_commands.json via 'llmtk context export --build <build-dir>'")
     else:
-        recommendations.append("Copy existing compile_commands.json into exports/ (e.g. 'cp compile_commands.json exports/') for agents")
+        dest = EXPORTS / "compile_commands.json"
+        try:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            if dest.exists() and dest.resolve() == compile_db.resolve():
+                exported_compile_db = str(dest.resolve())
+            else:
+                shutil.copy2(compile_db, dest)
+                exported_compile_db = str(dest.resolve())
+        except Exception as exc:  # best effort copy
+            compile_db_copy_error = str(exc)
+            recommendations.append(
+                "Copy existing compile_commands.json into exports/ (e.g. 'cp compile_commands.json exports/') for agents"
+            )
 
     deduped_recs = []
     seen = set()
@@ -249,6 +263,7 @@ def adopt_existing_project(project_dir: pathlib.Path, project_name: str) -> int:
         "artifacts": {
             "compile_commands": str(compile_db.resolve()) if compile_db.exists() else None,
             "build_directories": build_dir_candidates,
+            "exports_compile_commands": exported_compile_db,
         },
         "presets": presets_status,
         "recommendations": deduped_recs,
@@ -258,6 +273,10 @@ def adopt_existing_project(project_dir: pathlib.Path, project_name: str) -> int:
     write_json(out, adoption_summary)
 
     print("📄 Adoption summary written to", out)
+    if exported_compile_db:
+        print(f"📦 Copied existing compile_commands.json to {exported_compile_db}")
+    elif compile_db_copy_error:
+        print(f"⚠️ Failed to copy compile_commands.json: {compile_db_copy_error}")
     if cmake_validation["overall_score"] >= 80:
         print(f"✅ Existing CMake setup scores {cmake_validation['overall_score']:.0f}% against CMAKE_GUIDANCE.md")
     else:
