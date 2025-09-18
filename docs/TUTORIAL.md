@@ -2,6 +2,21 @@
 
 This walkthrough shows how to install **llm-cpp-toolkit**, scaffold a deliberately broken C++ project, and iterate with an LLM/agent to bring it back to green by leaning on the toolkit’s context packs, analyzers, and sanitized builds. Each stage calls out what the user does versus what the agent can automate once the artifacts exist.
 
+```
+┌───────────────────┐      ┌──────────────────┐
+│ User runs llmtk   ├─────>│  JSON artifacts  │
+│ (build, analyze)  │      │  (exports/, logs/) │
+└─────────┬─────────┘      └────────┬─────────┘
+          │                        │
+          │                        ▼
+┌─────────┴─────────┐      ┌──────────────────┐
+│  User applies fix │<─────┤ Agent proposes a │
+│                   │      │ fix              │
+└───────────────────┘      └──────────────────┘
+```
+
+In practice the agent can automate the inner loop—calling `llmtk`/`build_manager`, parsing the JSON, applying fixes, and repeating—until the build, sanitizers, and analyzers come back clean.
+
 > 💡 Tip: The tutorial assumes you’re on Linux or macOS with a recent Clang/LLVM toolchain available. Substitute equivalent package commands if your distro differs.
 
 ## What You’ll Accomplish
