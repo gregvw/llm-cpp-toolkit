@@ -381,21 +381,71 @@ def cmd_init(args):
     # Handle sanitizers section based on user preference
     sanitizers_section = ""
     if not disable_sanitizers:
-        sanitizers_section = '''
-# 2) Sanitizers toggles (don't hardcode CMAKE_CXX_FLAGS_*; compose options instead)
-option(ENABLE_ASAN "Enable AddressSanitizer" $<NOT:$<CXX_COMPILER_ID:MSVC>>)
-option(ENABLE_UBSAN "Enable UBSan"           $<NOT:$<CXX_COMPILER_ID:MSVC>>)
-add_library(project_sanitizers INTERFACE)
+        sanitizers_section = f'''
+# 2) Sanitizer function for creating multiple sanitized variants
+function(llmtk_add_sanitized_target base_target sanitizer_name sanitizer_flags)
+  if (NOT TARGET "${{base_target}}")
+    message(FATAL_ERROR "llmtk_add_sanitized_target: unknown target '${{base_target}}'")
+  endif()
+
+  set(sanitized "${{base_target}}_${{sanitizer_name}}")
+
+  # Collect the base target's sources so we can clone the build
+  get_target_property(srcs "${{base_target}}" SOURCES)
+  if (NOT srcs)
+    message(FATAL_ERROR "Target '${{base_target}}' has no SOURCES property; cannot clone for sanitizer build")
+  endif()
+
+  # Determine target type (executable vs library)
+  get_target_property(target_type "${{base_target}}" TYPE)
+  if(target_type STREQUAL "EXECUTABLE")
+    add_executable("${{sanitized}}" EXCLUDE_FROM_ALL ${{srcs}})
+  elseif(target_type STREQUAL "STATIC_LIBRARY" OR target_type STREQUAL "SHARED_LIBRARY")
+    add_library("${{sanitized}}" EXCLUDE_FROM_ALL ${{srcs}})
+  else()
+    message(FATAL_ERROR "Unsupported target type '${{target_type}}' for sanitizer cloning")
+  endif()
+
+  # Keep the strict warnings and any other link deps from the original target
+  target_link_libraries("${{sanitized}}" PRIVATE
+    $<TARGET_PROPERTY:${{base_target}},LINK_LIBRARIES>
+    project_warnings
+  )
+
+  # Mirror include dirs / compile definitions / options so the TU is identical
+  target_include_directories("${{sanitized}}" PRIVATE
+    $<TARGET_PROPERTY:${{base_target}},INCLUDE_DIRECTORIES>
+  )
+  target_compile_definitions("${{sanitized}}" PRIVATE
+    $<TARGET_PROPERTY:${{base_target}},COMPILE_DEFINITIONS>
+  )
+  target_compile_options("${{sanitized}}" PRIVATE
+    $<TARGET_PROPERTY:${{base_target}},COMPILE_OPTIONS>
+    ${{sanitizer_flags}}
+  )
+  target_link_options("${{sanitized}}" PRIVATE ${{sanitizer_flags}})
+
+  # Optional: share the same output directory, and make the sanitized target depend on the base one
+  set_target_properties("${{sanitized}}" PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY $<TARGET_PROPERTY:${{base_target}},RUNTIME_OUTPUT_DIRECTORY>
+  )
+  add_dependencies("${{sanitized}}" "${{base_target}}")
+endfunction()
+
+# Create sanitized variants for non-MSVC compilers
 if (NOT MSVC)
-  if (ENABLE_ASAN)
-    target_compile_options(project_sanitizers INTERFACE -fsanitize=address)
-    target_link_options(project_sanitizers    INTERFACE -fsanitize=address)
-  endif()
-  if (ENABLE_UBSAN)
-    target_compile_options(project_sanitizers INTERFACE -fsanitize=undefined)
-    target_link_options(project_sanitizers    INTERFACE -fsanitize=undefined)
-  endif()
-endif()'''
+  # AddressSanitizer + UBSan combo (most common for development)
+  llmtk_add_sanitized_target({project_name} asan_ubsan "-fsanitize=address,undefined")
+
+  # ThreadSanitizer (mutually exclusive with AddressSanitizer)
+  llmtk_add_sanitized_target({project_name} tsan "-fsanitize=thread")
+
+  # MemorySanitizer (requires special build setup, uncomment if needed)
+  # llmtk_add_sanitized_target({project_name} msan "-fsanitize=memory")
+endif()
+
+# Legacy compatibility: empty interface library for existing code
+add_library(project_sanitizers INTERFACE)'''
     else:
         sanitizers_section = '''
 # 2) Sanitizers disabled per user preference
@@ -418,6 +468,21 @@ target_link_libraries({project_name} PRIVATE project_warnings project_sanitizers
 # Optional: also build example executable
 add_executable({project_name}_example examples/main.cpp)
 target_link_libraries({project_name}_example PRIVATE {project_name} project_warnings project_sanitizers)'''
+
+        # For library preset, add sanitized variants of both library and example
+        if not disable_sanitizers:
+            target_section += f'''
+
+# Create sanitized variants of library and example (non-MSVC only)
+if (NOT MSVC)
+  # Library sanitized variants
+  llmtk_add_sanitized_target({project_name} asan_ubsan "-fsanitize=address,undefined")
+  llmtk_add_sanitized_target({project_name} tsan "-fsanitize=thread")
+
+  # Example sanitized variants
+  llmtk_add_sanitized_target({project_name}_example asan_ubsan "-fsanitize=address,undefined")
+  llmtk_add_sanitized_target({project_name}_example tsan "-fsanitize=thread")
+endif()'''
         lint_section = f'''
 # 4) LLM-focused "lint" that compiles TUs with tight diagnostics (no linking)
 get_target_property(LIB_SOURCES {project_name} SOURCES)
