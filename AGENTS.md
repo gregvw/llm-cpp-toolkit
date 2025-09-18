@@ -272,6 +272,7 @@ Short answer: **yes—build this as a CLI-first toolkit** and let Codex/CLI agen
 * A tiny wrapper, e.g. `llmtk`, with subcommands:
 
   * `llmtk install` – installs deps from a manifest.
+  * `llmtk init` – scaffolds new projects or emits adoption reports for existing ones.
   * `llmtk doctor` – prints a machine-readable health report.
   * `llmtk context export` – emits `compile_commands.json` + CMake File API JSON.
   * `llmtk analyze` – runs clang-tidy/IWYU/cppcheck → JSON reports.
@@ -383,4 +384,3 @@ From here you can:
 * Read `exports/context.json` to discover where everything lives.
 * Run `llmtk analyze src/ include/` and parse `exports/reports/*.json`.
 * Propose patches, then optionally `llmtk reduce repro.cpp -- test.sh` to shrink a failing case.
-

@@ -207,6 +207,71 @@ def cmd_docs(_):
     generate_reference_md(out)
     print(str(out))
 
+def adopt_existing_project(project_dir: pathlib.Path, project_name: str) -> int:
+    """Generate an adoption report for an existing project without mutating sources."""
+    print(f"🤝 Adopting existing project in {project_dir}")
+
+    cmake_validation = validate_cmake_guidance(project_dir)
+    compile_db = project_dir / "compile_commands.json"
+    build_dir_candidates = []
+    for candidate in ["build", "cmake-build-debug", "cmake-build-release"]:
+        bdir = project_dir / candidate
+        if bdir.exists() and bdir.is_dir():
+            build_dir_candidates.append(str(bdir.resolve()))
+
+    preset_names = [".clang-tidy", ".clang-format", "cmake-format.yaml", "pre-commit-config.yaml"]
+    presets_status = []
+    recommendations = list(cmake_validation.get("suggestions", []))
+    for preset in preset_names:
+        present = (project_dir / preset).exists()
+        presets_status.append({"name": preset, "present": present})
+        if not present:
+            recommendations.append(f"Consider copying preset '{preset}' from llm-cpp-toolkit/presets")
+
+    if not compile_db.exists():
+        recommendations.append("Generate compile_commands.json via 'llmtk context export --build <build-dir>'")
+    else:
+        recommendations.append("Copy existing compile_commands.json into exports/ (e.g. 'cp compile_commands.json exports/') for agents")
+
+    deduped_recs = []
+    seen = set()
+    for item in recommendations:
+        if item and item not in seen:
+            deduped_recs.append(item)
+            seen.add(item)
+
+    adoption_summary = {
+        "mode": "existing",
+        "project_name": project_name,
+        "project_dir": str(project_dir.resolve()),
+        "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
+        "cmake_validation": cmake_validation,
+        "artifacts": {
+            "compile_commands": str(compile_db.resolve()) if compile_db.exists() else None,
+            "build_directories": build_dir_candidates,
+        },
+        "presets": presets_status,
+        "recommendations": deduped_recs,
+    }
+
+    out = EXPORTS / "init-existing.json"
+    write_json(out, adoption_summary)
+
+    print("📄 Adoption summary written to", out)
+    if cmake_validation["overall_score"] >= 80:
+        print(f"✅ Existing CMake setup scores {cmake_validation['overall_score']:.0f}% against CMAKE_GUIDANCE.md")
+    else:
+        print(f"💡 CMake compliance is {cmake_validation['overall_score']:.0f}% – see recommendations above.")
+
+    print("\n🚀 Suggested follow-ups:")
+    for rec in deduped_recs[:5]:
+        print(f"   • {rec}")
+    if len(deduped_recs) > 5:
+        print(f"   • ...and {len(deduped_recs) - 5} more (see adoption summary)")
+
+    return 0
+
+
 def cmd_init(args):
     """Initialize a new C++ project with CMAKE_GUIDANCE.md compliance"""
     project_name = args.name or pathlib.Path.cwd().name
@@ -214,29 +279,233 @@ def cmd_init(args):
 
     # Create directory if it doesn't exist
     if args.name:
-        project_dir.mkdir(exist_ok=True)
-        print(f"📁 Created project directory: {project_dir}")
+        if project_dir.exists():
+            print(f"📂 Using existing project directory: {project_dir}")
+        else:
+            project_dir.mkdir(parents=True, exist_ok=True)
+            print(f"📁 Created project directory: {project_dir}")
 
     # Check if CMakeLists.txt already exists
     cmake_file = project_dir / "CMakeLists.txt"
-    if cmake_file.exists() and not args.force:
-        print(f"❌ CMakeLists.txt already exists. Use --force to overwrite.")
-        cmake_validation = validate_cmake_guidance(project_dir)
-        if cmake_validation["overall_score"] >= 80:
-            print(f"✅ Existing CMake setup is already {cmake_validation['overall_score']:.0f}% compliant!")
-            return 0
-        else:
-            print(f"💡 Current compliance: {cmake_validation['overall_score']:.0f}%. Use --force to upgrade.")
-            return 1
+    if args.existing and not cmake_file.exists():
+        print("❌ --existing specified but no CMakeLists.txt found in the target directory.")
+        return 1
 
-    # Generate CMAKE_GUIDANCE.md compliant CMakeLists.txt
-    cmake_template = f'''cmake_minimum_required(VERSION 3.28)
+    if cmake_file.exists() and not args.force:
+        return adopt_existing_project(project_dir, project_name)
+
+    # Generate CMAKE_GUIDANCE.md compliant CMakeLists.txt with user options
+    cmake_min_version = getattr(args, 'cmake_min', '3.28')
+    cxx_standard = getattr(args, 'std', '23')
+    enable_pic = getattr(args, 'pic', False)
+    disable_sanitizers = getattr(args, 'no_sanitizers', False)
+    preset = getattr(args, 'preset', 'full')
+
+    # Handle sanitizers section based on user preference
+    sanitizers_section = ""
+    if not disable_sanitizers:
+        sanitizers_section = '''
+# 2) Sanitizers toggles (don't hardcode CMAKE_CXX_FLAGS_*; compose options instead)
+option(ENABLE_ASAN "Enable AddressSanitizer" $<NOT:$<CXX_COMPILER_ID:MSVC>>)
+option(ENABLE_UBSAN "Enable UBSan"           $<NOT:$<CXX_COMPILER_ID:MSVC>>)
+add_library(project_sanitizers INTERFACE)
+if (NOT MSVC)
+  if (ENABLE_ASAN)
+    target_compile_options(project_sanitizers INTERFACE -fsanitize=address)
+    target_link_options(project_sanitizers    INTERFACE -fsanitize=address)
+  endif()
+  if (ENABLE_UBSAN)
+    target_compile_options(project_sanitizers INTERFACE -fsanitize=undefined)
+    target_link_options(project_sanitizers    INTERFACE -fsanitize=undefined)
+  endif()
+endif()'''
+    else:
+        sanitizers_section = '''
+# 2) Sanitizers disabled per user preference
+add_library(project_sanitizers INTERFACE)'''
+
+    # Handle different presets for target and lint sections
+    if preset == "minimal":
+        target_section = f'''
+# 3) Your target(s) - replace with your actual source files
+add_executable({project_name} main.cpp)
+target_link_libraries({project_name} PRIVATE project_warnings project_sanitizers)'''
+        lint_section = ""
+    elif preset == "library":
+        target_section = f'''
+# 3) Library target - adjust as needed
+add_library({project_name} src/{project_name}.cpp)
+target_include_directories({project_name} PUBLIC include)
+target_link_libraries({project_name} PRIVATE project_warnings project_sanitizers)
+
+# Optional: also build example executable
+add_executable({project_name}_example examples/main.cpp)
+target_link_libraries({project_name}_example PRIVATE {project_name} project_warnings project_sanitizers)'''
+        lint_section = f'''
+# 4) LLM-focused "lint" that compiles TUs with tight diagnostics (no linking)
+get_target_property(LIB_SOURCES {project_name} SOURCES)
+get_target_property(LIB_INCLUDES {project_name} INCLUDE_DIRECTORIES)
+get_target_property(LIB_DEFS     {project_name} COMPILE_DEFINITIONS)
+get_target_property(LIB_OPTS     {project_name} COMPILE_OPTIONS)
+
+# Compose include and define flags portably
+set(_lint_includes "")
+if(LIB_INCLUDES)
+  foreach(inc ${{LIB_INCLUDES}})
+    list(APPEND _lint_includes -I${{inc}})
+  endforeach()
+endif()
+set(_lint_defines "")
+if(LIB_DEFS)
+  foreach(def ${{LIB_DEFS}})
+    list(APPEND _lint_defines -D${{def}})
+  endforeach()
+endif()
+
+# Build a response file so the command stays short
+set(_lint_rsp "${{CMAKE_BINARY_DIR}}/lint_args.rsp")
+file(WRITE  "${{_lint_rsp}}" "")
+if(LIB_OPTS)
+  foreach(opt ${{LIB_OPTS}})
+    file(APPEND "${{_lint_rsp}}" "${{opt}}\\n")
+  endforeach()
+endif()
+foreach(def ${{_lint_defines}})
+  file(APPEND "${{_lint_rsp}}" "${{def}}\\n")
+endforeach()
+foreach(inc ${{_lint_includes}})
+  file(APPEND "${{_lint_rsp}}" "${{inc}}\\n")
+endforeach()
+
+# Pick flags per compiler
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  set(LINT_CORE_FLAGS
+    -std=c++{cxx_standard} -fsyntax-only
+    -Wfatal-errors -ferror-limit=1
+    -ftemplate-backtrace-limit=6 -fconstexpr-backtrace-limit=3 -fmacro-backtrace-limit=2
+    -fno-caret-diagnostics -fdiagnostics-color=never -fdiagnostics-show-option
+    -fdiagnostics-format=json
+  )
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set(LINT_CORE_FLAGS
+    -std=c++{cxx_standard} -fsyntax-only
+    -Wfatal-errors -fmax-errors=1
+    -fconcepts-diagnostics-depth=2
+    -fno-diagnostics-show-caret -fdiagnostics-color=never
+    -fdiagnostics-format=json
+  )
+else()
+  # MSVC: fall back to /analyze JSON? For now: no-op lint with success.
+  set(LINT_CORE_FLAGS "")
+endif()
+
+# One lint target that iterates all TU's; writes a single JSON per TU into build/lint/
+add_custom_target(lint
+  COMMENT "Running tight JSON diagnostics per translation unit..."
+)
+foreach(src ${{LIB_SOURCES}})
+  get_filename_component(src_name "${{src}}" NAME_WE)
+  set(out_json "${{CMAKE_BINARY_DIR}}/lint/${{src_name}}.json")
+  file(MAKE_DIRECTORY "${{CMAKE_BINARY_DIR}}/lint")
+  add_custom_command(TARGET lint POST_BUILD
+    COMMAND ${{CMAKE_CXX_COMPILER}} "@${{_lint_rsp}}" ${{LINT_CORE_FLAGS}} "${{src}}" 2> "${{out_json}}"
+    BYPRODUCTS "${{out_json}}"
+    COMMENT "Lint ${{src_name}}"
+    VERBATIM
+  )
+endforeach()'''
+    else:  # preset == "full"
+        target_section = f'''
+# 3) Your target(s) - replace with your actual source files
+add_executable({project_name} main.cpp)
+target_link_libraries({project_name} PRIVATE project_warnings project_sanitizers)'''
+        lint_section = f'''
+# 4) LLM-focused "lint" that compiles TUs with tight diagnostics (no linking)
+#    Important: use the *same* include dirs/defs/opts as {project_name} so headers resolve.
+get_target_property(APP_SOURCES {project_name} SOURCES)
+get_target_property(APP_INCLUDES {project_name} INCLUDE_DIRECTORIES)
+get_target_property(APP_DEFS     {project_name} COMPILE_DEFINITIONS)
+get_target_property(APP_OPTS     {project_name} COMPILE_OPTIONS)
+
+# Compose include and define flags portably for non-MSVC compilers.
+set(_lint_includes "")
+if(APP_INCLUDES)
+  foreach(inc ${{APP_INCLUDES}})
+    list(APPEND _lint_includes -I${{inc}})
+  endforeach()
+endif()
+set(_lint_defines "")
+if(APP_DEFS)
+  foreach(def ${{APP_DEFS}})
+    list(APPEND _lint_defines -D${{def}})
+  endforeach()
+endif()
+
+# Build a response file so the command stays short (token-cheap logs)
+set(_lint_rsp "${{CMAKE_BINARY_DIR}}/lint_args.rsp")
+file(WRITE  "${{_lint_rsp}}" "")
+if(APP_OPTS)
+  foreach(opt ${{APP_OPTS}})
+    file(APPEND "${{_lint_rsp}}" "${{opt}}\\n")
+  endforeach()
+endif()
+foreach(def ${{_lint_defines}})
+  file(APPEND "${{_lint_rsp}}" "${{def}}\\n")
+endforeach()
+foreach(inc ${{_lint_includes}})
+  file(APPEND "${{_lint_rsp}}" "${{inc}}\\n")
+endforeach()
+
+# Pick flags per compiler
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  set(LINT_CORE_FLAGS
+    -std=c++{cxx_standard} -fsyntax-only
+    -Wfatal-errors -ferror-limit=1
+    -ftemplate-backtrace-limit=6 -fconstexpr-backtrace-limit=3 -fmacro-backtrace-limit=2
+    -fno-caret-diagnostics -fdiagnostics-color=never -fdiagnostics-show-option
+    -fdiagnostics-format=json
+  )
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set(LINT_CORE_FLAGS
+    -std=c++{cxx_standard} -fsyntax-only
+    -Wfatal-errors -fmax-errors=1
+    -fconcepts-diagnostics-depth=2
+    -fno-diagnostics-show-caret -fdiagnostics-color=never
+    -fdiagnostics-format=json
+  )
+else()
+  # MSVC: fall back to /analyze JSON? For now: no-op lint with success.
+  set(LINT_CORE_FLAGS "")
+endif()
+
+# One lint target that iterates all TU's; writes a single JSON per TU into build/lint/
+add_custom_target(lint
+  COMMENT "Running tight JSON diagnostics per translation unit..."
+)
+foreach(src ${{APP_SOURCES}})
+  get_filename_component(src_name "${{src}}" NAME_WE)
+  set(out_json "${{CMAKE_BINARY_DIR}}/lint/${{src_name}}.json")
+  file(MAKE_DIRECTORY "${{CMAKE_BINARY_DIR}}/lint")
+  add_custom_command(TARGET lint POST_BUILD
+    COMMAND ${{CMAKE_CXX_COMPILER}} "@${{_lint_rsp}}" ${{LINT_CORE_FLAGS}} "${{src}}" 2> "${{out_json}}"
+    BYPRODUCTS "${{out_json}}"
+    COMMENT "Lint ${{src_name}}"
+    VERBATIM
+  )
+endforeach()'''
+
+    # Handle Position Independent Code
+    pic_section = ""
+    if enable_pic:
+        pic_section = "\n# Enable position independent code\nset(CMAKE_POSITION_INDEPENDENT_CODE ON)\n"
+
+    cmake_template = f'''cmake_minimum_required(VERSION {cmake_min_version})
 project({project_name} LANGUAGES CXX)
 
 # Always declare the language level once
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD {cxx_standard})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_EXTENSIONS OFF){pic_section}
 
 # Export compile_commands.json (handy for your reducer or tools)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -1154,6 +1423,15 @@ def main():
     init_parser = sub.add_parser("init", help="Initialize LLM-optimized C++ project")
     init_parser.add_argument("name", nargs="?", help="Project name (uses current directory if not specified)")
     init_parser.add_argument("--force", action="store_true", help="Overwrite existing CMakeLists.txt")
+    init_parser.add_argument("--existing", action="store_true", help="Adopt an existing project without overwriting CMake files")
+
+    # Customization options
+    init_parser.add_argument("--std", choices=["17", "20", "23", "26"], default="23", help="C++ standard version")
+    init_parser.add_argument("--cmake-min", default="3.28", help="Minimum CMake version required")
+    init_parser.add_argument("--pic", action="store_true", help="Enable position independent code by default")
+    init_parser.add_argument("--no-sanitizers", action="store_true", help="Disable sanitizer options")
+    init_parser.add_argument("--preset", choices=["minimal", "full", "library"], default="full", help="Project template preset")
+
     init_parser.set_defaults(fn=cmd_init)
 
     install_parser = sub.add_parser("install", help="Install missing tools")

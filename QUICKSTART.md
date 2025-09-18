@@ -62,14 +62,24 @@ llmtk doctor
 ```
 This checks which tools are available and highlights any missing dependencies.
 
-### 2. Generate Context for Your Project
+### 2. Bootstrap or Adopt a Project
+```bash
+# Create a fresh starter project in a new directory
+llmtk init my-cpp-project
+
+# Or adopt an existing project without touching sources
+llmtk init --existing path/to/project
+```
+This drops a `CMakeLists.txt` template for new projects or produces an adoption report for existing ones.
+
+### 3. Generate Context for Your Project
 ```bash
 cd your-cpp-project/
 llmtk context export
 ```
 Creates `exports/compile_commands.json` and CMake file API data that LLMs need.
 
-### 3. Run Static Analysis
+### 4. Run Static Analysis
 ```bash
 llmtk analyze
 ```

@@ -20,6 +20,10 @@ llmtk --version
 
 ### Basic Usage
 ```bash
+# Bootstrap a new project or adopt an existing one
+llmtk init my-cpp-project
+llmtk init --existing path/to/existing-project
+
 # Check system dependencies
 llmtk doctor
 
@@ -36,6 +40,7 @@ llmtk reduce test.cpp "gcc test.cpp && ./a.out"
 ## 🎯 Key Features
 
 - **🔍 System Health Check** - Verify development tool installation and versions
+- **🧱 Project Bootstrap/Adoption** - Generate starter scaffolding or adopt existing CMake projects with guidance
 - **📦 Context Export** - Generate compilation databases and CMake introspection data
 - **🔬 Code Analysis** - Run clang-tidy, include-what-you-use, and cppcheck with JSON output
 - **🪚 Test Case Reduction** - Minimize failing code with cvise integration
