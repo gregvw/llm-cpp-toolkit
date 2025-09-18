@@ -22,11 +22,11 @@ modules:
     buildsystem: simple
     build-commands:
       - install -Dm755 cli/llmtk /app/bin/llmtk
+      - install -Dm755 build_manager /app/bin/build_manager
       - mkdir -p /app/share/llm-cpp-toolkit
       - cp -r modules /app/share/llm-cpp-toolkit/
       - cp -r presets /app/share/llm-cpp-toolkit/
       - cp -r manifest /app/share/llm-cpp-toolkit/
-      - cp build_manager.py /app/share/llm-cpp-toolkit/
       - cp VERSION /app/share/llm-cpp-toolkit/
       - sed -i "s|ROOT = pathlib.Path(__file__).resolve().parent.parent|ROOT = pathlib.Path('/app/share/llm-cpp-toolkit')|" /app/bin/llmtk
       - install -Dm644 flatpak/io.github.gregvw.llm-cpp-toolkit.desktop /app/share/applications/io.github.gregvw.llm-cpp-toolkit.desktop

@@ -15,9 +15,11 @@ rm -rf AppDir || true
 mkdir -p AppDir/usr/bin
 mkdir -p AppDir/usr/share/llm-cpp-toolkit
 
-# Copy the main script
+# Copy the main scripts
 cp ../cli/llmtk AppDir/usr/bin/llmtk
+cp ../build_manager AppDir/usr/bin/build_manager
 chmod +x AppDir/usr/bin/llmtk
+chmod +x AppDir/usr/bin/build_manager
 
 # Point ROOT inside the script to packaged share directory
 sed -i "s|ROOT = pathlib.Path(__file__).resolve().parent.parent|ROOT = pathlib.Path('/usr/share/llm-cpp-toolkit')|" AppDir/usr/bin/llmtk
@@ -26,7 +28,6 @@ sed -i "s|ROOT = pathlib.Path(__file__).resolve().parent.parent|ROOT = pathlib.P
 cp -r ../modules AppDir/usr/share/llm-cpp-toolkit/
 cp -r ../presets AppDir/usr/share/llm-cpp-toolkit/
 cp -r ../manifest AppDir/usr/share/llm-cpp-toolkit/
-cp ../build_manager.py AppDir/usr/share/llm-cpp-toolkit/
 cp ../VERSION AppDir/usr/share/llm-cpp-toolkit/
 
 # Create desktop file

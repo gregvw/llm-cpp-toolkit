@@ -92,7 +92,7 @@ commands:
    also enforces strict standard compilation settings: `-Werror -Wall -Wextra -Wconversions -Wshadow` 
    Use address sanitizer and undefined behavior sanitizer ( `-fsanitize=undefined` and
    `-fsanitize=address`) and sensible `clang-tidy` checks (e.f. core guidelines).
-   See `build_manager.py` as an example to work from. This also makes it possible to filter out 
+   See `build_manager` as an example to work from. This also makes it possible to filter out 
    unnecessary output from the compiler, cmake, ctest, etc that only consume context helping the 
    agent identify problems. 
 

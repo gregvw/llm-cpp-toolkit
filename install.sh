@@ -23,6 +23,7 @@ done
 
 BIN_DIR="$PREFIX/bin"
 WRAPPER="$BIN_DIR/llmtk"
+BUILD_WRAPPER="$BIN_DIR/build_manager"
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
@@ -137,6 +138,14 @@ exec python3 "$ROOT_DIR/cli/llmtk" "$@"
 EOF
   chmod +x "$WRAPPER"
   echo "[info] Installed wrapper at $WRAPPER" >&2
+  cat > "$BUILD_WRAPPER" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT_DIR=${LLMTK_DIR:-"$HOME/.local/share/llm-cpp-toolkit"}
+exec python3 "$ROOT_DIR/build_manager" "$@"
+EOF
+  chmod +x "$BUILD_WRAPPER"
+  echo "[info] Installed build manager at $BUILD_WRAPPER" >&2
   case ":$PATH:" in
     *":$BIN_DIR:"*) ;;
     *) echo "[warn] $BIN_DIR not in PATH. Add: export PATH=\"$BIN_DIR:\$PATH\"" >&2 ;;
@@ -158,4 +167,3 @@ main() {
 }
 
 main "$@"
-

@@ -80,7 +80,7 @@ commands:
       - "exports/repros/report.json"
 ```
 
-4) Build management: a Python script (`build_manager.py`) that configures, builds, and tests with strict flags (`-Werror -Wall -Wextra -Wconversion -Wshadow`), sanitizer support (`-fsanitize=undefined,address`), and sensible clang‑tidy defaults, while producing concise, LLM‑friendly summaries.
+4) Build management: a Python script (`build_manager`) that configures, builds, and tests with strict flags (`-Werror -Wall -Wextra -Wconversion -Wshadow`), sanitizer support (`-fsanitize=undefined,address`), and sensible clang‑tidy defaults, while producing concise, LLM‑friendly summaries.
 
 ## Repo Layout
 

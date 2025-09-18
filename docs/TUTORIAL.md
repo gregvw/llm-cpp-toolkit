@@ -30,7 +30,7 @@ curl -sSL https://raw.githubusercontent.com/gregvw/llm-cpp-toolkit/main/install.
 llmtk --version
 ```
 
-Other distributable options (Nix, Homebrew tap, Docker, etc.) are described in `docs/INSTALLATION.md`. Regardless of how you install, keep the repository handy—we’ll re-use `build_manager.py` in a later step.
+Other distributable options (Nix, Homebrew tap, Docker, etc.) are described in `docs/INSTALLATION.md`. Regardless of how you install, keep the repository handy—you may want to inspect the shipped presets or manifests later.
 
 ## 2. Run the Health Check
 With `llmtk` on your `PATH`, verify the host before creating a project:
@@ -53,14 +53,14 @@ cd buglab
 
 The command writes a CMakeLists.txt aligned with `CMAKE_GUIDANCE.md`, a starter `main.cpp`, and regenerates `exports/capabilities.json` so agents can enumerate supported commands without scraping docs.
 
-## 4. Bring in the Build Manager
-The repository ships a helper (`build_manager.py`) that wraps configure/build/test with concise JSON summaries. Copy it into the project (or create a symlink) so the agent can call it locally:
+## 4. Verify the Build Manager CLI
+The installer drops a companion CLI named `build_manager` into the same prefix as `llmtk`. It wraps configure/build/test with concise JSON summaries engineered for agents. Confirm it’s available, then you can call it from anywhere:
 
 ```bash
-cp /path/to/llm-cpp-toolkit/build_manager.py .
+build_manager --help | head
 ```
 
-Make it executable if you prefer: `chmod +x build_manager.py`.
+You should see the usage banner with `configure`, `build`, `test`, `clean`, and `full` subcommands.
 
 ## 5. Seed Some Bugs
 Replace the generated `main.cpp` with intentionally problematic code. It contains:
@@ -121,7 +121,7 @@ Artifacts you can hand to the agent now include:
 Run a full configure/build cycle with the build manager. The strict warning set will stop the build on the implicit narrowing conversion:
 
 ```bash
-python3 build_manager.py full --no-tests
+build_manager full --no-tests
 ```
 
 Expect a non-zero exit along with a log under `logs/`, e.g. `logs/build_20240830_153011.json`. The JSON captures compiler diagnostics such as:
@@ -140,7 +140,7 @@ Expect a non-zero exit along with a log under `logs/`, e.g. `logs/build_20240830
 **Agent playbook:**
 1. Inspect `logs/build_*json` (or the console summary) to pinpoint the failing diagnostic.
 2. Propose a minimal patch—e.g. change `scale` to return `double`, or switch to `std::lround` with a checked cast.
-3. Have the user apply the patch and rerun `python3 build_manager.py full --no-tests` until the compile stage succeeds.
+3. Have the user apply the patch and rerun `build_manager full --no-tests` until the compile stage succeeds.
 
 Once the build passes, the manager prints `✅ Build successful`. Sanitized targets still haven’t run—next!
 
@@ -184,7 +184,7 @@ The command emits JSON reports under `exports/reports/` for clang-tidy, IWYU, an
 - Capture a final build/test transcript for provenance:
 
   ```bash
-  python3 build_manager.py full
+  build_manager full
   cmake --build build --target buglab_tsan    # optional: thread sanitizer
   llmtk context export --build build          # refresh context after fixes
   llmtk analyze .

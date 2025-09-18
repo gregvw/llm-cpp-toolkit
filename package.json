@@ -4,10 +4,11 @@
   "description": "A comprehensive toolkit for working with LLM C++ implementations",
   "main": "cli/llmtk",
   "bin": {
-    "llmtk": "./cli/llmtk"
+    "llmtk": "./cli/llmtk",
+    "build_manager": "./build_manager"
   },
   "scripts": {
-    "postinstall": "chmod +x ./cli/llmtk"
+    "postinstall": "chmod +x ./cli/llmtk ./build_manager"
   },
   "repository": {
     "type": "git",
@@ -41,7 +42,7 @@
     "modules/",
     "presets/",
     "manifest/",
-    "build_manager.py",
+    "build_manager",
     "VERSION",
     "LICENSE",
     "README.md"

@@ -30,7 +30,7 @@ parts:
     source-type: local
     organize:
       cli/llmtk: bin/llmtk
-      build_manager.py: lib/llm-cpp-toolkit/build_manager.py
+      build_manager: bin/build_manager
       modules/: lib/llm-cpp-toolkit/modules/
       presets/: lib/llm-cpp-toolkit/presets/
       manifest/: lib/llm-cpp-toolkit/manifest/
@@ -42,7 +42,8 @@ parts:
       - python3-distutils
     override-build: |
       craftctl default
-      # Make the main script executable
+      # Make the main scripts executable
       chmod +x $CRAFT_PART_INSTALL/bin/llmtk
+      chmod +x $CRAFT_PART_INSTALL/bin/build_manager
       # Update the script to use the correct paths
       sed -i "s|ROOT = pathlib.Path(__file__).resolve().parent.parent|ROOT = pathlib.Path('/snap/llm-cpp-toolkit/current/lib/llm-cpp-toolkit')|" $CRAFT_PART_INSTALL/bin/llmtk

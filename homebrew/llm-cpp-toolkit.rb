@@ -11,13 +11,13 @@ class LlmCppToolkit < Formula
   def install
     # Install the main CLI script
     bin.install "cli/llmtk"
+    bin.install "build_manager"
 
     # Create lib directory for supporting files
     lib_dir = libexec/"lib"
     lib_dir.mkpath
 
     # Install supporting Python files
-    lib_dir.install "build_manager.py"
     lib_dir.install "modules"
     lib_dir.install "presets"
     lib_dir.install "manifest"
