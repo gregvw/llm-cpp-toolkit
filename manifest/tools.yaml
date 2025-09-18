@@ -194,7 +194,7 @@ tools:
     min_version: ">=0.20"
     provides: ["include-analysis"]
     install:
-      apt: ["iwyu", "include-what-you-use"]
+      apt: ["iwyu"]
       dnf: ["include-what-you-use"]
       pacman: ["include-what-you-use"]
       brew: ["include-what-you-use"]
@@ -202,6 +202,8 @@ tools:
     local_install:
       github_repo: "include-what-you-use/include-what-you-use"
       build_method: "cmake"
+      dependencies:
+        apt: ["clang-18-dev", "libclang-18-dev", "llvm-18-dev", "cmake", "python3"]
     check:
       cmd: ["include-what-you-use", "--version"]
   iwyu-tool:
@@ -209,13 +211,19 @@ tools:
     min_version: ">=0.20"
     provides: ["include-analysis"]
     install:
-      apt: ["iwyu-tool"]
+      apt: ["iwyu"]  # iwyu-tool comes with iwyu package
       dnf: ["include-what-you-use"]
       pacman: ["include-what-you-use"]
       brew: ["include-what-you-use"]
       nix: ["include-what-you-use"]
+    local_install:
+      github_repo: "include-what-you-use/include-what-you-use"
+      build_method: "cmake"
+      binary_path: "iwyu_tool.py"
+      dependencies:
+        apt: ["clang-18-dev", "libclang-18-dev", "llvm-18-dev", "cmake", "python3"]
     check:
-      cmd: ["iwyu-tool", "--version"]
+      cmd: ["iwyu_tool.py", "--help"]
   cppcheck:
     role: recommended
     min_version: ">=2.9"
@@ -279,6 +287,7 @@ tools:
       github_repo: "XAMPPRocky/tokei"
       release_pattern: "tokei-x86_64-unknown-linux-gnu.tar.gz"
       binary_path: "tokei"
+      version_tag: "v12.1.2"  # Use stable version with binary releases
     check:
       cmd: ["tokei", "--version"]
   hyperfine:

@@ -654,6 +654,10 @@ def install_from_github(tool_name, config, local_bin):
         if "checksums" in local_config:
             env["LLMTK_CHECKSUMS"] = json.dumps(local_config["checksums"])
 
+        # Add version tag if specified
+        if "version_tag" in local_config:
+            env["LLMTK_VERSION_TAG"] = local_config["version_tag"]
+
         result = subprocess.run([str(enhanced_installer), tool_name], env=env, text=True, capture_output=True)
 
         # Show stderr output for user feedback

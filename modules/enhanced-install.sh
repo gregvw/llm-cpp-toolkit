@@ -456,9 +456,68 @@ install_generic_from_manifest() {
     log "Pattern: $pattern"
     log "Binary path: $binary_path"
 
-    # For now, return false to indicate not implemented
-    # This can be extended for other tools as needed
-    return 1
+    # Use version from environment or get latest release
+    local version_tag="${LLMTK_VERSION_TAG:-}"
+    if [[ -z "$version_tag" ]]; then
+        version_tag=$(get_github_latest_tag "$repo")
+        if [[ -z "$version_tag" ]]; then
+            log "Failed to get release version for $repo"
+            return 1
+        fi
+    fi
+
+    log "Using version: $version_tag"
+
+    # Download release asset
+    local download_url="https://github.com/$repo/releases/download/$version_tag/$pattern"
+    local tmp_dir="$LOCAL_TMP/$tool_name"
+    local archive="$tmp_dir/$pattern"
+
+    mkdir -p "$tmp_dir"
+    log "Downloading $download_url"
+
+    if ! curl -fsSL "$download_url" -o "$archive"; then
+        log "Failed to download $tool_name release"
+        return 1
+    fi
+
+    # Extract archive
+    local extract_dir="$tmp_dir/extracted"
+    mkdir -p "$extract_dir"
+
+    if [[ "$pattern" == *.tar.gz ]]; then
+        if ! tar -xzf "$archive" -C "$extract_dir"; then
+            log "Failed to extract $archive"
+            return 1
+        fi
+    elif [[ "$pattern" == *.zip ]]; then
+        if ! unzip -q "$archive" -d "$extract_dir"; then
+            log "Failed to extract $archive"
+            return 1
+        fi
+    else
+        log "Unsupported archive format: $pattern"
+        return 1
+    fi
+
+    # Find and install binary
+    local binary_file
+    binary_file=$(find "$extract_dir" -name "$binary_path" -type f | head -1)
+
+    if [[ -z "$binary_file" ]]; then
+        # Try looking for the tool name if binary_path doesn't work
+        binary_file=$(find "$extract_dir" -name "$tool_name" -type f | head -1)
+    fi
+
+    if [[ -n "$binary_file" ]]; then
+        cp "$binary_file" "$LOCAL_BIN/"
+        chmod +x "$LOCAL_BIN/$(basename "$binary_file")"
+        log "✓ $tool_name installed successfully to $LOCAL_BIN/$(basename "$binary_file")"
+        return 0
+    else
+        log "Binary not found in archive"
+        return 1
+    fi
 }
 
 # Handle command line arguments
