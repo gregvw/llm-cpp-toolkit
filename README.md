@@ -40,6 +40,20 @@ llmtk capabilities
 llmtk reduce test.cpp "gcc test.cpp && ./a.out"
 ```
 
+### Project Initialization Options
+```bash
+# Create projects with custom settings
+llmtk init myproject --std=20 --cmake-min=3.25 --preset=library
+llmtk init myproject --pic --no-sanitizers --preset=minimal
+
+# Available options:
+--std {17,20,23,26}              # C++ standard version
+--cmake-min VERSION              # Minimum CMake version
+--pic                           # Enable position independent code
+--no-sanitizers                 # Disable sanitizer variants
+--preset {minimal,full,library} # Project template type
+```
+
 When adopting an existing workspace, `llmtk init --existing` also copies any top-level `compile_commands.json` into
 `exports/compile_commands.json` so downstream commands and agents can consume it immediately. Every init run also
 generates `exports/capabilities.json`, a machine-readable rollup of the manifest-defined tools and commands. The
@@ -51,10 +65,39 @@ entire `exports/` directory is ignored by default via `.gitignore`.
 - **🧱 Project Bootstrap/Adoption** - Generate starter scaffolding or adopt existing CMake projects with guidance
 - **📦 Context Export** - Generate compilation databases and CMake introspection data
 - **🔬 Code Analysis** - Run clang-tidy, include-what-you-use, and cppcheck with JSON output
+- **🧪 Advanced Sanitizer Support** - Multiple sanitizer variants with proper isolation
 - **🪚 Test Case Reduction** - Minimize failing code with cvise integration
 - **🤖 LLM-Optimized** - JSON outputs designed for AI agent consumption
 - **📋 Manifest-Driven** - Tool versions and commands defined in YAML manifests
 - **🗂️ Capabilities Summary** - `exports/capabilities.json` captures the toolkit's API surface for agents
+
+## 🧪 Sanitizer Variants
+
+Projects created with `llmtk init` include sophisticated sanitizer support with multiple isolated variants:
+
+```bash
+# Build different sanitizer combinations
+cmake --build build --target myapp_asan_ubsan  # AddressSanitizer + UBSan
+cmake --build build --target myapp_tsan        # ThreadSanitizer
+cmake --build build --target myapp             # Regular build
+
+# For library projects, both library and example get variants
+cmake --build build --target mylib_asan_ubsan
+cmake --build build --target mylib_example_asan_ubsan
+```
+
+### Sanitizer Features:
+- **🎯 Isolated Targets**: Each sanitizer combination gets its own target
+- **🔄 No Mutual Exclusion**: Can build AddressSanitizer and ThreadSanitizer variants simultaneously
+- **📁 Shared Dependencies**: Sanitized variants mirror all include paths and compile options
+- **⚡ Smart Building**: Use `EXCLUDE_FROM_ALL` to avoid building variants by default
+- **🏗️ Complete Coverage**: Works for both executables and libraries
+
+### Preset-Specific Behavior:
+- **`--preset=full`**: Includes sanitized variants of main executable
+- **`--preset=library`**: Includes sanitized variants of both library and example
+- **`--preset=minimal`**: No sanitizer complexity (basic executable only)
+- **`--no-sanitizers`**: Completely disables all sanitizer setup
 
 ## 📁 Output Structure
 
@@ -66,6 +109,7 @@ exports/
 ├── capabilities.json        # Toolkit commands/tools summary for agents
 ├── context.json             # Project context summary
 ├── compile_commands.json    # Compilation database
+├── init-existing.json       # Project adoption report (--existing only)
 ├── cmake-file-api/         # CMake introspection data
 ├── reports/                # Analysis reports
 │   ├── clang-tidy.json
@@ -75,6 +119,8 @@ exports/
     ├── minimized.cpp
     └── report.json
 ```
+
+The `capabilities.json` file is automatically generated during `llmtk init` and `llmtk capabilities` commands, providing a machine-readable summary of all available tools and commands for AI agents to consume.
 
 ## 🛠️ Supported Tools
 
