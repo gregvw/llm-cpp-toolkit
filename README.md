@@ -33,12 +33,17 @@ llmtk context export
 # Analyze code with multiple tools
 llmtk analyze src/ include/
 
+# Regenerate machine-readable capabilities summary
+llmtk capabilities
+
 # Reduce a failing test case
 llmtk reduce test.cpp "gcc test.cpp && ./a.out"
 ```
 
 When adopting an existing workspace, `llmtk init --existing` also copies any top-level `compile_commands.json` into
-`exports/compile_commands.json` so downstream commands and agents can consume it immediately.
+`exports/compile_commands.json` so downstream commands and agents can consume it immediately. Every init run also
+generates `exports/capabilities.json`, a machine-readable rollup of the manifest-defined tools and commands. The
+entire `exports/` directory is ignored by default via `.gitignore`.
 
 ## 🎯 Key Features
 
@@ -49,6 +54,7 @@ When adopting an existing workspace, `llmtk init --existing` also copies any top
 - **🪚 Test Case Reduction** - Minimize failing code with cvise integration
 - **🤖 LLM-Optimized** - JSON outputs designed for AI agent consumption
 - **📋 Manifest-Driven** - Tool versions and commands defined in YAML manifests
+- **🗂️ Capabilities Summary** - `exports/capabilities.json` captures the toolkit's API surface for agents
 
 ## 📁 Output Structure
 
@@ -57,6 +63,7 @@ All artifacts are written to the `exports/` directory:
 ```
 exports/
 ├── doctor.json              # System dependency report
+├── capabilities.json        # Toolkit commands/tools summary for agents
 ├── context.json             # Project context summary
 ├── compile_commands.json    # Compilation database
 ├── cmake-file-api/         # CMake introspection data

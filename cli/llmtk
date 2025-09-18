@@ -202,10 +202,66 @@ def generate_reference_md(out_path: pathlib.Path):
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text("\n".join(lines) + "\n")
 
+
+
+def generate_capabilities_json(out_path: pathlib.Path):
+    """Emit a machine-readable capabilities summary for agents."""
+    tools_manifest = ROOT/"manifest"/"tools.yaml"
+    commands_manifest = ROOT/"manifest"/"commands.yaml"
+    tools = load_yaml(tools_manifest) or {}
+    commands = load_yaml(commands_manifest) or {}
+
+    data = {
+        "_meta": {
+            "generated_at": datetime.datetime.now(datetime.UTC).isoformat(),
+            "toolkit_version": get_version(),
+            "tools_manifest": str(tools_manifest),
+            "commands_manifest": str(commands_manifest),
+        },
+        "tools": {},
+        "commands": {},
+    }
+
+    tools_section = tools.get("tools") if isinstance(tools, dict) else None
+    if isinstance(tools_section, dict):
+        for name, entry in tools_section.items():
+            entry = entry or {}
+            data["tools"][name] = {
+                "version": entry.get("version"),
+                "min_version": entry.get("min_version"),
+                "provides": entry.get("provides") or [],
+                "role": entry.get("role", "optional"),
+                "install": entry.get("install") or {},
+                "check": entry.get("check") or {},
+                "fallbacks": entry.get("fallbacks") or [],
+                "local_install": entry.get("local_install") or None,
+            }
+
+    commands_section = commands.get("commands") if isinstance(commands, dict) else None
+    if isinstance(commands_section, dict):
+        for name, entry in commands_section.items():
+            entry = entry or {}
+            data["commands"][name] = {
+                "description": entry.get("description"),
+                "args": entry.get("args") or [],
+                "runs": entry.get("runs") or [],
+                "outputs": entry.get("outputs") or [],
+                "json_summary": entry.get("json_summary"),
+                "examples": entry.get("examples") or [],
+            }
+
+    write_json(out_path, data)
+    return out_path
+
+
 def cmd_docs(_):
     out = ROOT/"docs"/"REFERENCE.md"
     generate_reference_md(out)
     print(str(out))
+
+def cmd_capabilities(_):
+    path = generate_capabilities_json(EXPORTS/"capabilities.json")
+    print(str(path))
 
 def adopt_existing_project(project_dir: pathlib.Path, project_name: str) -> int:
     """Generate an adoption report for an existing project without mutating sources."""
@@ -271,8 +327,10 @@ def adopt_existing_project(project_dir: pathlib.Path, project_name: str) -> int:
 
     out = EXPORTS / "init-existing.json"
     write_json(out, adoption_summary)
+    capabilities_path = generate_capabilities_json(EXPORTS/"capabilities.json")
 
     print("📄 Adoption summary written to", out)
+    print("📚 Capabilities manifest available at", capabilities_path)
     if exported_compile_db:
         print(f"📦 Copied existing compile_commands.json to {exported_compile_db}")
     elif compile_db_copy_error:
@@ -668,6 +726,9 @@ int main() {{
     print(f"   • cmake -B build -G Ninja  # Configure build")
     print(f"   • cmake --build build      # Build project")
     print(f"   • cmake --build build --target lint  # Run LLM-optimized linting")
+
+    capabilities_path = generate_capabilities_json(EXPORTS/"capabilities.json")
+    print(f"\n📚 Capabilities manifest available at {capabilities_path}")
 
     return 0
 
@@ -1438,6 +1499,7 @@ def main():
     rd = sub.add_parser("reduce"); rd.add_argument("input"); rd.add_argument("test_cmd"); rd.set_defaults(fn=cmd_reduce)
 
     sub.add_parser("docs").set_defaults(fn=cmd_docs)
+    sub.add_parser("capabilities").set_defaults(fn=cmd_capabilities)
 
     init_parser = sub.add_parser("init", help="Initialize LLM-optimized C++ project")
     init_parser.add_argument("name", nargs="?", help="Project name (uses current directory if not specified)")

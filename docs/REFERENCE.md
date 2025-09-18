@@ -1,11 +1,11 @@
 # Toolkit Reference
 
-Generated from manifests on 2025-09-18T04:25:32.112485+00:00.
+Generated from manifests on 2025-09-18T20:39:32.569108+00:00.
 
 ## Tools
 - bat
   - provides: pager
-  - check: `bat --version`
+  - check: `batcat --version`
 - bear
   - provides: compile-db
   - check: `bear --version`
@@ -47,10 +47,13 @@ Generated from manifests on 2025-09-18T04:25:32.112485+00:00.
   - check: `eza --version`
 - fd
   - provides: file-find
-  - check: `fd --version`
+  - check: `fdfind --version`
 - fzf
   - provides: fuzzy-find
   - check: `fzf --version`
+- git
+  - provides: version-control
+  - check: `git --version`
 - httpie
   - provides: http-client
   - check: `http --version`
@@ -62,7 +65,7 @@ Generated from manifests on 2025-09-18T04:25:32.112485+00:00.
   - check: `include-what-you-use --version`
 - iwyu-tool
   - provides: include-analysis
-  - check: `iwyu-tool --version`
+  - check: `iwyu_tool --help`
 - jq
   - provides: json
   - check: `jq --version`
@@ -181,6 +184,22 @@ Generated from manifests on 2025-09-18T04:25:32.112485+00:00.
           ]
         }
       ]
+    }
+    ```
+- capabilities
+  - description: Emit machine-readable toolkit capabilities summary.
+  - output: exports/capabilities.json
+    schema:
+    ```json
+    {
+      "_meta": {
+        "generated_at": "string",
+        "toolkit_version": "string",
+        "tools_manifest": "string",
+        "commands_manifest": "string"
+      },
+      "tools": "object",
+      "commands": "object"
     }
     ```
 - context-export

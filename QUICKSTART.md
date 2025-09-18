@@ -71,7 +71,8 @@ llmtk init my-cpp-project
 llmtk init --existing path/to/project
 ```
 This drops a `CMakeLists.txt` template for new projects or produces an adoption report for existing ones, copying any
-existing `compile_commands.json` into `exports/` for immediate LLM use.
+existing `compile_commands.json` into `exports/` for immediate LLM use and emitting `exports/capabilities.json` so
+agents can discover the toolkit automatically.
 
 ### 3. Generate Context for Your Project
 ```bash
@@ -85,6 +86,12 @@ Creates `exports/compile_commands.json` and CMake file API data that LLMs need.
 llmtk analyze
 ```
 Runs clang-tidy, include-what-you-use, and cppcheck, outputting JSON reports in `exports/reports/`.
+
+### 5. Refresh Capabilities Summary (optional)
+```bash
+llmtk capabilities
+```
+Regenerates `exports/capabilities.json` if manifests or tooling change.
 
 ## 📁 Project Structure Expected
 

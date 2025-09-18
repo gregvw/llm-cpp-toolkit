@@ -94,3 +94,16 @@ commands:
           cvise_available: bool
           exit_code: int|null
           input: string
+
+  capabilities:
+    description: Emit machine-readable toolkit capabilities summary.
+    outputs:
+      - path: "exports/capabilities.json"
+        schema:
+          _meta:
+            generated_at: string
+            toolkit_version: string
+            tools_manifest: string
+            commands_manifest: string
+          tools: object
+          commands: object

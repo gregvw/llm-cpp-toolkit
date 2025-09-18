@@ -272,11 +272,12 @@ Short answer: **yes—build this as a CLI-first toolkit** and let Codex/CLI agen
 * A tiny wrapper, e.g. `llmtk`, with subcommands:
 
   * `llmtk install` – installs deps from a manifest.
-  * `llmtk init` – scaffolds new projects or emits adoption reports for existing ones (copying existing compile DBs into exports).
+  * `llmtk init` – scaffolds new projects or emits adoption reports for existing ones (copying existing compile DBs into exports and refreshing `exports/capabilities.json`).
   * `llmtk doctor` – prints a machine-readable health report.
   * `llmtk context export` – emits `compile_commands.json` + CMake File API JSON.
   * `llmtk analyze` – runs clang-tidy/IWYU/cppcheck → JSON reports.
   * `llmtk reduce` – cvise wrapper to minimize repros.
+  * `llmtk capabilities` – regenerate the manifest-driven `exports/capabilities.json` summary.
 * **Outputs** always land under `exports/` and include at least one JSON file per command.
 * A **manifest** (YAML) drives installs, versions, and docs generation.
 * Optional adapters for agents/editors later (but the CLI is the source of truth).
