@@ -143,13 +143,43 @@ def cmd_docs(_):
     generate_reference_md(out)
     print(str(out))
 
-def cmd_doctor(_):
-    # Keep in sync with manifest/tools.yaml (no YAML dep here)
-    tools = [
-        "cmake","ninja","clangd","clang-tidy","clang-format",
-        "include-what-you-use","cppcheck","rg","fd","jq","yq","bear","ccache","mold"
-    ]
+def cmd_doctor(args):
+    # Load from manifest to get complete tool list
+    tools_manifest = ROOT / "manifest" / "tools.yaml"
+    if tools_manifest.exists():
+        tools_config = load_yaml(tools_manifest)
+        if tools_config and "tools" in tools_config:
+            # Get all tools from manifest, prioritizing core and recommended
+            all_tools = tools_config["tools"]
+            tools = []
+            for name, config in all_tools.items():
+                role = config.get("role", "optional")
+                if role in ["core", "recommended"]:
+                    tools.append(name)
+            # Add any remaining tools
+            for name in all_tools.keys():
+                if name not in tools:
+                    tools.append(name)
+        else:
+            # Fallback list
+            tools = [
+                "cmake","ninja","clangd","clang-tidy","clang-format",
+                "include-what-you-use","cppcheck","rg","fd","jq","yq","bear","ccache","mold"
+            ]
+    else:
+        # Fallback list
+        tools = [
+            "cmake","ninja","clangd","clang-tidy","clang-format",
+            "include-what-you-use","cppcheck","rg","fd","jq","yq","bear","ccache","mold"
+        ]
+
     report = {"_meta": {"generated_at": datetime.datetime.now(datetime.UTC).isoformat()}}
+
+    found_tools = []
+    missing_core = []
+    missing_recommended = []
+    missing_optional = []
+
     for t in tools:
         path = shutil.which(t)
         info = {"found": bool(path), "path": path or None}
@@ -159,9 +189,59 @@ def cmd_doctor(_):
                 info["version_line"] = out[0] if out else None
             except Exception:
                 info["version_line"] = None
+            found_tools.append(t)
+        else:
+            # Categorize missing tools by role
+            if tools_manifest.exists() and tools_config and "tools" in tools_config:
+                tool_config = tools_config["tools"].get(t, {})
+                role = tool_config.get("role", "optional")
+                if role == "core":
+                    missing_core.append(t)
+                elif role == "recommended":
+                    missing_recommended.append(t)
+                else:
+                    missing_optional.append(t)
+            else:
+                missing_core.append(t)  # Default to core for fallback
         report[t] = info
+
+    # Add summary to report
+    report["_summary"] = {
+        "total_tools": len(tools),
+        "found": len(found_tools),
+        "missing": len(tools) - len(found_tools),
+        "missing_core": missing_core,
+        "missing_recommended": missing_recommended,
+        "missing_optional": missing_optional
+    }
+
     out = EXPORTS / "doctor.json"
     write_json(out, report)
+
+    # Print user-friendly summary if not being called from install
+    if not hasattr(args, '_from_install'):
+        print()
+        print("🏥 HEALTH CHECK SUMMARY")
+        print("=" * 40)
+        print(f"✅ Found: {len(found_tools)}/{len(tools)} tools")
+
+        if missing_core:
+            print(f"\n❌ Missing core tools ({len(missing_core)}):")
+            for tool in missing_core:
+                print(f"   • {tool}")
+
+        if missing_recommended:
+            print(f"\n⚠️ Missing recommended tools ({len(missing_recommended)}):")
+            for tool in missing_recommended:
+                print(f"   • {tool}")
+
+        if missing_core or missing_recommended:
+            print(f"\n💡 RECOMMENDED ACTIONS:")
+            print(f"   • Run 'llmtk install' to install missing tools")
+            print(f"   • Use 'llmtk install --local' for non-sudo installation")
+
+        print(f"\n📄 Detailed report: {out}")
+
     print(str(out))
 
 def cmd_context_export(args):
@@ -461,7 +541,7 @@ def install_tool_with_package_manager(tool_name, tool_config, pm):
     if not packages:
         return False
 
-    print(f"Installing {tool_name} via {pm}: {packages}")
+    print(f"  📦 Installing {tool_name} via {pm}...")
 
     # Build install command based on package manager
     if pm == "apt":
@@ -479,51 +559,52 @@ def install_tool_with_package_manager(tool_name, tool_config, pm):
 
     try:
         if pm == "apt":
-            # Handle apt's compound command - don't capture output for sudo commands
-            print("Running: sudo apt-get update")
-            update_result = subprocess.run(["sudo", "apt-get", "update"], text=True)
+            # Handle apt's compound command - suppress normal output but show errors
+            update_result = subprocess.run(["sudo", "apt-get", "update"],
+                                         text=True, capture_output=True)
             if update_result.returncode != 0:
-                print("Warning: apt-get update failed, but continuing with install attempt...")
+                # Only show if it's a real error, not just GPG warnings
+                if "E:" in update_result.stderr and "NO_PUBKEY" not in update_result.stderr:
+                    print(f"    ⚠️ apt-get update warning (continuing): {update_result.stderr.strip()}")
 
-            print(f"Running: sudo apt-get install -y {' '.join(packages)}")
-            result = subprocess.run(["sudo", "apt-get", "install", "-y"] + packages, check=True, text=True)
+            result = subprocess.run(["sudo", "apt-get", "install", "-y"] + packages,
+                                  check=True, text=True, capture_output=True)
         elif pm in ["dnf", "pacman"]:
-            # Don't capture output for sudo commands
-            print(f"Running: {' '.join(cmd)}")
-            result = subprocess.run(cmd, check=True, text=True)
-        else:
-            # For brew/nix, these don't need sudo so we can still capture output for better error reporting
-            print(f"Running: {' '.join(cmd)}")
             result = subprocess.run(cmd, check=True, text=True, capture_output=True)
+        else:
+            result = subprocess.run(cmd, check=True, text=True, capture_output=True)
+
+        print(f"    ✅ {tool_name} installed successfully")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"Failed to install {tool_name} via {pm}")
-        print(f"Command failed with return code: {e.returncode}")
-        if hasattr(e, 'stderr') and e.stderr:
-            print(f"Error output: {e.stderr}")
-        elif hasattr(e, 'stdout') and e.stdout:
-            print(f"Command output: {e.stdout}")
+        print(f"    ❌ Failed to install {tool_name}")
 
-        # Provide helpful suggestions based on error type
-        if pm == "apt" and e.returncode == 100:
-            print("This often indicates repository or GPG key issues.")
-            print("Try fixing with: sudo apt-get update --allow-unauthenticated")
-            print("Or remove problematic repositories from /etc/apt/sources.list.d/")
+        # Show specific error for debugging
+        if e.stderr and e.stderr.strip():
+            # Extract key error messages, skip verbose output
+            error_lines = [line.strip() for line in e.stderr.split('\n')
+                          if line.strip() and ('E:' in line or 'Error:' in line or 'unable to locate' in line.lower())]
+            if error_lines:
+                print(f"       Error: {error_lines[0]}")
 
-        manual_cmd = ' '.join(cmd) if pm not in ['apt'] else f"sudo apt-get update && sudo apt-get install -y {' '.join(packages)}"
-        print(f"You can try installing manually with: {manual_cmd}")
         return False
 
 def install_tool_locally(tool_name, tool_config, local_bin):
     """Install a tool locally"""
     if "local_install" not in tool_config:
-        print(f"No local install method for {tool_name}")
+        print(f"    ❌ No local install method for {tool_name}")
         return False
 
+    print(f"  🔧 Installing {tool_name} locally...")
     local_config = tool_config["local_install"]
 
     if "github_repo" in local_config:
-        return install_from_github(tool_name, tool_config, local_bin)
+        success = install_from_github(tool_name, tool_config, local_bin)
+        if success:
+            print(f"    ✅ {tool_name} installed locally")
+        else:
+            print(f"    ❌ Failed to install {tool_name} locally")
+        return success
 
     return False
 
@@ -628,52 +709,97 @@ def cmd_install(args):
         cmd_doctor(None)
         return 0
 
-    print(f"Installing missing tools: {', '.join(tools_to_install)}")
-    print(f"Method: {'local' if use_local else f'package manager ({pm})'}")
+    print(f"🚀 Installing {len(tools_to_install)} missing tools...")
+    print(f"   Method: {'local' if use_local else f'package manager ({pm})'}")
+    print()
 
-    success_count = 0
+    installed = []
+    failed = []
+    skipped = []
+
     for tool_name in tools_to_install:
         if tool_name not in tools_config["tools"]:
-            print(f"Warning: {tool_name} not found in manifest")
+            print(f"⚠️ {tool_name} not found in manifest, skipping")
+            skipped.append(tool_name)
             continue
 
         tool_config = tools_config["tools"][tool_name]
 
         if use_local:
             if install_tool_locally(tool_name, tool_config, local_bin):
-                success_count += 1
+                installed.append(tool_name)
             else:
                 # Fall back to simple installer for specific tools
                 if tool_name in ["cppcheck", "include-what-you-use"]:
                     script = MODULES / "simple-install.sh"
                     if script.exists():
-                        print(f"Using fallback installer for {tool_name}")
+                        print(f"  🔄 Using fallback installer for {tool_name}")
                         result = run([str(script)], check=False)
                         if result.returncode == 0:
-                            success_count += 1
+                            installed.append(tool_name)
+                        else:
+                            failed.append(tool_name)
+                    else:
+                        failed.append(tool_name)
+                else:
+                    failed.append(tool_name)
         else:
             if install_tool_with_package_manager(tool_name, tool_config, pm):
-                success_count += 1
+                installed.append(tool_name)
             else:
-                print(f"Falling back to local install for {tool_name}")
+                print(f"  🔄 Falling back to local install for {tool_name}")
                 if install_tool_locally(tool_name, tool_config, local_bin):
-                    success_count += 1
+                    installed.append(tool_name)
+                else:
+                    failed.append(tool_name)
 
     # Update PATH for doctor check
     if local_bin.exists():
         old_path = os.environ.get("PATH", "")
         os.environ["PATH"] = f"{local_bin}:{old_path}"
 
-    print(f"\nInstallation complete: {success_count}/{len(tools_to_install)} tools installed")
+    # Print comprehensive summary
+    print()
+    print("=" * 60)
+    print("📊 INSTALLATION SUMMARY")
+    print("=" * 60)
+
+    if installed:
+        print(f"✅ Successfully installed ({len(installed)}):")
+        for tool in installed:
+            print(f"   • {tool}")
+
+    if failed:
+        print(f"\n❌ Failed to install ({len(failed)}):")
+        for tool in failed:
+            print(f"   • {tool}")
+
+    if skipped:
+        print(f"\n⚠️ Skipped ({len(skipped)}):")
+        for tool in skipped:
+            print(f"   • {tool}")
+
+    print(f"\n📈 Total: {len(installed)}/{len(tools_to_install)} tools successfully installed")
 
     # Generate updated doctor report
-    cmd_doctor(None)
+    print("\n🔍 Running health check...")
+    # Create a dummy args object to signal we're being called from install
+    class DummyArgs:
+        _from_install = True
+    cmd_doctor(DummyArgs())
 
-    if use_local or success_count < len(tools_to_install):
-        print(f"\nLocal tools in: {local_bin}")
-        print(f"Add to your shell: export PATH=\"{local_bin}:$PATH\"")
+    # Show next steps
+    if failed:
+        print("\n🛠️ NEXT STEPS:")
+        print("   • Run 'llmtk install --local' to try local installation")
+        print("   • Check 'llmtk doctor' output for specific issues")
+        print("   • Install failed tools manually")
 
-    return 0 if success_count > 0 else 1
+    if use_local or any(local_bin.glob("*")):
+        print(f"\n📁 Local tools directory: {local_bin}")
+        print(f"   Add to your shell: export PATH=\"{local_bin}:$PATH\"")
+
+    return 0 if installed else 1
 
 def main():
     ap = argparse.ArgumentParser(prog="llmtk", description="LLM-friendly C++/CMake toolkit")

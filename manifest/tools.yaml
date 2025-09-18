@@ -1,24 +1,6 @@
 schema: 1
 tools:
   # Core
-  cmake:
-    role: core
-    min_version: ">=3.22"
-    provides: ["build", "configure"]
-    check:
-      cmd: ["cmake", "--version"]
-  ninja:
-    role: core
-    min_version: ">=1.10"
-    provides: ["build-backend"]
-    check:
-      cmd: ["ninja", "--version"]
-  bear:
-    role: core
-    min_version: ">=3"
-    provides: ["compile-db"]
-    check:
-      cmd: ["bear", "--version"]
   clangd:
     role: core
     min_version: ">=17"
@@ -31,12 +13,6 @@ tools:
       nix: ["clang-tools_18", "clang-tools"]
     check:
       cmd: ["clangd", "--version"]
-  clang-format:
-    role: core
-    min_version: ">=17"
-    provides: ["format"]
-    check:
-      cmd: ["clang-format", "--version"]
   clang-tidy:
     role: core
     min_version: ">=17"
@@ -53,6 +29,12 @@ tools:
     role: core
     min_version: ">=13"
     provides: ["search"]
+    install:
+      apt: ["ripgrep"]
+      dnf: ["ripgrep"]
+      pacman: ["ripgrep"]
+      brew: ["ripgrep"]
+      nix: ["ripgrep"]
     check:
       cmd: ["rg", "--version"]
   fd:
@@ -71,18 +53,36 @@ tools:
     role: core
     min_version: ">=1.6"
     provides: ["json"]
+    install:
+      apt: ["jq"]
+      dnf: ["jq"]
+      pacman: ["jq"]
+      brew: ["jq"]
+      nix: ["jq"]
     check:
       cmd: ["jq", "--version"]
   yq:
     role: core
     min_version: ">=4"
     provides: ["yaml"]
+    install:
+      apt: ["yq"]
+      dnf: ["yq"]
+      pacman: ["yq"]
+      brew: ["yq"]
+      nix: ["yq"]
     check:
       cmd: ["yq", "--version"]
   ccache:
     role: core
     min_version: ">=4"
     provides: ["cache"]
+    install:
+      apt: ["ccache"]
+      dnf: ["ccache"]
+      pacman: ["ccache"]
+      brew: ["ccache"]
+      nix: ["ccache"]
     fallbacks: ["sccache"]
     check:
       cmd: ["ccache", "--version"]
@@ -99,6 +99,94 @@ tools:
     fallbacks: ["lld"]
     check:
       cmd: ["mold", "--version"]
+
+  # Core build tools
+  cmake:
+    role: core
+    min_version: ">=3.22"
+    provides: ["build", "configure"]
+    install:
+      apt: ["cmake"]
+      dnf: ["cmake"]
+      pacman: ["cmake"]
+      brew: ["cmake"]
+      nix: ["cmake"]
+    check:
+      cmd: ["cmake", "--version"]
+  ninja:
+    role: core
+    min_version: ">=1.10"
+    provides: ["build-backend"]
+    install:
+      apt: ["ninja-build"]
+      dnf: ["ninja-build"]
+      pacman: ["ninja"]
+      brew: ["ninja"]
+      nix: ["ninja"]
+    check:
+      cmd: ["ninja", "--version"]
+  bear:
+    role: core
+    min_version: ">=3"
+    provides: ["compile-db"]
+    install:
+      apt: ["bear"]
+      dnf: ["bear"]
+      pacman: ["bear"]
+      brew: ["bear"]
+      nix: ["bear"]
+    check:
+      cmd: ["bear", "--version"]
+  clang-format:
+    role: core
+    min_version: ">=17"
+    provides: ["format"]
+    install:
+      apt: ["clang-format-18", "clang-format-17", "clang-format"]
+      dnf: ["clang-tools-extra"]
+      pacman: ["clang"]
+      brew: ["llvm@18", "llvm"]
+      nix: ["clang-tools_18", "clang-tools"]
+    check:
+      cmd: ["clang-format", "--version"]
+
+  # Additional recommended tools from AGENTS.md
+  fzf:
+    role: recommended
+    min_version: ">=0.35"
+    provides: ["fuzzy-find"]
+    install:
+      apt: ["fzf"]
+      dnf: ["fzf"]
+      pacman: ["fzf"]
+      brew: ["fzf"]
+      nix: ["fzf"]
+    check:
+      cmd: ["fzf", "--version"]
+  tree:
+    role: recommended
+    min_version: ">=1.8"
+    provides: ["tree"]
+    install:
+      apt: ["tree"]
+      dnf: ["tree"]
+      pacman: ["tree"]
+      brew: ["tree"]
+      nix: ["tree"]
+    check:
+      cmd: ["tree", "--version"]
+  git:
+    role: core
+    min_version: ">=2.30"
+    provides: ["version-control"]
+    install:
+      apt: ["git"]
+      dnf: ["git"]
+      pacman: ["git"]
+      brew: ["git"]
+      nix: ["git"]
+    check:
+      cmd: ["git", "--version"]
 
   # Recommended
   include-what-you-use:
@@ -159,12 +247,6 @@ tools:
       nix: ["universal-ctags"]
     check:
       cmd: ["ctags", "--version"]
-  fzf:
-    role: recommended
-    min_version: ">=0.35"
-    provides: ["fuzzy-find"]
-    check:
-      cmd: ["fzf", "--version"]
   zoxide:
     role: recommended
     min_version: ">=0.9"
