@@ -1,20 +1,9 @@
 {
-  "tool": "cppcheck",
-  "ok": true,
-  "status": "no_translation_units",
-  "issues": [],
-  "summary": {
-    "by_severity": {}
-  },
-  "meta": {
-    "generated_at": "2025-09-18T03:10:36Z",
-    "project_root": "/home/greg/Projects/github/llm-cpp-toolkit",
-    "filters": [
-      "src",
-      "include",
-      "."
-    ],
-    "translation_units": [],
-    "compile_commands": "/home/greg/Projects/github/llm-cpp-toolkit/exports/compile_commands.json"
-  }
+  "available": true,
+  "version": "Cppcheck 2.12.1",
+  "diagnostics": [
+    {
+      "raw": ""
+    }
+  ]
 }

@@ -314,10 +314,176 @@ install_tools() {
     return 0
 }
 
+# Install tool using manifest data
+install_tool_from_manifest() {
+    local tool_name="${LLMTK_TOOL_NAME:-$1}"
+    local repo="${LLMTK_GITHUB_REPO}"
+    local release_pattern="${LLMTK_RELEASE_PATTERN}"
+    local binary_path="${LLMTK_BINARY_PATH}"
+    local build_method="${LLMTK_BUILD_METHOD}"
+
+    if [[ -z "$tool_name" || -z "$repo" ]]; then
+        log "Error: Tool name and GitHub repo required"
+        return 1
+    fi
+
+    log "Installing $tool_name from $repo using manifest data"
+
+    case "$tool_name" in
+        cppcheck)
+            install_cppcheck_from_manifest "$repo" "$release_pattern" "$binary_path"
+            ;;
+        include-what-you-use)
+            install_iwyu_from_manifest "$repo" "$build_method"
+            ;;
+        *)
+            log "No specific installer for $tool_name, trying generic method"
+            install_generic_from_manifest "$tool_name" "$repo" "$release_pattern" "$binary_path"
+            ;;
+    esac
+}
+
+# Install cppcheck using manifest configuration
+install_cppcheck_from_manifest() {
+    local repo="$1"
+    local pattern="$2"
+    local binary_path="$3"
+
+    if [[ -f "$LOCAL_BIN/cppcheck" ]]; then
+        log "cppcheck already installed locally"
+        return 0
+    fi
+
+    log "Installing cppcheck from $repo"
+
+    # Use manifest pattern or default
+    local version="2.12.1"
+    local download_url="https://github.com/$repo/releases/download/$version/"
+
+    if [[ -n "$pattern" ]]; then
+        # Replace {version} in pattern
+        local filename="${pattern/\{version\}/$version}"
+        download_url="$download_url$filename"
+    else
+        # Default pattern for cppcheck
+        download_url="${download_url}cppcheck-$version-linux.tar.gz"
+    fi
+
+    local tmp_dir="$LOCAL_TMP/cppcheck-manifest"
+    rm -rf "$tmp_dir"
+    mkdir -p "$tmp_dir"
+
+    local archive="$tmp_dir/cppcheck.tar.gz"
+
+    log "Downloading from: $download_url"
+    if ! download "$download_url" "$archive"; then
+        log "Download failed, trying source build..."
+        install_cppcheck_from_source
+        return $?
+    fi
+
+    # Verify checksum if provided
+    if [[ -n "$LLMTK_CHECKSUMS" ]]; then
+        local checksums=$(echo "$LLMTK_CHECKSUMS" | python3 -c "import json,sys; print(json.load(sys.stdin).get('$version', 'skip'))")
+        if ! verify_checksum "$archive" "$checksums"; then
+            log "Checksum verification failed"
+            return 1
+        fi
+    fi
+
+    # Extract
+    extract "$archive" "$tmp_dir/extracted"
+
+    # Find binary using manifest path or default
+    local binary_source=""
+    if [[ -n "$binary_path" ]]; then
+        binary_source="$tmp_dir/extracted/$binary_path"
+    else
+        binary_source="$tmp_dir/extracted/bin/cppcheck"
+    fi
+
+    if [[ -f "$binary_source" ]]; then
+        cp "$binary_source" "$LOCAL_BIN/"
+        chmod +x "$LOCAL_BIN/cppcheck"
+
+        # Copy configuration files if they exist
+        if [[ -d "$tmp_dir/extracted/cfg" ]]; then
+            mkdir -p "$ROOT_DIR/.llmtk/share/cppcheck"
+            cp -r "$tmp_dir/extracted/cfg" "$ROOT_DIR/.llmtk/share/cppcheck/" 2>/dev/null || true
+        fi
+
+        log "✓ cppcheck installed successfully from manifest"
+        return 0
+    else
+        log "Binary not found at expected path: $binary_path"
+        install_cppcheck_from_source
+        return $?
+    fi
+}
+
+# Install IWYU using manifest configuration
+install_iwyu_from_manifest() {
+    local repo="$1"
+    local build_method="$2"
+
+    if [[ -f "$LOCAL_BIN/include-what-you-use" ]]; then
+        log "include-what-you-use already installed locally"
+        return 0
+    fi
+
+    log "Installing include-what-you-use from $repo (method: $build_method)"
+
+    # IWYU typically needs to be built from source due to clang version dependencies
+    case "$build_method" in
+        cmake|"")
+            install_iwyu  # Use existing build-from-source method
+            ;;
+        *)
+            log "Unknown build method: $build_method, using default"
+            install_iwyu
+            ;;
+    esac
+}
+
+# Generic installer for other tools
+install_generic_from_manifest() {
+    local tool_name="$1"
+    local repo="$2"
+    local pattern="$3"
+    local binary_path="$4"
+
+    log "Generic installation for $tool_name from $repo"
+    log "Pattern: $pattern"
+    log "Binary path: $binary_path"
+
+    # For now, return false to indicate not implemented
+    # This can be extended for other tools as needed
+    return 1
+}
+
 # Handle command line arguments
 case "${1:-install}" in
     install) install_tools ;;
-    cppcheck) install_cppcheck ;;
-    iwyu) install_iwyu ;;
-    *) log "Usage: $0 {install|cppcheck|iwyu}"; exit 1 ;;
+    cppcheck)
+        if [[ -n "$LLMTK_TOOL_NAME" ]]; then
+            install_tool_from_manifest "$1"
+        else
+            install_cppcheck
+        fi
+        ;;
+    iwyu|include-what-you-use)
+        if [[ -n "$LLMTK_TOOL_NAME" ]]; then
+            install_tool_from_manifest "$1"
+        else
+            install_iwyu
+        fi
+        ;;
+    *)
+        if [[ -n "$LLMTK_TOOL_NAME" ]]; then
+            install_tool_from_manifest "$1"
+        else
+            log "Usage: $0 {install|cppcheck|iwyu}";
+            exit 1
+        fi
+        ;;
 esac

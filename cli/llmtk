@@ -498,24 +498,69 @@ def install_tool_locally(tool_name, tool_config, local_bin):
     local_config = tool_config["local_install"]
 
     if "github_repo" in local_config:
-        return install_from_github(tool_name, local_config, local_bin)
+        return install_from_github(tool_name, tool_config, local_bin)
 
     return False
 
-def install_from_github(tool_name, config, local_bin):
-    """Install tool from GitHub releases"""
-    repo = config["github_repo"]
-
-    # For now, fall back to existing simple installers
-    print(f"Installing {tool_name} locally from {repo}")
-
+def install_tool_basic(tool_name, local_bin):
+    """Basic fallback installation for specific tools"""
     if tool_name == "cppcheck":
         script = MODULES / "simple-install.sh"
         if script.exists():
             result = run([str(script)], check=False)
             return result.returncode == 0
+    elif tool_name == "include-what-you-use":
+        script = MODULES / "simple-install.sh"
+        if script.exists():
+            result = run([str(script)], check=False)
+            return result.returncode == 0
 
+    print(f"No basic installation method available for {tool_name}")
     return False
+
+def install_from_github(tool_name, config, local_bin):
+    """Install tool from GitHub releases using manifest configuration"""
+    local_config = config.get("local_install", {})
+    repo = local_config.get("github_repo")
+
+    if not repo:
+        print(f"No GitHub repo specified for {tool_name}")
+        return False
+
+    print(f"Installing {tool_name} locally from {repo}")
+
+    # Use the enhanced local installer with manifest data
+    enhanced_installer = MODULES / "enhanced-install.sh"
+    if enhanced_installer.exists():
+        # Pass manifest data as environment variables
+        env = os.environ.copy()
+        env.update({
+            "LLMTK_TOOL_NAME": tool_name,
+            "LLMTK_GITHUB_REPO": repo,
+            "LLMTK_RELEASE_PATTERN": local_config.get("release_pattern", ""),
+            "LLMTK_BINARY_PATH": local_config.get("binary_path", ""),
+            "LLMTK_BUILD_METHOD": local_config.get("build_method", ""),
+            "LLMTK_LOCAL_BIN": str(local_bin),
+            "LLMTK_MANIFEST_DATA": json.dumps(local_config)
+        })
+
+        # Add checksums as JSON
+        if "checksums" in local_config:
+            env["LLMTK_CHECKSUMS"] = json.dumps(local_config["checksums"])
+
+        result = subprocess.run([str(enhanced_installer), tool_name], env=env, text=True, capture_output=True)
+
+        # Show stderr output for user feedback
+        if result.stderr:
+            for line in result.stderr.strip().split('\n'):
+                if line.strip():
+                    print(line)
+
+        return result.returncode == 0
+
+    # Fallback to basic installation if enhanced installer not available
+    print(f"Enhanced installer not found, using basic method for {tool_name}")
+    return install_tool_basic(tool_name, local_bin)
 
 def cmd_install(args):
     """Install missing tools using manifest-driven approach"""
