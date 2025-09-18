@@ -180,18 +180,26 @@ def cmd_doctor(args):
     missing_recommended = []
     missing_optional = []
 
-    # Add local bin to PATH for tool discovery
+    # Add local bin to PATH for tool discovery (use same path as install command)
     local_bin = ROOT / ".llmtk" / "bin"
     old_path = os.environ.get("PATH", "")
     if local_bin.exists():
         os.environ["PATH"] = f"{local_bin}:{old_path}"
 
     for t in tools:
-        path = shutil.which(t)
+        # Get the actual command to check from the manifest
+        actual_cmd = t
+        if tools_manifest.exists() and tools_config and "tools" in tools_config:
+            tool_config = tools_config["tools"].get(t, {})
+            check_config = tool_config.get("check", {})
+            if isinstance(check_config, dict) and "cmd" in check_config:
+                actual_cmd = check_config["cmd"][0]  # First element is the command name
+
+        path = shutil.which(actual_cmd)
         info = {"found": bool(path), "path": path or None}
         if path:
             try:
-                out = run([t, "--version"], check=False).stdout.splitlines()
+                out = run([actual_cmd, "--version"], check=False).stdout.splitlines()
                 info["version_line"] = out[0] if out else None
             except Exception:
                 info["version_line"] = None
