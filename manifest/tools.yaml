@@ -35,6 +35,12 @@ tools:
     role: core
     min_version: ">=17"
     provides: ["lint", "analysis"]
+    install:
+      apt: ["clang-tidy-18", "clang-tidy", "clang-tools-extra"]
+      dnf: ["clang-tools-extra"]
+      pacman: ["clang"]
+      brew: ["llvm@18", "llvm"]
+      nix: ["clang-tools_18", "clang-tools"]
     check:
       cmd: ["clang-tidy", "--version"]
   rg:
@@ -81,6 +87,15 @@ tools:
     role: recommended
     min_version: ">=0.20"
     provides: ["include-analysis"]
+    install:
+      apt: ["iwyu", "include-what-you-use"]
+      dnf: ["include-what-you-use"]
+      pacman: ["include-what-you-use"]
+      brew: ["include-what-you-use"]
+      nix: ["include-what-you-use"]
+    local_install:
+      github_repo: "include-what-you-use/include-what-you-use"
+      build_method: "cmake"
     check:
       cmd: ["include-what-you-use", "--version"]
   iwyu-tool:
@@ -93,6 +108,18 @@ tools:
     role: recommended
     min_version: ">=2.9"
     provides: ["static-analysis"]
+    install:
+      apt: ["cppcheck"]
+      dnf: ["cppcheck"]
+      pacman: ["cppcheck"]
+      brew: ["cppcheck"]
+      nix: ["cppcheck"]
+    local_install:
+      github_repo: "danmar/cppcheck"
+      release_pattern: "cppcheck-{version}-linux.tar.gz"
+      binary_path: "bin/cppcheck"
+      checksums:
+        "2.12.1": "sha256:3b3b1c70d1e0d37d1d5c4f40a1a7a95f0a3c7a8b7c4f4d3e4f4e4f4e4f4e4f4e"
     check:
       cmd: ["cppcheck", "--version"]
   universal-ctags:

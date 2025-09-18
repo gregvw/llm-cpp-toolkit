@@ -436,37 +436,174 @@ def cmd_reduce(args):
     write_json(repros/"report.json", report)
     print(str(repros/"report.json"))
 
-def cmd_install(args):
-    """Install missing tools locally"""
-    install_script = MODULES / "simple-install.sh"
-    if not install_script.exists():
-        print(f"Error: Install script not found at {install_script}", file=sys.stderr)
-        return 1
+def detect_package_manager():
+    """Detect available package manager"""
+    managers = [
+        ("apt", ["apt-get", "apt"]),
+        ("dnf", ["dnf"]),
+        ("pacman", ["pacman"]),
+        ("brew", ["brew"]),
+        ("nix", ["nix-env"])
+    ]
+
+    for name, commands in managers:
+        for cmd in commands:
+            if shutil.which(cmd):
+                return name
+    return None
+
+def install_tool_with_package_manager(tool_name, tool_config, pm):
+    """Install a tool using system package manager"""
+    if "install" not in tool_config or pm not in tool_config["install"]:
+        return False
+
+    packages = tool_config["install"][pm]
+    if not packages:
+        return False
+
+    print(f"Installing {tool_name} via {pm}: {packages}")
+
+    # Build install command based on package manager
+    if pm == "apt":
+        cmd = ["sudo", "apt-get", "update", "&&", "sudo", "apt-get", "install", "-y"] + packages
+    elif pm == "dnf":
+        cmd = ["sudo", "dnf", "install", "-y"] + packages
+    elif pm == "pacman":
+        cmd = ["sudo", "pacman", "-S", "--noconfirm"] + packages
+    elif pm == "brew":
+        cmd = ["brew", "install"] + packages
+    elif pm == "nix":
+        cmd = ["nix-env", "-iA"] + [f"nixpkgs.{pkg}" for pkg in packages]
+    else:
+        return False
 
     try:
-        result = run([str(install_script)], cwd=ROOT, check=False)
-        if result.returncode != 0:
-            print(f"Install failed with exit code {result.returncode}", file=sys.stderr)
-            if result.stderr:
-                print(result.stderr, file=sys.stderr)
-            return result.returncode
+        if pm == "apt":
+            # Handle apt's compound command
+            run(["sudo", "apt-get", "update"], check=True)
+            run(["sudo", "apt-get", "install", "-y"] + packages, check=True)
+        else:
+            run(cmd, check=True)
+        return True
+    except subprocess.CalledProcessError:
+        print(f"Failed to install {tool_name} via {pm}")
+        return False
 
-        if result.stdout:
-            print(result.stdout, end="")
+def install_tool_locally(tool_name, tool_config, local_bin):
+    """Install a tool locally"""
+    if "local_install" not in tool_config:
+        print(f"No local install method for {tool_name}")
+        return False
 
-        # Generate updated doctor report
-        local_bin = ROOT / ".llmtk" / "bin"
-        if local_bin.exists():
-            old_path = os.environ.get("PATH", "")
-            os.environ["PATH"] = f"{local_bin}:{old_path}"
+    local_config = tool_config["local_install"]
 
+    if "github_repo" in local_config:
+        return install_from_github(tool_name, local_config, local_bin)
+
+    return False
+
+def install_from_github(tool_name, config, local_bin):
+    """Install tool from GitHub releases"""
+    repo = config["github_repo"]
+
+    # For now, fall back to existing simple installers
+    print(f"Installing {tool_name} locally from {repo}")
+
+    if tool_name == "cppcheck":
+        script = MODULES / "simple-install.sh"
+        if script.exists():
+            result = run([str(script)], check=False)
+            return result.returncode == 0
+
+    return False
+
+def cmd_install(args):
+    """Install missing tools using manifest-driven approach"""
+    tools_manifest = ROOT / "manifest" / "tools.yaml"
+    if not tools_manifest.exists():
+        print(f"Error: Tools manifest not found at {tools_manifest}", file=sys.stderr)
+        return 1
+
+    # Load tools manifest
+    tools_config = load_yaml(tools_manifest)
+    if not tools_config or "tools" not in tools_config:
+        print("Error: Invalid tools manifest", file=sys.stderr)
+        return 1
+
+    # Determine installation method
+    use_local = getattr(args, 'local', False)
+    pm = None if use_local else detect_package_manager()
+
+    if not use_local and not pm:
+        print("No package manager detected, falling back to local installation")
+        use_local = True
+
+    # Prepare local bin directory
+    local_bin = ROOT / ".llmtk" / "bin"
+    local_bin.mkdir(parents=True, exist_ok=True)
+
+    # Install missing tools
+    tools_to_install = []
+    if hasattr(args, 'tools') and args.tools:
+        tools_to_install = args.tools
+    else:
+        # Install all core and recommended tools that are missing
+        for tool_name, tool_config in tools_config["tools"].items():
+            if tool_config.get("role") in ["core", "recommended"]:
+                if not shutil.which(tool_name):
+                    tools_to_install.append(tool_name)
+
+    if not tools_to_install:
+        print("All tools are already installed")
         cmd_doctor(None)
-        print(f"\nTools installed locally in: {local_bin}")
+        return 0
+
+    print(f"Installing missing tools: {', '.join(tools_to_install)}")
+    print(f"Method: {'local' if use_local else f'package manager ({pm})'}")
+
+    success_count = 0
+    for tool_name in tools_to_install:
+        if tool_name not in tools_config["tools"]:
+            print(f"Warning: {tool_name} not found in manifest")
+            continue
+
+        tool_config = tools_config["tools"][tool_name]
+
+        if use_local:
+            if install_tool_locally(tool_name, tool_config, local_bin):
+                success_count += 1
+            else:
+                # Fall back to simple installer for specific tools
+                if tool_name in ["cppcheck", "include-what-you-use"]:
+                    script = MODULES / "simple-install.sh"
+                    if script.exists():
+                        print(f"Using fallback installer for {tool_name}")
+                        result = run([str(script)], check=False)
+                        if result.returncode == 0:
+                            success_count += 1
+        else:
+            if install_tool_with_package_manager(tool_name, tool_config, pm):
+                success_count += 1
+            else:
+                print(f"Falling back to local install for {tool_name}")
+                if install_tool_locally(tool_name, tool_config, local_bin):
+                    success_count += 1
+
+    # Update PATH for doctor check
+    if local_bin.exists():
+        old_path = os.environ.get("PATH", "")
+        os.environ["PATH"] = f"{local_bin}:{old_path}"
+
+    print(f"\nInstallation complete: {success_count}/{len(tools_to_install)} tools installed")
+
+    # Generate updated doctor report
+    cmd_doctor(None)
+
+    if use_local or success_count < len(tools_to_install):
+        print(f"\nLocal tools in: {local_bin}")
         print(f"Add to your shell: export PATH=\"{local_bin}:$PATH\"")
 
-    except Exception as e:
-        print(f"Install error: {e}", file=sys.stderr)
-        return 1
+    return 0 if success_count > 0 else 1
 
 def main():
     ap = argparse.ArgumentParser(prog="llmtk", description="LLM-friendly C++/CMake toolkit")
@@ -483,7 +620,10 @@ def main():
 
     sub.add_parser("docs").set_defaults(fn=cmd_docs)
 
-    sub.add_parser("install", help="Install missing tools locally").set_defaults(fn=cmd_install)
+    install_parser = sub.add_parser("install", help="Install missing tools")
+    install_parser.add_argument("--local", action="store_true", help="Force local installation (no sudo)")
+    install_parser.add_argument("tools", nargs="*", help="Specific tools to install")
+    install_parser.set_defaults(fn=cmd_install)
 
     args = ap.parse_args()
     # map nested subcommand

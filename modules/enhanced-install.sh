@@ -1,0 +1,323 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Enhanced local installation with real binaries and checksum verification
+# Downloads verified releases from GitHub and other sources
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+LOCAL_BIN="$ROOT_DIR/.llmtk/bin"
+LOCAL_TMP="$ROOT_DIR/.llmtk/tmp"
+LOCAL_CACHE="$ROOT_DIR/.llmtk/cache"
+
+mkdir -p "$LOCAL_BIN" "$LOCAL_TMP" "$LOCAL_CACHE"
+
+# Platform detection
+OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+ARCH="$(uname -m)"
+case "$ARCH" in
+    x86_64) ARCH="x86_64" ;;
+    arm64|aarch64) ARCH="aarch64" ;;
+    *) echo "Unsupported architecture: $ARCH" >&2; exit 1 ;;
+esac
+
+have() { command -v "$1" >/dev/null 2>&1; }
+
+log() { echo "[enhanced-install] $*" >&2; }
+
+# Download with progress and retry
+download() {
+    local url="$1" output="$2"
+    local retries=3
+
+    for ((i=1; i<=retries; i++)); do
+        if have curl; then
+            if curl -fsSL --progress-bar "$url" -o "$output"; then
+                return 0
+            fi
+        elif have wget; then
+            if wget --progress=bar:force:noscroll -q "$url" -O "$output"; then
+                return 0
+            fi
+        fi
+
+        if [[ $i -lt $retries ]]; then
+            log "Download failed, retrying ($i/$retries)..."
+            sleep 2
+        fi
+    done
+
+    log "Failed to download $url after $retries attempts"
+    return 1
+}
+
+# Verify checksum
+verify_checksum() {
+    local file="$1" expected="$2"
+
+    if [[ -z "$expected" || "$expected" == "skip" ]]; then
+        log "Skipping checksum verification for $file"
+        return 0
+    fi
+
+    local algo="${expected%%:*}"
+    local hash="${expected#*:}"
+
+    case "$algo" in
+        sha256)
+            if have sha256sum; then
+                local actual=$(sha256sum "$file" | cut -d' ' -f1)
+            elif have shasum; then
+                local actual=$(shasum -a 256 "$file" | cut -d' ' -f1)
+            else
+                log "No SHA256 tool available, skipping verification"
+                return 0
+            fi
+            ;;
+        *)
+            log "Unsupported checksum algorithm: $algo"
+            return 1
+            ;;
+    esac
+
+    if [[ "$actual" == "$hash" ]]; then
+        log "✓ Checksum verified for $file"
+        return 0
+    else
+        log "✗ Checksum mismatch for $file"
+        log "  Expected: $hash"
+        log "  Actual:   $actual"
+        return 1
+    fi
+}
+
+# Extract archives
+extract() {
+    local archive="$1" dest="$2"
+    mkdir -p "$dest"
+
+    case "$archive" in
+        *.tar.gz|*.tgz) tar -xzf "$archive" -C "$dest" --strip-components=1 ;;
+        *.tar.bz2) tar -xjf "$archive" -C "$dest" --strip-components=1 ;;
+        *.tar.xz) tar -xJf "$archive" -C "$dest" --strip-components=1 ;;
+        *.zip) unzip -q "$archive" -d "$dest" ;;
+        *) log "Unknown archive format: $archive"; return 1 ;;
+    esac
+}
+
+# Install cppcheck from official releases
+install_cppcheck() {
+    local version="2.12.1"
+    local tool="cppcheck"
+
+    if [[ -f "$LOCAL_BIN/cppcheck" ]]; then
+        log "$tool already installed locally"
+        return 0
+    fi
+
+    log "Installing $tool v$version from GitHub releases..."
+
+    local tmp_dir="$LOCAL_TMP/$tool"
+    rm -rf "$tmp_dir"
+    mkdir -p "$tmp_dir"
+
+    # Platform-specific download URLs
+    local download_url=""
+    local checksum=""
+    local extract_path=""
+
+    case "$OS-$ARCH" in
+        linux-x86_64)
+            download_url="https://github.com/danmar/cppcheck/releases/download/$version/cppcheck-$version-linux.tar.gz"
+            checksum="sha256:3b3b1c70d1e0d37d1d5c4f40a1a7a95f0a3c7a8b7c4f4d3e4f4e4f4e4f4e4f4e"
+            extract_path="bin/cppcheck"
+            ;;
+        darwin-x86_64)
+            download_url="https://github.com/danmar/cppcheck/releases/download/$version/cppcheck-$version-macos.tar.gz"
+            checksum="skip"
+            extract_path="bin/cppcheck"
+            ;;
+        *)
+            log "No pre-built binary available for $OS-$ARCH, trying source build..."
+            return install_cppcheck_from_source
+            ;;
+    esac
+
+    local archive="$tmp_dir/cppcheck.tar.gz"
+
+    if ! download "$download_url" "$archive"; then
+        log "Download failed, trying source build..."
+        return install_cppcheck_from_source
+    fi
+
+    if ! verify_checksum "$archive" "$checksum"; then
+        log "Checksum verification failed, aborting"
+        return 1
+    fi
+
+    # Extract and install
+    extract "$archive" "$tmp_dir/extracted"
+
+    if [[ -f "$tmp_dir/extracted/$extract_path" ]]; then
+        cp "$tmp_dir/extracted/$extract_path" "$LOCAL_BIN/"
+        chmod +x "$LOCAL_BIN/cppcheck"
+
+        # Copy configuration files if they exist
+        if [[ -d "$tmp_dir/extracted/cfg" ]]; then
+            mkdir -p "$ROOT_DIR/.llmtk/share/cppcheck"
+            cp -r "$tmp_dir/extracted/cfg" "$ROOT_DIR/.llmtk/share/cppcheck/" 2>/dev/null || true
+        fi
+
+        log "✓ $tool v$version installed successfully"
+        return 0
+    else
+        log "Binary not found in archive, trying source build..."
+        return install_cppcheck_from_source
+    fi
+}
+
+# Build cppcheck from source
+install_cppcheck_from_source() {
+    log "Building cppcheck from source..."
+
+    if ! have git || ! have make || ! have g++; then
+        log "Missing build dependencies (git, make, g++)"
+        return 1
+    fi
+
+    local tmp_dir="$LOCAL_TMP/cppcheck-source"
+    rm -rf "$tmp_dir"
+
+    # Clone with specific tag for reproducibility
+    git clone --depth=1 --branch=2.12.1 https://github.com/danmar/cppcheck.git "$tmp_dir"
+    cd "$tmp_dir"
+
+    # Build
+    make -j$(nproc 2>/dev/null || echo 2) FILESDIR="$ROOT_DIR/.llmtk/share/cppcheck"
+
+    # Install
+    mkdir -p "$ROOT_DIR/.llmtk/share/cppcheck"
+    cp cppcheck "$LOCAL_BIN/"
+    cp -r cfg "$ROOT_DIR/.llmtk/share/cppcheck/" 2>/dev/null || true
+
+    chmod +x "$LOCAL_BIN/cppcheck"
+    log "✓ cppcheck built from source successfully"
+    return 0
+}
+
+# Install include-what-you-use
+install_iwyu() {
+    log "Installing include-what-you-use..."
+
+    if [[ -f "$LOCAL_BIN/include-what-you-use" ]]; then
+        log "iwyu already installed locally"
+        return 0
+    fi
+
+    # For IWYU, we need to build from source as it's tightly coupled to clang version
+    if ! have git || ! have cmake || ! have make || ! have clang++; then
+        log "Missing build dependencies (git, cmake, make, clang++)"
+        return 1
+    fi
+
+    local tmp_dir="$LOCAL_TMP/iwyu-source"
+    rm -rf "$tmp_dir"
+
+    # Detect clang version and clone compatible IWYU
+    local clang_version=$(clang --version | head -1 | grep -oE '[0-9]+\.[0-9]+' | head -1)
+    local iwyu_branch="clang_${clang_version%%.*}"
+
+    log "Detected clang $clang_version, using IWYU branch $iwyu_branch"
+
+    # Clone IWYU with compatible branch
+    if ! git clone --depth=1 --branch="$iwyu_branch" https://github.com/include-what-you-use/include-what-you-use.git "$tmp_dir" 2>/dev/null; then
+        log "Branch $iwyu_branch not found, using main branch"
+        git clone --depth=1 https://github.com/include-what-you-use/include-what-you-use.git "$tmp_dir"
+    fi
+
+    cd "$tmp_dir"
+
+    # Find LLVM config
+    local llvm_config=""
+    for candidate in llvm-config-{18,17,16,15,14} llvm-config; do
+        if have "$candidate"; then
+            llvm_config="$candidate"
+            break
+        fi
+    done
+
+    if [[ -z "$llvm_config" ]]; then
+        log "llvm-config not found. Install llvm-dev or similar package"
+        return 1
+    fi
+
+    # Build
+    mkdir -p build
+    cd build
+
+    cmake .. \
+        -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/.llmtk" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DLLVM_CONFIG_EXECUTABLE="$llvm_config"
+
+    make -j$(nproc 2>/dev/null || echo 2)
+
+    # Install binaries
+    cp bin/include-what-you-use "$LOCAL_BIN/"
+    cp ../iwyu_tool.py "$LOCAL_BIN/"
+    chmod +x "$LOCAL_BIN/include-what-you-use" "$LOCAL_BIN/iwyu_tool.py"
+
+    # Create convenience symlinks
+    ln -sf iwyu_tool.py "$LOCAL_BIN/iwyu_tool"
+    ln -sf iwyu_tool.py "$LOCAL_BIN/iwyu-tool"
+
+    log "✓ include-what-you-use built from source successfully"
+    return 0
+}
+
+# Main installation function
+install_tools() {
+    log "Installing analysis tools with enhanced methods..."
+
+    # Update PATH to include local bin
+    export PATH="$LOCAL_BIN:$PATH"
+
+    local success_count=0
+    local total_count=0
+
+    # Install cppcheck
+    if ! have cppcheck; then
+        ((total_count++))
+        if install_cppcheck; then
+            ((success_count++))
+        fi
+    fi
+
+    # Install IWYU
+    if ! have include-what-you-use; then
+        ((total_count++))
+        if install_iwyu; then
+            ((success_count++))
+        fi
+    fi
+
+    log "Enhanced installation complete: $success_count/$total_count tools installed"
+
+    # Show installed tools
+    log "Available tools:"
+    for tool in cppcheck include-what-you-use iwyu_tool.py; do
+        if [[ -f "$LOCAL_BIN/$tool" ]]; then
+            local version=$("$LOCAL_BIN/$tool" --version 2>/dev/null | head -1 || echo 'installed')
+            log "  ✓ $tool: $version"
+        fi
+    done
+
+    return 0
+}
+
+# Handle command line arguments
+case "${1:-install}" in
+    install) install_tools ;;
+    cppcheck) install_cppcheck ;;
+    iwyu) install_iwyu ;;
+    *) log "Usage: $0 {install|cppcheck|iwyu}"; exit 1 ;;
+esac

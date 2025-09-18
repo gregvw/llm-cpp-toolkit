@@ -4,18 +4,19 @@ A comprehensive CLI toolkit designed to help LLMs and AI agents work effectively
 
 ## 🚀 Quick Start
 
-### Install via npm (Recommended)
+### One-Line Install (Recommended)
 ```bash
-npm install -g llm-cpp-toolkit
+curl -sSL https://raw.githubusercontent.com/gregvw/llm-cpp-toolkit/main/install.sh | bash
 llmtk --version
 ```
 
-### Other Installation Options
-- **Homebrew:** `brew tap gregvw/llm-cpp-toolkit && brew install llm-cpp-toolkit`
-- **Snap:** `sudo snap install llm-cpp-toolkit`
-- **Flatpak:** `flatpak install flathub io.github.gregvw.llm-cpp-toolkit`
-- **AppImage:** Download from [releases](https://github.com/gregvw/llm-cpp-toolkit/releases)
-- **Script:** `curl -sSL https://raw.githubusercontent.com/gregvw/llm-cpp-toolkit/main/install.sh | bash -s -- --yes`
+### Alternative Installation Methods
+- **Local (no sudo):** `git clone ... && llmtk install --local`
+- **Nix:** `nix develop github:gregvw/llm-cpp-toolkit`
+- **Docker:** `docker run ghcr.io/gregvw/llm-cpp-toolkit:latest`
+- **Homebrew:** `brew tap gregvw/llm-cpp-toolkit && brew install llmtk`
+
+📖 **[Complete Installation Guide](docs/INSTALLATION.md)** | 🚀 **[Quick Start Guide](QUICKSTART.md)**
 
 ### Basic Usage
 ```bash
