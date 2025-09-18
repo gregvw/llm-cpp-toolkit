@@ -180,6 +180,12 @@ def cmd_doctor(args):
     missing_recommended = []
     missing_optional = []
 
+    # Add local bin to PATH for tool discovery
+    local_bin = ROOT / ".llmtk" / "bin"
+    old_path = os.environ.get("PATH", "")
+    if local_bin.exists():
+        os.environ["PATH"] = f"{local_bin}:{old_path}"
+
     for t in tools:
         path = shutil.which(t)
         info = {"found": bool(path), "path": path or None}
@@ -204,6 +210,9 @@ def cmd_doctor(args):
             else:
                 missing_core.append(t)  # Default to core for fallback
         report[t] = info
+
+    # Restore original PATH
+    os.environ["PATH"] = old_path
 
     # Add summary to report
     report["_summary"] = {

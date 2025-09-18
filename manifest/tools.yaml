@@ -48,7 +48,7 @@ tools:
       brew: ["fd"]
       nix: ["fd"]
     check:
-      cmd: ["fd", "--version"]
+      cmd: ["fdfind", "--version"]
   jq:
     role: core
     min_version: ">=1.6"
@@ -223,7 +223,7 @@ tools:
       dependencies:
         apt: ["clang-18-dev", "libclang-18-dev", "llvm-18-dev", "cmake", "python3"]
     check:
-      cmd: ["iwyu_tool.py", "--help"]
+      cmd: ["iwyu_tool", "--help"]
   cppcheck:
     role: recommended
     min_version: ">=2.9"
@@ -272,7 +272,7 @@ tools:
       brew: ["bat"]
       nix: ["bat"]
     check:
-      cmd: ["bat", "--version"]
+      cmd: ["batcat", "--version"]
   tokei:
     role: recommended
     min_version: ">=12"
