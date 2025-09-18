@@ -16,7 +16,7 @@ llmtk --version
 - **Docker:** `docker run ghcr.io/gregvw/llm-cpp-toolkit:latest`
 - **Homebrew:** `brew tap gregvw/llm-cpp-toolkit && brew install llmtk`
 
-📖 **[Complete Installation Guide](docs/INSTALLATION.md)** | 🚀 **[Quick Start Guide](QUICKSTART.md)**
+📖 **[Complete Installation Guide](docs/INSTALLATION.md)** | 🚀 **[Quick Start Guide](QUICKSTART.md)** | 🎓 **[Agent Tutorial](docs/TUTORIAL.md)**
 
 ### Basic Usage
 ```bash

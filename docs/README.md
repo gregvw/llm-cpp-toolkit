@@ -211,6 +211,7 @@ See `DISTRIBUTION.md` for detailed build and packaging instructions.
 ## Reference
 
 - See `docs/REFERENCE.md` for an auto-generated list of tools and commands derived from the manifests.
+- Try `docs/TUTORIAL.md` for a step-by-step walkthrough that pairs the toolkit with an agent-driven debug loop.
 
 ### Regenerate Docs
 
