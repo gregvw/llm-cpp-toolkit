@@ -333,7 +333,7 @@ def cmd_context_export(args):
     summary = {
         "compile_commands": "exports/compile_commands.json",
         "cmake_file_api": "exports/cmake-file-api/",
-        "generated_at": __import__("datetime").datetime.utcnow().isoformat()+"Z"
+        "generated_at": __import__("datetime").datetime.now(__import__("datetime").UTC).isoformat()
     }
     (EXPORTS/"context.json").write_text(json.dumps(summary, indent=2))
     print(str(EXPORTS/"context.json"))

@@ -52,7 +52,7 @@ def generate_reference_md(out_path: pathlib.Path):
     tools = load_yaml(tools_manifest)
     commands = load_yaml(commands_manifest)
 
-    now = datetime.datetime.utcnow().isoformat()+"Z"
+    now = datetime.datetime.now(datetime.UTC).isoformat()
     lines = []
     lines.append("# Toolkit Reference")
     lines.append("")
@@ -149,7 +149,7 @@ def cmd_doctor(_):
         "cmake","ninja","clangd","clang-tidy","clang-format",
         "include-what-you-use","cppcheck","rg","fd","jq","yq","bear","ccache","mold"
     ]
-    report = {"_meta": {"generated_at": datetime.datetime.utcnow().isoformat()+"Z"}}
+    report = {"_meta": {"generated_at": datetime.datetime.now(datetime.UTC).isoformat()}}
     for t in tools:
         path = shutil.which(t)
         info = {"found": bool(path), "path": path or None}
@@ -203,7 +203,7 @@ def cmd_context_export(args):
             "dir": "exports/cmake-file-api/",
             "files": sorted([p.name for p in (EXPORTS/"cmake-file-api").iterdir()]) if (EXPORTS/"cmake-file-api").exists() else []
         } if (EXPORTS/"cmake-file-api").exists() else None,
-        "generated_at": datetime.datetime.utcnow().isoformat()+"Z"
+        "generated_at": datetime.datetime.now(datetime.UTC).isoformat()
     }
     write_json(EXPORTS/"context.json", summary)
     print(str(EXPORTS/"context.json"))
