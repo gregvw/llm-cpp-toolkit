@@ -481,7 +481,10 @@ def install_tool_with_package_manager(tool_name, tool_config, pm):
         if pm == "apt":
             # Handle apt's compound command - don't capture output for sudo commands
             print("Running: sudo apt-get update")
-            result = subprocess.run(["sudo", "apt-get", "update"], check=True, text=True)
+            update_result = subprocess.run(["sudo", "apt-get", "update"], text=True)
+            if update_result.returncode != 0:
+                print("Warning: apt-get update failed, but continuing with install attempt...")
+
             print(f"Running: sudo apt-get install -y {' '.join(packages)}")
             result = subprocess.run(["sudo", "apt-get", "install", "-y"] + packages, check=True, text=True)
         elif pm in ["dnf", "pacman"]:
@@ -500,6 +503,13 @@ def install_tool_with_package_manager(tool_name, tool_config, pm):
             print(f"Error output: {e.stderr}")
         elif hasattr(e, 'stdout') and e.stdout:
             print(f"Command output: {e.stdout}")
+
+        # Provide helpful suggestions based on error type
+        if pm == "apt" and e.returncode == 100:
+            print("This often indicates repository or GPG key issues.")
+            print("Try fixing with: sudo apt-get update --allow-unauthenticated")
+            print("Or remove problematic repositories from /etc/apt/sources.list.d/")
+
         manual_cmd = ' '.join(cmd) if pm not in ['apt'] else f"sudo apt-get update && sudo apt-get install -y {' '.join(packages)}"
         print(f"You can try installing manually with: {manual_cmd}")
         return False

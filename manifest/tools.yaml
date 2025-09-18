@@ -23,6 +23,12 @@ tools:
     role: core
     min_version: ">=17"
     provides: ["lsp", "xref", "refactor"]
+    install:
+      apt: ["clangd-18", "clangd-17", "clangd"]
+      dnf: ["clang-tools-extra"]
+      pacman: ["clang"]
+      brew: ["llvm@18", "llvm"]
+      nix: ["clang-tools_18", "clang-tools"]
     check:
       cmd: ["clangd", "--version"]
   clang-format:
@@ -53,6 +59,12 @@ tools:
     role: core
     min_version: ">=8"
     provides: ["file-find"]
+    install:
+      apt: ["fd-find"]
+      dnf: ["fd-find"]
+      pacman: ["fd"]
+      brew: ["fd"]
+      nix: ["fd"]
     check:
       cmd: ["fd", "--version"]
   jq:
@@ -78,6 +90,12 @@ tools:
     role: core
     min_version: ">=2"
     provides: ["linker"]
+    install:
+      apt: ["mold"]
+      dnf: ["mold"]
+      pacman: ["mold"]
+      brew: ["mold"]
+      nix: ["mold"]
     fallbacks: ["lld"]
     check:
       cmd: ["mold", "--version"]
@@ -102,6 +120,12 @@ tools:
     role: recommended
     min_version: ">=0.20"
     provides: ["include-analysis"]
+    install:
+      apt: ["iwyu-tool"]
+      dnf: ["include-what-you-use"]
+      pacman: ["include-what-you-use"]
+      brew: ["include-what-you-use"]
+      nix: ["include-what-you-use"]
     check:
       cmd: ["iwyu-tool", "--version"]
   cppcheck:
@@ -127,6 +151,12 @@ tools:
     role: recommended
     min_version: ">=6.0.0"
     provides: ["indexing"]
+    install:
+      apt: ["universal-ctags"]
+      dnf: ["universal-ctags"]
+      pacman: ["universal-ctags"]
+      brew: ["universal-ctags"]
+      nix: ["universal-ctags"]
     check:
       cmd: ["ctags", "--version"]
   fzf:
@@ -145,12 +175,28 @@ tools:
     role: recommended
     min_version: ">=0.23"
     provides: ["pager"]
+    install:
+      apt: ["bat"]
+      dnf: ["bat"]
+      pacman: ["bat"]
+      brew: ["bat"]
+      nix: ["bat"]
     check:
       cmd: ["bat", "--version"]
   tokei:
     role: recommended
     min_version: ">=12"
     provides: ["code-stats"]
+    install:
+      apt: []  # Not available in apt, will use local install
+      dnf: ["tokei"]
+      pacman: ["tokei"]
+      brew: ["tokei"]
+      nix: ["tokei"]
+    local_install:
+      github_repo: "XAMPPRocky/tokei"
+      release_pattern: "tokei-x86_64-unknown-linux-gnu.tar.gz"
+      binary_path: "tokei"
     check:
       cmd: ["tokei", "--version"]
   hyperfine:
