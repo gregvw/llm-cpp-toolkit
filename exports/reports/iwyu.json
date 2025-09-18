@@ -1,5 +1,22 @@
 {
-  "available": false,
-  "version": null,
-  "suggestions": []
+  "tool": "include-what-you-use",
+  "ok": true,
+  "status": "no_translation_units",
+  "issues": [],
+  "summary": {
+    "files_with_suggestions": 0,
+    "total_additions": 0,
+    "total_removals": 0
+  },
+  "meta": {
+    "generated_at": "2025-09-18T03:10:36Z",
+    "project_root": "/home/greg/Projects/github/llm-cpp-toolkit",
+    "filters": [
+      "src",
+      "include",
+      "."
+    ],
+    "translation_units": [],
+    "compile_commands": "/home/greg/Projects/github/llm-cpp-toolkit/exports/compile_commands.json"
+  }
 }

@@ -436,6 +436,38 @@ def cmd_reduce(args):
     write_json(repros/"report.json", report)
     print(str(repros/"report.json"))
 
+def cmd_install(args):
+    """Install missing tools locally"""
+    install_script = MODULES / "simple-install.sh"
+    if not install_script.exists():
+        print(f"Error: Install script not found at {install_script}", file=sys.stderr)
+        return 1
+
+    try:
+        result = run([str(install_script)], cwd=ROOT, check=False)
+        if result.returncode != 0:
+            print(f"Install failed with exit code {result.returncode}", file=sys.stderr)
+            if result.stderr:
+                print(result.stderr, file=sys.stderr)
+            return result.returncode
+
+        if result.stdout:
+            print(result.stdout, end="")
+
+        # Generate updated doctor report
+        local_bin = ROOT / ".llmtk" / "bin"
+        if local_bin.exists():
+            old_path = os.environ.get("PATH", "")
+            os.environ["PATH"] = f"{local_bin}:{old_path}"
+
+        cmd_doctor(None)
+        print(f"\nTools installed locally in: {local_bin}")
+        print(f"Add to your shell: export PATH=\"{local_bin}:$PATH\"")
+
+    except Exception as e:
+        print(f"Install error: {e}", file=sys.stderr)
+        return 1
+
 def main():
     ap = argparse.ArgumentParser(prog="llmtk", description="LLM-friendly C++/CMake toolkit")
     ap.add_argument("--version", action="version", version=f"llmtk {get_version()}")
@@ -450,6 +482,8 @@ def main():
     rd = sub.add_parser("reduce"); rd.add_argument("input"); rd.add_argument("test_cmd"); rd.set_defaults(fn=cmd_reduce)
 
     sub.add_parser("docs").set_defaults(fn=cmd_docs)
+
+    sub.add_parser("install", help="Install missing tools locally").set_defaults(fn=cmd_install)
 
     args = ap.parse_args()
     # map nested subcommand
