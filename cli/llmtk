@@ -29,6 +29,70 @@ def write_json(path: pathlib.Path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2))
 
+def validate_cmake_guidance(project_dir=None):
+    """Validate CMakeLists.txt compliance with CMAKE_GUIDANCE.md patterns"""
+    if project_dir is None:
+        project_dir = pathlib.Path.cwd()
+    else:
+        project_dir = pathlib.Path(project_dir)
+
+    cmake_file = project_dir / "CMakeLists.txt"
+
+    result = {
+        "cmake_file_exists": cmake_file.exists(),
+        "compliance": {
+            "compile_commands_export": False,
+            "project_warnings_interface": False,
+            "project_sanitizers_interface": False,
+            "json_diagnostics": False,
+            "cxx_standard_set": False,
+            "lint_target": False
+        },
+        "suggestions": [],
+        "overall_score": 0
+    }
+
+    if not cmake_file.exists():
+        result["suggestions"].append("Create CMakeLists.txt with 'llmtk init'")
+        return result
+
+    try:
+        cmake_content = cmake_file.read_text()
+
+        # Check for required patterns from CMAKE_GUIDANCE.md
+        patterns = {
+            "compile_commands_export": "CMAKE_EXPORT_COMPILE_COMMANDS ON",
+            "project_warnings_interface": "add_library(project_warnings INTERFACE)",
+            "project_sanitizers_interface": "add_library(project_sanitizers INTERFACE)",
+            "json_diagnostics": "fdiagnostics-format=json",
+            "cxx_standard_set": "CMAKE_CXX_STANDARD",
+            "lint_target": "add_custom_target(lint"
+        }
+
+        for key, pattern in patterns.items():
+            if pattern in cmake_content:
+                result["compliance"][key] = True
+            else:
+                # Add specific suggestions based on missing patterns
+                if key == "compile_commands_export":
+                    result["suggestions"].append("Add 'set(CMAKE_EXPORT_COMPILE_COMMANDS ON)' for clangd support")
+                elif key == "project_warnings_interface":
+                    result["suggestions"].append("Create project_warnings INTERFACE library for consistent warnings")
+                elif key == "json_diagnostics":
+                    result["suggestions"].append("Add JSON diagnostics support for LLM-friendly error output")
+                elif key == "lint_target":
+                    result["suggestions"].append("Add custom lint target for syntax-only checking")
+
+        # Calculate overall compliance score
+        compliant_count = sum(result["compliance"].values())
+        total_checks = len(result["compliance"])
+        result["overall_score"] = (compliant_count / total_checks) * 100
+
+    except Exception as e:
+        result["suggestions"].append(f"Error reading CMakeLists.txt: {e}")
+
+    return result
+
 def load_yaml(path: pathlib.Path):
     # Try PyYAML, then yq, else return None
     try:
@@ -143,6 +207,182 @@ def cmd_docs(_):
     generate_reference_md(out)
     print(str(out))
 
+def cmd_init(args):
+    """Initialize a new C++ project with CMAKE_GUIDANCE.md compliance"""
+    project_name = args.name or pathlib.Path.cwd().name
+    project_dir = pathlib.Path.cwd() if not args.name else pathlib.Path(args.name)
+
+    # Create directory if it doesn't exist
+    if args.name:
+        project_dir.mkdir(exist_ok=True)
+        print(f"📁 Created project directory: {project_dir}")
+
+    # Check if CMakeLists.txt already exists
+    cmake_file = project_dir / "CMakeLists.txt"
+    if cmake_file.exists() and not args.force:
+        print(f"❌ CMakeLists.txt already exists. Use --force to overwrite.")
+        cmake_validation = validate_cmake_guidance(project_dir)
+        if cmake_validation["overall_score"] >= 80:
+            print(f"✅ Existing CMake setup is already {cmake_validation['overall_score']:.0f}% compliant!")
+            return 0
+        else:
+            print(f"💡 Current compliance: {cmake_validation['overall_score']:.0f}%. Use --force to upgrade.")
+            return 1
+
+    # Generate CMAKE_GUIDANCE.md compliant CMakeLists.txt
+    cmake_template = f'''cmake_minimum_required(VERSION 3.28)
+project({project_name} LANGUAGES CXX)
+
+# Always declare the language level once
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Export compile_commands.json (handy for your reducer or tools)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# 1) Warnings-as-errors & friends — per-compiler, per-config, target-attachable
+add_library(project_warnings INTERFACE)
+
+if (MSVC)
+  target_compile_options(project_warnings INTERFACE
+    /W4 /WX /permissive- /Zc:preprocessor /Zc:__cplusplus /EHsc
+    # optional noise trims:
+    # /wd4244 /wd4267
+  )
+else()
+  target_compile_options(project_warnings INTERFACE
+    -Wall -Wextra -Wconversion -Wshadow -Werror
+    -Wnon-virtual-dtor -Woverloaded-virtual -Wimplicit-fallthrough
+    -fdiagnostics-show-option
+  )
+endif()
+
+# 2) Sanitizers toggles (don't hardcode CMAKE_CXX_FLAGS_*; compose options instead)
+option(ENABLE_ASAN "Enable AddressSanitizer" $<NOT:$<CXX_COMPILER_ID:MSVC>>)
+option(ENABLE_UBSAN "Enable UBSan"           $<NOT:$<CXX_COMPILER_ID:MSVC>>)
+add_library(project_sanitizers INTERFACE)
+if (NOT MSVC)
+  if (ENABLE_ASAN)
+    target_compile_options(project_sanitizers INTERFACE -fsanitize=address)
+    target_link_options(project_sanitizers    INTERFACE -fsanitize=address)
+  endif()
+  if (ENABLE_UBSAN)
+    target_compile_options(project_sanitizers INTERFACE -fsanitize=undefined)
+    target_link_options(project_sanitizers    INTERFACE -fsanitize=undefined)
+  endif()
+endif()
+
+# 3) Your target(s) - replace with your actual source files
+add_executable({project_name} main.cpp)
+target_link_libraries({project_name} PRIVATE project_warnings project_sanitizers)
+
+# 4) LLM-focused "lint" that compiles TUs with tight diagnostics (no linking)
+#    Important: use the *same* include dirs/defs/opts as {project_name} so headers resolve.
+get_target_property(APP_SOURCES {project_name} SOURCES)
+get_target_property(APP_INCLUDES {project_name} INCLUDE_DIRECTORIES)
+get_target_property(APP_DEFS     {project_name} COMPILE_DEFINITIONS)
+get_target_property(APP_OPTS     {project_name} COMPILE_OPTIONS)
+
+# Compose include and define flags portably for non-MSVC compilers.
+set(_lint_includes "")
+if(APP_INCLUDES)
+  foreach(inc ${{APP_INCLUDES}})
+    list(APPEND _lint_includes -I${{inc}})
+  endforeach()
+endif()
+
+set(_lint_defines "")
+if(APP_DEFS)
+  foreach(def ${{APP_DEFS}})
+    list(APPEND _lint_defines -D${{def}})
+  endforeach()
+endif()
+
+# Build a response file so the command stays short (token-cheap logs)
+set(_lint_rsp "${{CMAKE_BINARY_DIR}}/lint_args.rsp")
+file(WRITE  "${{_lint_rsp}}" "")
+if(APP_OPTS)
+  foreach(opt ${{APP_OPTS}})
+    file(APPEND "${{_lint_rsp}}" "${{opt}}\\n")
+  endforeach()
+endif()
+foreach(def ${{_lint_defines}})
+  file(APPEND "${{_lint_rsp}}" "${{def}}\\n")
+endforeach()
+foreach(inc ${{_lint_includes}})
+  file(APPEND "${{_lint_rsp}}" "${{inc}}\\n")
+endforeach()
+
+# Pick flags per compiler
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  set(LINT_CORE_FLAGS
+    -std=c++23 -fsyntax-only
+    -Wfatal-errors -ferror-limit=1
+    -ftemplate-backtrace-limit=6 -fconstexpr-backtrace-limit=3 -fmacro-backtrace-limit=2
+    -fno-caret-diagnostics -fdiagnostics-color=never -fdiagnostics-show-option
+    -fdiagnostics-format=json
+  )
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set(LINT_CORE_FLAGS
+    -std=c++20 -fsyntax-only
+    -Wfatal-errors -fmax-errors=1
+    -fconcepts-diagnostics-depth=2
+    -fno-diagnostics-show-caret -fdiagnostics-color=never
+    -fdiagnostics-format=json
+  )
+else()
+  # MSVC: fall back to /analyze JSON? For now: no-op lint with success.
+  set(LINT_CORE_FLAGS "")
+endif()
+
+# One lint target that iterates all TU's; writes a single JSON per TU into build/lint/
+add_custom_target(lint
+  COMMENT "Running tight JSON diagnostics per translation unit..."
+)
+foreach(src ${{APP_SOURCES}})
+  get_filename_component(src_name "${{src}}" NAME_WE)
+  set(out_json "${{CMAKE_BINARY_DIR}}/lint/${{src_name}}.json")
+  file(MAKE_DIRECTORY "${{CMAKE_BINARY_DIR}}/lint")
+  add_custom_command(TARGET lint POST_BUILD
+    COMMAND ${{CMAKE_CXX_COMPILER}} "@${{_lint_rsp}}" ${{LINT_CORE_FLAGS}} "${{src}}" 2> "${{out_json}}"
+    BYPRODUCTS "${{out_json}}"
+    COMMENT "Lint ${{src_name}}"
+    VERBATIM
+  )
+endforeach()
+'''
+
+    # Write CMakeLists.txt
+    cmake_file.write_text(cmake_template)
+    print(f"✅ Created CMAKE_GUIDANCE.md compliant CMakeLists.txt")
+
+    # Create main.cpp if it doesn't exist
+    main_file = project_dir / "main.cpp"
+    if not main_file.exists():
+        main_template = f'''#include <iostream>
+
+int main() {{
+    std::cout << "Hello from {project_name}!\\n";
+    return 0;
+}}
+'''
+        main_file.write_text(main_template)
+        print(f"✅ Created sample main.cpp")
+
+    # Validate the created setup
+    cmake_validation = validate_cmake_guidance(project_dir)
+    print(f"🏗️ CMake compliance: ✅ {cmake_validation['overall_score']:.0f}% compliant with CMAKE_GUIDANCE.md")
+
+    print(f"\n🚀 Next steps:")
+    print(f"   • cd {project_dir if args.name else '.'}")
+    print(f"   • llmtk context export    # Generate build context")
+    print(f"   • cmake -B build -G Ninja  # Configure build")
+    print(f"   • cmake --build build      # Build project")
+    print(f"   • cmake --build build --target lint  # Run LLM-optimized linting")
+
+    return 0
+
 def cmd_doctor(args):
     # Load from manifest to get complete tool list
     tools_manifest = ROOT / "manifest" / "tools.yaml"
@@ -222,6 +462,10 @@ def cmd_doctor(args):
     # Restore original PATH
     os.environ["PATH"] = old_path
 
+    # Add CMake validation to the report
+    cmake_validation = validate_cmake_guidance()
+    report["_cmake"] = cmake_validation
+
     # Add summary to report
     report["_summary"] = {
         "total_tools": len(tools),
@@ -229,7 +473,8 @@ def cmd_doctor(args):
         "missing": len(tools) - len(found_tools),
         "missing_core": missing_core,
         "missing_recommended": missing_recommended,
-        "missing_optional": missing_optional
+        "missing_optional": missing_optional,
+        "cmake_compliance_score": cmake_validation["overall_score"]
     }
 
     out = EXPORTS / "doctor.json"
@@ -237,31 +482,95 @@ def cmd_doctor(args):
 
     # Print user-friendly summary if not being called from install
     if not hasattr(args, '_from_install'):
-        print()
-        print("🏥 HEALTH CHECK SUMMARY")
-        print("=" * 40)
-        print(f"✅ Found: {len(found_tools)}/{len(tools)} tools")
+        # Check if this is CMake-focused or full health check
+        cmake_only = hasattr(args, 'cmake') and args.cmake
 
-        if missing_core:
-            print(f"\n❌ Missing core tools ({len(missing_core)}):")
-            for tool in missing_core:
-                print(f"   • {tool}")
+        if cmake_only:
+            print()
+            print("🏗️ CMAKE COMPLIANCE CHECK")
+            print("=" * 40)
+        else:
+            print()
+            print("🏥 HEALTH CHECK SUMMARY")
+            print("=" * 40)
+            print(f"✅ Found: {len(found_tools)}/{len(tools)} tools")
 
-        if missing_recommended:
-            print(f"\n⚠️ Missing recommended tools ({len(missing_recommended)}):")
-            for tool in missing_recommended:
-                print(f"   • {tool}")
+        # Show different content based on mode
+        if not cmake_only:
+            if missing_core:
+                print(f"\n❌ Missing core tools ({len(missing_core)}):")
+                for tool in missing_core:
+                    print(f"   • {tool}")
 
-        if missing_core or missing_recommended:
+            if missing_recommended:
+                print(f"\n⚠️ Missing recommended tools ({len(missing_recommended)}):")
+                for tool in missing_recommended:
+                    print(f"   • {tool}")
+
+        # Show CMake compliance status (always shown)
+        cmake_score = cmake_validation["overall_score"]
+        if cmake_validation["cmake_file_exists"]:
+            if cmake_score >= 80:
+                print(f"\n🏗️ CMake setup: ✅ {cmake_score:.0f}% compliant with CMAKE_GUIDANCE.md")
+            elif cmake_score >= 50:
+                print(f"\n🏗️ CMake setup: ⚠️ {cmake_score:.0f}% compliant with CMAKE_GUIDANCE.md")
+            else:
+                print(f"\n🏗️ CMake setup: ❌ {cmake_score:.0f}% compliant with CMAKE_GUIDANCE.md")
+
+            # Show detailed compliance breakdown in CMake-only mode
+            if cmake_only:
+                print(f"\n📋 Compliance Details:")
+                for key, value in cmake_validation["compliance"].items():
+                    status = "✅" if value else "❌"
+                    readable_name = key.replace("_", " ").title()
+                    print(f"   {status} {readable_name}")
+
+            if cmake_validation["suggestions"]:
+                suggestions_to_show = cmake_validation["suggestions"] if cmake_only else cmake_validation["suggestions"][:3]
+                print("   CMake improvements needed:")
+                for suggestion in suggestions_to_show:
+                    print(f"   • {suggestion}")
+        else:
+            print(f"\n🏗️ CMake setup: ❌ No CMakeLists.txt found")
+            print("   • Run 'llmtk init' to create LLM-optimized project structure")
+
+        # Recommendations section
+        needs_tools = missing_core or missing_recommended
+        needs_cmake = cmake_score < 80
+
+        if (not cmake_only and needs_tools) or needs_cmake:
             print(f"\n💡 RECOMMENDED ACTIONS:")
-            print(f"   • Run 'llmtk install' to install missing tools")
-            print(f"   • Use 'llmtk install --local' for non-sudo installation")
+            if not cmake_only and needs_tools:
+                print(f"   • Run 'llmtk install' to install missing tools")
+                print(f"   • Use 'llmtk install --local' for non-sudo installation")
+            if needs_cmake:
+                print(f"   • Run 'llmtk init' to upgrade CMake setup for LLM workflows")
+                print(f"   • See CMAKE_GUIDANCE.md for manual setup instructions")
 
-        print(f"\n📄 Detailed report: {out}")
+        if not cmake_only:
+            print(f"\n📄 Detailed report: {out}")
 
     print(str(out))
 
 def cmd_context_export(args):
+    # Check CMake compliance if requested
+    if hasattr(args, 'require_cmake') and args.require_cmake:
+        cmake_validation = validate_cmake_guidance()
+        if not cmake_validation["cmake_file_exists"]:
+            print("❌ Error: No CMakeLists.txt found. Use --require-cmake only in CMake projects.")
+            print("💡 Run 'llmtk init' to create a compliant CMake project")
+            return 1
+
+        if cmake_validation["overall_score"] < 80:
+            print(f"❌ Error: CMake compliance too low ({cmake_validation['overall_score']:.0f}% < 80%)")
+            print("💡 Missing CMAKE_GUIDANCE.md patterns:")
+            for suggestion in cmake_validation["suggestions"][:3]:
+                print(f"   • {suggestion}")
+            print("💡 Run 'llmtk init' to upgrade your CMake setup")
+            return 1
+
+        print(f"✅ CMake compliance verified ({cmake_validation['overall_score']:.0f}%)")
+
     build = pathlib.Path(args.build)
     build.mkdir(exist_ok=True)
 
@@ -826,16 +1135,26 @@ def main():
     ap = argparse.ArgumentParser(prog="llmtk", description="LLM-friendly C++/CMake toolkit")
     ap.add_argument("--version", action="version", version=f"llmtk {get_version()}")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("doctor").set_defaults(fn=cmd_doctor)
+    doctor_parser = sub.add_parser("doctor", help="Check tool availability and CMake compliance")
+    doctor_parser.add_argument("--cmake", action="store_true", help="Focus on CMake compliance only")
+    doctor_parser.set_defaults(fn=cmd_doctor)
 
     cx = sub.add_parser("context", help="context commands").add_subparsers(dest="sub", required=True)
-    cx_exp = cx.add_parser("export"); cx_exp.add_argument("--build", default="build"); cx_exp.set_defaults(fn=cmd_context_export)
+    cx_exp = cx.add_parser("export", help="Export build context for LLMs")
+    cx_exp.add_argument("--build", default="build", help="Build directory path")
+    cx_exp.add_argument("--require-cmake", action="store_true", help="Require CMAKE_GUIDANCE.md compliance")
+    cx_exp.set_defaults(fn=cmd_context_export)
 
     an = sub.add_parser("analyze"); an.add_argument("paths", nargs="*"); an.set_defaults(fn=cmd_analyze)
 
     rd = sub.add_parser("reduce"); rd.add_argument("input"); rd.add_argument("test_cmd"); rd.set_defaults(fn=cmd_reduce)
 
     sub.add_parser("docs").set_defaults(fn=cmd_docs)
+
+    init_parser = sub.add_parser("init", help="Initialize LLM-optimized C++ project")
+    init_parser.add_argument("name", nargs="?", help="Project name (uses current directory if not specified)")
+    init_parser.add_argument("--force", action="store_true", help="Overwrite existing CMakeLists.txt")
+    init_parser.set_defaults(fn=cmd_init)
 
     install_parser = sub.add_parser("install", help="Install missing tools")
     install_parser.add_argument("--local", action="store_true", help="Force local installation (no sudo)")
