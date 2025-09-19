@@ -3068,6 +3068,18 @@ def cmd_cache(args):
         else:
             print("Cache is empty.")
 
+def cmd_kb(args):
+    """Query the error knowledge base."""
+    kb_file = ROOT / "manifest" / "knowledge_base" / "diagnostics.yaml"
+    if kb_file.exists():
+        kb_data = load_yaml(kb_file)
+        if kb_data:
+            print(json.dumps(kb_data, indent=2))
+        else:
+            print("Error: Could not load knowledge base.")
+    else:
+        print("Error: Knowledge base not found.")
+
 def main():
     ap = argparse.ArgumentParser(prog="llmtk", description="LLM-friendly C++/CMake toolkit")
     ap.add_argument("--version", action="version", version=f"llmtk {get_version()}")
@@ -3190,6 +3202,10 @@ def main():
     cache_subparsers = cache_parser.add_subparsers(dest="cache_cmd", required=True)
     cache_subparsers.add_parser("clear", help="Clear the analysis cache").set_defaults(fn=cmd_cache)
     cache_subparsers.add_parser("show", help="Show cache contents").set_defaults(fn=cmd_cache)
+
+    kb_parser = sub.add_parser("knowledge-base", help="Query the error knowledge base")
+    kb_subparsers = kb_parser.add_subparsers(dest="kb_cmd", required=True)
+    kb_subparsers.add_parser("show", help="Show knowledge base contents").set_defaults(fn=cmd_kb)
 
     args = ap.parse_args()
     # map nested subcommand

@@ -1,0 +1,26 @@
+schema: 1
+diagnostics:
+  - id: CPP001
+    pattern: "undefined reference to `(.*)`"
+    description: "Linker error: The definition for a symbol (function, variable, etc.) is not found."
+    remediation:
+      - "Ensure the source file containing the definition is included in the build."
+      - "Check for typos in the function or variable name."
+      - "Verify that you are linking against the correct libraries."
+    context_level: 2 # Requires compile_commands.json and possibly CMakeLists.txt
+
+  - id: CPP002
+    pattern: "passing `const (.*)` as `this` argument discards qualifiers"
+    description: "Compiler error: Attempting to call a non-const member function on a const object."
+    remediation:
+      - "If the member function does not modify the object's state, mark it as `const`."
+      - "If the member function needs to modify the object, call it on a non-const instance."
+    context_level: 1 # Requires only the source file content
+
+  - id: CPP003
+    pattern: "throw expression with an exception object of type `(.*)` that is not copy-constructible"
+    description: "Compiler error: An exception is being thrown, but the exception object cannot be copied."
+    remediation:
+      - "Ensure the exception class has a public copy constructor."
+      - "Consider throwing a pointer to the exception object instead of the object itself (less common)."
+    context_level: 1 # Requires only the source file content
