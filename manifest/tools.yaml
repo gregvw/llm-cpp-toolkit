@@ -367,3 +367,27 @@ tools:
     provides: ["git-pager"]
     check:
       cmd: ["delta", "--version"]
+  cvise:
+    role: recommended
+    min_version: ">=2.9"
+    provides: ["reducer"]
+    install:
+      apt: ["cvise"]
+      dnf: ["cvise"]
+      pacman: ["cvise"]
+      brew: ["cvise"]
+      nix: ["cvise"]
+    check:
+      cmd: ["cvise", "--version"]
+  creduce:
+    role: recommended
+    min_version: ">=2.5"
+    provides: ["reducer"]
+    install:
+      apt: ["creduce"]
+      dnf: ["creduce"]
+      pacman: ["creduce"]
+      brew: ["creduce"]
+      nix: ["creduce"]
+    check:
+      cmd: ["creduce", "--version"]

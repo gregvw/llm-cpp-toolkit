@@ -1,6 +1,6 @@
 # Toolkit Reference
 
-Generated from manifests on 2025-09-18T20:39:32.569108+00:00.
+Generated from manifests on 2025-09-19T03:02:51.082122+00:00.
 
 ## Tools
 - bat
@@ -33,6 +33,12 @@ Generated from manifests on 2025-09-18T20:39:32.569108+00:00.
 - cppcheck
   - provides: static-analysis
   - check: `cppcheck --version`
+- creduce
+  - provides: reducer
+  - check: `creduce --version`
+- cvise
+  - provides: reducer
+  - check: `cvise --version`
 - delta
   - provides: git-pager
   - check: `delta --version`
@@ -106,7 +112,7 @@ Generated from manifests on 2025-09-18T20:39:32.569108+00:00.
 ## Commands
 - analyze
   - description: Run clang-tidy + IWYU + cppcheck with JSON reports.
-  - args: paths (variadic)
+  - args: paths (variadic), sarif
   - runs: modules/analyze.sh
   - output: exports/reports/clang-tidy.json
     schema:
@@ -186,6 +192,39 @@ Generated from manifests on 2025-09-18T20:39:32.569108+00:00.
       ]
     }
     ```
+  - output: exports/reports/analysis.sarif
+    schema:
+    ```json
+    {
+      "version": "string",
+      "$schema": "string",
+      "runs": [
+        {
+          "tool": {
+            "driver": {
+              "name": "string",
+              "version": "string",
+              "rules": [
+                "object"
+              ]
+            }
+          },
+          "results": [
+            {
+              "ruleId": "string",
+              "message": {
+                "text": "string"
+              },
+              "level": "string",
+              "locations": [
+                "object"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+    ```
 - capabilities
   - description: Emit machine-readable toolkit capabilities summary.
   - output: exports/capabilities.json
@@ -238,6 +277,13 @@ Generated from manifests on 2025-09-18T20:39:32.569108+00:00.
       }
     }
     ```
+- format
+  - description: Run clang-format on code with check or apply options.
+  - args: paths (variadic), check, apply, style
+- gate
+  - description: Enforce SARIF severity budgets for CI gating.
+  - args: sarif_file (required), max-errors, max-warnings, max-notes, config
+  - output: (unknown)
 - reduce
   - description: Minimize a failing repro with cvise.
   - args: input (required), test_cmd (required)
@@ -252,3 +298,41 @@ Generated from manifests on 2025-09-18T20:39:32.569108+00:00.
       "input": "string"
     }
     ```
+- stderr-thin
+  - description: Collapse compiler stderr into deterministic, budget-aware highlights.
+  - args: log, compile, compile-index, level, context-budget
+  - output: exports/diagnostics/stderr-thin.json
+    schema:
+    ```json
+    {
+      "_meta": {
+        "generated_at": "string",
+        "level": "string",
+        "context_budget": "int",
+        "structured_source": "string"
+      },
+      "counts": {
+        "error": "int",
+        "warning": "int",
+        "note": "int",
+        "remark": "int",
+        "other": "int"
+      },
+      "view": {
+        "path": "string",
+        "level": "string",
+        "context_budget": "int",
+        "context_used": "int",
+        "context_full": "int",
+        "context_truncated": "int"
+      },
+      "highlights": [
+        "string"
+      ]
+    }
+    ```
+  - output: exports/diagnostics/stderr-thin.txt
+  - output: exports/diagnostics/stderr-raw.txt
+- tidy
+  - description: Run clang-tidy with optional fix application.
+  - args: paths (variadic), apply, checks

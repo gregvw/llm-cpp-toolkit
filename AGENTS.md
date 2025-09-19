@@ -275,9 +275,19 @@ Short answer: **yes—build this as a CLI-first toolkit** and let Codex/CLI agen
   * `llmtk init` – scaffolds new projects or emits adoption reports for existing ones (copying existing compile DBs into exports and refreshing `exports/capabilities.json`).
   * `llmtk doctor` – prints a machine-readable health report.
   * `llmtk context export` – emits `compile_commands.json` + CMake File API JSON.
-  * `llmtk analyze` – runs clang-tidy/IWYU/cppcheck → JSON reports.
-  * `llmtk reduce` – cvise wrapper to minimize repros.
-  * `llmtk capabilities` – regenerate the manifest-driven `exports/capabilities.json` summary.
+* `llmtk analyze` – runs clang-tidy/IWYU/cppcheck → JSON reports.
+* `llmtk reduce` – cvise wrapper to minimize repros.
+* `llmtk capabilities` – regenerate the manifest-driven `exports/capabilities.json` summary.
+* `llmtk stderr-thin` – collapse compiler stderr into structured, budget-aware highlights for agents.
+
+`llmtk stderr-thin` always emits three artifacts under `exports/diagnostics/`:
+
+- `stderr-thin.txt` – the context-budgeted view at the requested tier (`summary`, `focused`, or `detailed`).
+- `stderr-thin.json` – structured metadata with severity counts, highlights, and the underlying diagnostic payload.
+- `stderr-raw.txt` – the untouched stderr capture for deep dives when more context is explicitly requested.
+
+Provide either a stored log (`--log`), a compile database entry (`--compile` or `--compile-index`), or a command to run (`-- …`).
+Every invocation accepts `--context-budget` to bound token usage, and agents should default to `--level=focused` for interactive fix-it loops.
 * **Outputs** always land under `exports/` and include at least one JSON file per command.
 * A **manifest** (YAML) drives installs, versions, and docs generation.
 * Optional adapters for agents/editors later (but the CLI is the source of truth).

@@ -33,6 +33,9 @@ llmtk context export
 # Analyze code with multiple tools
 llmtk analyze src/ include/
 
+# Thin compiler diagnostics with context budgets
+llmtk stderr-thin --compile main.cpp --level=focused
+
 # Regenerate machine-readable capabilities summary
 llmtk capabilities
 
@@ -65,6 +68,7 @@ entire `exports/` directory is ignored by default via `.gitignore`.
 - **🧱 Project Bootstrap/Adoption** - Generate starter scaffolding or adopt existing CMake projects with guidance
 - **📦 Context Export** - Generate compilation databases and CMake introspection data
 - **🔬 Code Analysis** - Run clang-tidy, include-what-you-use, and cppcheck with JSON output
+- **🧠 Deterministic Diagnostics** - Collapse compiler stderr with `llmtk stderr-thin` into budget-aware highlights
 - **🧪 Advanced Sanitizer Support** - Multiple sanitizer variants with proper isolation
 - **🪚 Test Case Reduction** - Minimize failing code with cvise integration
 - **🤖 LLM-Optimized** - JSON outputs designed for AI agent consumption
@@ -115,6 +119,10 @@ exports/
 │   ├── clang-tidy.json
 │   ├── iwyu.json
 │   └── cppcheck.json
+├── diagnostics/            # Deterministic stderr thinning outputs
+│   ├── stderr-thin.json
+│   ├── stderr-thin.txt
+│   └── stderr-raw.txt
 └── repros/                 # Reduced test cases
     ├── minimized.cpp
     └── report.json

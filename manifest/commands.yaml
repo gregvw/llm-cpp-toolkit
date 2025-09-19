@@ -100,6 +100,48 @@ commands:
                   level: string
                   locations: [object]
 
+  stderr-thin:
+    description: Collapse compiler stderr into deterministic, budget-aware highlights.
+    args:
+      - name: log
+        description: "Path to stderr log to thin"
+      - name: compile
+        description: "Substring filter for compile_commands.json entries"
+      - name: compile-index
+        description: "Explicit index into compile_commands.json"
+      - name: level
+        description: "Detail level (summary|focused|detailed)"
+      - name: context-budget
+        description: "Maximum characters in the thinned output"
+    outputs:
+      - path: "exports/diagnostics/stderr-thin.json"
+        schema:
+          _meta:
+            generated_at: string
+            level: string
+            context_budget: int
+            structured_source: string
+          counts:
+            error: int
+            warning: int
+            note: int
+            remark: int
+            other: int
+          view:
+            path: string
+            level: string
+            context_budget: int
+            context_used: int
+            context_full: int
+            context_truncated: int
+          highlights: [string]
+      - path: "exports/diagnostics/stderr-thin.txt"
+      - path: "exports/diagnostics/stderr-raw.txt"
+    examples:
+      - "llmtk stderr-thin --log build.log"
+      - "llmtk stderr-thin --compile main.cpp --level=summary"
+      - "llmtk stderr-thin --context-budget=4000 -- cmake --build build"
+
   reduce:
     description: Minimize a failing repro with cvise.
     args:

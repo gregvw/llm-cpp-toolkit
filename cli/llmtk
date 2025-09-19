@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import argparse, json, os, shutil, subprocess, sys, pathlib, datetime, re, tempfile, textwrap, tarfile
+import argparse, json, os, shutil, subprocess, sys, pathlib, datetime, re, tempfile, textwrap, tarfile, time, shlex
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -22,8 +22,8 @@ EXPORTS = pathlib.Path.cwd() / "exports"
 MODULES = ROOT / "modules"
 EXPORTS.mkdir(exist_ok=True)
 
-def run(cmd, cwd=None, check=True):
-    return subprocess.run(cmd, cwd=cwd, text=True, capture_output=True, check=check)
+def run(cmd, cwd=None, check=True, env=None):
+    return subprocess.run(cmd, cwd=cwd, text=True, capture_output=True, check=check, env=env)
 
 def write_json(path: pathlib.Path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -252,6 +252,288 @@ def generate_capabilities_json(out_path: pathlib.Path):
 
     write_json(out_path, data)
     return out_path
+
+
+_TEMPLATE_CHAIN_PATTERNS = [
+    re.compile(r"\b(in|note: in) instantiation of", re.IGNORECASE),
+    re.compile(r"\brequired from", re.IGNORECASE),
+    re.compile(r"\binstantiated from", re.IGNORECASE),
+    re.compile(r"\bsubstitution failure", re.IGNORECASE),
+]
+
+_SEVERITY_REGEX = re.compile(r"\b(error|warning|note|remark|fatal error)\b", re.IGNORECASE)
+
+_DEFAULT_CONTEXT_BUDGETS = {
+    "summary": 1500,
+    "focused": 6000,
+    "detailed": 16000,
+}
+
+
+def _collapse_template_traces(lines):
+    collapsed = []
+    omitted = 0
+    i = 0
+    total = len(lines)
+    while i < total:
+        line = lines[i]
+        if any(pat.search(line) for pat in _TEMPLATE_CHAIN_PATTERNS):
+            group = [line]
+            i += 1
+            while i < total and any(pat.search(lines[i]) for pat in _TEMPLATE_CHAIN_PATTERNS):
+                group.append(lines[i])
+                i += 1
+            if len(group) > 3:
+                collapsed.append(group[0])
+                collapsed.append(f"... ({len(group) - 2} template frames trimmed)")
+                collapsed.append(group[-1])
+                omitted += len(group) - 3
+            else:
+                collapsed.extend(group)
+            continue
+        collapsed.append(line)
+        i += 1
+    return collapsed, omitted
+
+
+def _dedupe_preserve(seq):
+    seen = set()
+    out = []
+    for item in seq:
+        if item not in seen and item is not None:
+            out.append(item)
+            seen.add(item)
+    return out
+
+
+def _normalize_note(note):
+    if isinstance(note, str):
+        return {"message": note, "file": None, "line": None, "column": None, "level": "note"}
+    if isinstance(note, dict):
+        loc = note.get("location") or {}
+        return {
+            "message": note.get("message") or note.get("text") or "",
+            "file": note.get("file") or note.get("path") or loc.get("file"),
+            "line": note.get("line") or loc.get("line"),
+            "column": note.get("column") or loc.get("column"),
+            "level": note.get("level") or note.get("severity") or "note",
+        }
+    return {"message": str(note), "file": None, "line": None, "column": None, "level": "note"}
+
+
+def _normalize_diag(diag):
+    message = diag.get("message") or diag.get("text") or diag.get("description")
+    loc = diag.get("location") or {}
+    return {
+        "level": diag.get("level") or diag.get("severity") or loc.get("level"),
+        "message": message or "",
+        "file": diag.get("file") or diag.get("path") or loc.get("file"),
+        "line": diag.get("line") or loc.get("line"),
+        "column": diag.get("column") or loc.get("column"),
+        "category": diag.get("category") or diag.get("option"),
+        "option": diag.get("option"),
+        "notes": [_normalize_note(n) for n in diag.get("notes") or diag.get("children") or []],
+        "raw": diag,
+    }
+
+
+def _extract_json_objects(blob):
+    decoder = json.JSONDecoder()
+    idx = 0
+    length = len(blob)
+    results = []
+    while idx < length:
+        ch = blob[idx]
+        if ch not in "{[":
+            idx += 1
+            continue
+        try:
+            obj, end = decoder.raw_decode(blob, idx)
+        except json.JSONDecodeError:
+            idx += 1
+            continue
+        results.append(obj)
+        idx = end
+    return results
+
+
+def _parse_structured_diagnostics(text):
+    diagnostics = []
+    for obj in _extract_json_objects(text):
+        if isinstance(obj, dict):
+            if "diag" in obj and isinstance(obj["diag"], dict):
+                diagnostics.append(_normalize_diag(obj["diag"]))
+            elif "diagnostics" in obj and isinstance(obj["diagnostics"], list):
+                for item in obj["diagnostics"]:
+                    if isinstance(item, dict):
+                        diagnostics.append(_normalize_diag(item))
+            elif {"level", "message"}.issubset(obj.keys()):
+                diagnostics.append(_normalize_diag(obj))
+        elif isinstance(obj, list):
+            for entry in obj:
+                if isinstance(entry, dict) and {"level", "message"}.issubset(entry.keys()):
+                    diagnostics.append(_normalize_diag(entry))
+    return diagnostics
+
+
+_TEXT_DIAG_PATTERN = re.compile(
+    r"^(?P<file>[^:\n]+)?(?::(?P<line>\d+))?(?::(?P<column>\d+))?:\s*(?P<level>error|warning|note|remark|fatal error)\s*:\s*(?P<message>.*)",
+    re.IGNORECASE,
+)
+
+
+def _parse_text_diagnostics(lines):
+    diagnostics = []
+    for line in lines:
+        match = _TEXT_DIAG_PATTERN.match(line.strip())
+        if not match:
+            continue
+        gd = match.groupdict()
+        try:
+            line_no = int(gd.get("line")) if gd.get("line") else None
+        except ValueError:
+            line_no = None
+        try:
+            col_no = int(gd.get("column")) if gd.get("column") else None
+        except ValueError:
+            col_no = None
+        diagnostics.append({
+            "level": (gd.get("level") or "").lower(),
+            "message": gd.get("message") or "",
+            "file": gd.get("file") or None,
+            "line": line_no,
+            "column": col_no,
+            "category": None,
+            "option": None,
+            "notes": [],
+            "raw": line,
+        })
+    return diagnostics
+
+
+def _format_location(file, line, column):
+    if not file:
+        return None
+    location = str(file)
+    if line is not None:
+        location += f":{line}"
+        if column is not None:
+            location += f":{column}"
+    return location
+
+
+def _format_highlights(diagnostics):
+    highlights = []
+    for diag in diagnostics:
+        level = (diag.get("level") or "info").upper()
+        location = _format_location(diag.get("file"), diag.get("line"), diag.get("column"))
+        category = diag.get("category") or diag.get("option")
+        base = f"{level}: {diag.get('message', '').strip()}"
+        if location:
+            base = f"{base} ({location})"
+        if category:
+            base = f"{base} [{category}]"
+        highlights.append(base.strip())
+        for note in diag.get("notes", []):
+            note_level = (note.get("level") or "note").lower()
+            note_loc = _format_location(note.get("file"), note.get("line"), note.get("column"))
+            note_msg = note.get("message", "").strip()
+            frag = f"  {note_level}: {note_msg}" if note_msg else f"  {note_level}"
+            if note_loc:
+                frag = f"{frag} ({note_loc})"
+            highlights.append(frag.strip())
+    return _dedupe_preserve(highlights)
+
+
+def _focused_view_lines(collapsed_lines):
+    focus = []
+    for idx, line in enumerate(collapsed_lines):
+        if _SEVERITY_REGEX.search(line):
+            if idx > 0:
+                focus.append(collapsed_lines[idx - 1])
+            focus.append(line)
+            if idx + 1 < len(collapsed_lines):
+                focus.append(collapsed_lines[idx + 1])
+    focus = _dedupe_preserve(focus)
+    return focus if focus else collapsed_lines[:200]
+
+
+def _apply_context_budget(lines, budget):
+    text = "\n".join(line.rstrip() for line in lines if line is not None)
+    text = text.strip()
+    full_len = len(text)
+    if budget and full_len > budget:
+        trimmed = text[:budget]
+        cut = trimmed.rfind("\n")
+        if cut > budget * 0.6:
+            trimmed = trimmed[:cut]
+        truncated = full_len - len(trimmed)
+        text = trimmed.rstrip() + f"\n... [truncated {truncated} chars]"
+        used = len(text)
+        return text, used, full_len, truncated
+    return text, full_len, full_len, 0
+
+
+def _collect_counts(diagnostics):
+    counts = {"error": 0, "warning": 0, "note": 0, "remark": 0, "other": 0}
+    for diag in diagnostics:
+        level = (diag.get("level") or "other").lower()
+        if level in counts:
+            counts[level] += 1
+        else:
+            counts["other"] += 1
+    return counts
+
+
+def _find_compile_database(path_hint=None):
+    if path_hint:
+        candidate = pathlib.Path(path_hint)
+        if candidate.exists():
+            return candidate
+        return candidate  # allow caller to report missing path
+    candidates = [
+        EXPORTS / "compile_commands.json",
+        pathlib.Path.cwd() / "compile_commands.json",
+    ]
+    for cand in candidates:
+        if cand.exists():
+            return cand
+    common_build_dirs = ["build", "cmake-build-debug", "cmake-build-release"]
+    for build_dir in common_build_dirs:
+        candidate = pathlib.Path(build_dir) / "compile_commands.json"
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _prepare_compile_command(entry):
+    args = []
+    if isinstance(entry.get("arguments"), list):
+        args = list(entry["arguments"])
+    elif entry.get("command"):
+        args = shlex.split(entry["command"])
+    sanitized = []
+    skip_next = False
+    drop_prefixes = ("-o", "-MF", "-MT", "-MQ")
+    for part in args:
+        if skip_next:
+            skip_next = False
+            continue
+        if part in drop_prefixes:
+            skip_next = True
+            continue
+        if any(part.startswith(prefix) for prefix in drop_prefixes):
+            continue
+        sanitized.append(part)
+    if "-fsyntax-only" not in sanitized:
+        sanitized.append("-fsyntax-only")
+    if not any(arg.startswith("-fdiagnostics-format") for arg in sanitized):
+        sanitized.append("-fdiagnostics-format=json")
+    if not any(arg.startswith("-fdiagnostics-color") for arg in sanitized) and not any(arg.startswith("-fcolor-diagnostics") for arg in sanitized):
+        sanitized.append("-fdiagnostics-color=never")
+    if "-fno-caret-diagnostics" not in sanitized:
+        sanitized.append("-fno-caret-diagnostics")
+    return sanitized
 
 
 def cmd_docs(_):
@@ -1314,6 +1596,204 @@ def cmd_analyze(args):
 
     print(str(reports))
 
+
+def cmd_stderr_thin(args):
+    diagnostics_dir = EXPORTS / "diagnostics"
+    diagnostics_dir.mkdir(parents=True, exist_ok=True)
+
+    budget = _DEFAULT_CONTEXT_BUDGETS.get(args.level, 6000)
+    if args.context_budget and args.context_budget > 0:
+        budget = args.context_budget
+
+    json_out = pathlib.Path(args.json) if args.json else diagnostics_dir / "stderr-thin.json"
+    text_out = pathlib.Path(args.text) if args.text else diagnostics_dir / "stderr-thin.txt"
+    raw_out = pathlib.Path(args.raw) if args.raw else diagnostics_dir / "stderr-raw.txt"
+
+    raw_stderr = ""
+    stdout_text = ""
+    run_info = {
+        "mode": None,
+        "command": None,
+        "returncode": None,
+        "duration_seconds": None,
+    }
+
+    compile_db_path = None
+    structured_source = None
+
+    if args.log:
+        log_path = pathlib.Path(args.log)
+        if not log_path.exists():
+            print(f"Error: log file not found: {log_path}")
+            return 1
+        raw_stderr = log_path.read_text()
+        run_info.update({
+            "mode": "log",
+            "log_path": str(log_path.resolve()),
+        })
+    elif args.compile is not None or args.compile_index is not None:
+        compile_db_path = _find_compile_database(args.compile_db)
+        if not compile_db_path or not compile_db_path.exists():
+            hint = args.compile_db or "exports/compile_commands.json"
+            print(f"Error: compile_commands.json not found (looked for {hint})")
+            return 1
+        try:
+            compile_entries = json.loads(compile_db_path.read_text())
+        except Exception as exc:
+            print(f"Error: failed to read compile database: {exc}")
+            return 1
+        if not isinstance(compile_entries, list):
+            print("Error: compile_commands.json has unexpected format")
+            return 1
+
+        entry = None
+        selected_index = None
+        if args.compile_index is not None:
+            if 0 <= args.compile_index < len(compile_entries):
+                entry = compile_entries[args.compile_index]
+                selected_index = args.compile_index
+            else:
+                print(f"Error: compile index {args.compile_index} is out of range (size={len(compile_entries)})")
+                return 1
+        else:
+            needle = (args.compile or "").lower()
+            for idx, candidate in enumerate(compile_entries):
+                haystack = " ".join(filter(None, [candidate.get("file"), candidate.get("command"), candidate.get("directory")]))
+                if needle in haystack.lower():
+                    entry = candidate
+                    selected_index = idx
+                    break
+            if entry is None:
+                print(f"Error: no compile command matched '{args.compile}'")
+                return 1
+
+        command = _prepare_compile_command(entry)
+        if not command:
+            print("Error: unable to prepare compile command arguments")
+            return 1
+
+        cwd = pathlib.Path(entry.get("directory") or pathlib.Path.cwd())
+        if not cwd.exists():
+            cwd = pathlib.Path.cwd()
+        start = time.perf_counter()
+        result = run(command, cwd=str(cwd), check=False)
+        duration = time.perf_counter() - start
+        raw_stderr = (result.stderr or "")
+        stdout_text = result.stdout or ""
+        run_info.update({
+            "mode": "compile_command",
+            "command": list(command),
+            "returncode": result.returncode,
+            "duration_seconds": round(duration, 6),
+            "directory": str(cwd),
+            "compile_db": str(compile_db_path.resolve()),
+            "compile_entry_index": selected_index,
+            "compile_file": entry.get("file"),
+        })
+    elif args.cmd:
+        command = [c for c in args.cmd if c]
+        if command and command[0] == "--":
+            command = command[1:]
+        if not command:
+            print("Error: no command provided for stderr capture")
+            return 1
+        cwd = pathlib.Path(args.cwd).resolve() if args.cwd else pathlib.Path.cwd()
+        if not cwd.exists():
+            print(f"Error: working directory does not exist: {cwd}")
+            return 1
+        start = time.perf_counter()
+        result = run(command, cwd=str(cwd), check=False)
+        duration = time.perf_counter() - start
+        raw_stderr = result.stderr or ""
+        stdout_text = result.stdout or ""
+        run_info.update({
+            "mode": "command",
+            "command": list(command),
+            "returncode": result.returncode,
+            "duration_seconds": round(duration, 6),
+            "directory": str(cwd),
+        })
+    else:
+        if sys.stdin and not sys.stdin.isatty():
+            raw_stderr = sys.stdin.read()
+            run_info.update({"mode": "stdin"})
+        else:
+            print("Error: provide --log, --compile/--compile-index, a command, or pipe stderr to STDIN")
+            return 1
+
+    lines = raw_stderr.splitlines()
+    collapsed_lines, template_omitted = _collapse_template_traces(lines)
+
+    diagnostics = _parse_structured_diagnostics(raw_stderr)
+    if diagnostics:
+        structured_source = "clang-json"
+    else:
+        diagnostics = _parse_text_diagnostics(lines)
+        structured_source = "text-regex" if diagnostics else None
+
+    highlights = _format_highlights(diagnostics) if diagnostics else []
+    if not highlights:
+        severity_lines = [line for line in collapsed_lines if _SEVERITY_REGEX.search(line)]
+        highlights = _dedupe_preserve(severity_lines[:20])
+
+    view_lines = []
+    if args.level == "summary":
+        view_lines = highlights or collapsed_lines[:20]
+    elif args.level == "focused":
+        view_lines = _focused_view_lines(collapsed_lines)
+    else:
+        view_lines = collapsed_lines
+
+    if highlights and args.level != "detailed":
+        view_lines = _dedupe_preserve(highlights + view_lines)
+
+    view_lines = [line for line in view_lines if line is not None and line.strip()]
+
+    context_text, used_len, full_len, truncated = _apply_context_budget(view_lines, budget)
+
+    counts = _collect_counts(diagnostics) if diagnostics else {"error": 0, "warning": 0, "note": 0, "remark": 0, "other": 0}
+
+    text_out.parent.mkdir(parents=True, exist_ok=True)
+    raw_out.parent.mkdir(parents=True, exist_ok=True)
+    text_out.write_text((context_text + "\n") if context_text else "")
+    raw_out.write_text(raw_stderr)
+
+    report = {
+        "_meta": {
+            "generated_at": datetime.datetime.now(datetime.UTC).isoformat(),
+            "level": args.level,
+            "context_budget": budget,
+            "structured_source": structured_source or "none",
+        },
+        "run": run_info,
+        "counts": counts,
+        "view": {
+            "path": str(text_out.resolve()),
+            "level": args.level,
+            "context_budget": budget,
+            "context_used": used_len,
+            "context_full": full_len,
+            "context_truncated": truncated,
+        },
+        "raw": {
+            "stderr_path": str(raw_out.resolve()),
+            "stderr_chars": len(raw_stderr),
+            "stdout_chars": len(stdout_text),
+            "stdout_preview": (stdout_text.splitlines()[:5] if stdout_text else []),
+        },
+        "highlights": highlights,
+        "diagnostics": diagnostics,
+        "omissions": {
+            "template_frames": template_omitted,
+        },
+    }
+
+    json_out.parent.mkdir(parents=True, exist_ok=True)
+    write_json(json_out, report)
+
+    print(f"Thinned diagnostics written to {text_out}")
+    print(str(json_out))
+
 def cmd_tidy(args):
     """Run clang-tidy with optional fix application."""
     compile_db = EXPORTS / "compile_commands.json"
@@ -1569,16 +2049,67 @@ def cmd_gate(args):
 def cmd_reduce(args):
     repros = EXPORTS/"repros"; repros.mkdir(exist_ok=True)
     cvise = shutil.which("cvise")
-    report = {"input": args.input, "test_cmd": args.test_cmd, "cvise_available": bool(cvise)}
-    if not cvise:
-        report["note"] = "cvise not found; skip"
+    creduce = shutil.which("creduce")
+    reducer = None
+    reducer_name = None
+    if cvise:
+        reducer = cvise
+        reducer_name = "cvise"
+    elif creduce:
+        reducer = creduce
+        reducer_name = "creduce"
+
+    report = {
+        "input": args.input,
+        "test_cmd": args.test_cmd,
+        "cvise_available": bool(cvise),
+        "creduce_available": bool(creduce),
+        "reducer_used": reducer_name,
+        "timeout": args.timeout,
+        "sanitizer": args.sanitizer
+    }
+
+    if not reducer:
+        report["note"] = "No reducer found; please run `llmtk install cvise` or `llmtk install creduce`"
         write_json(repros/"report.json", report)
         print(str(repros/"report.json"))
         return
+
+    # Build the command
+    cmd = [reducer]
+    if args.timeout:
+        cmd.extend(["--timeout", str(args.timeout)])
+    cmd.extend([args.input, "--", "bash", "-lc"])
+
+    test_cmd = args.test_cmd
+    if args.sanitizer:
+        if args.sanitizer == "asan":
+            test_cmd = f"ASAN_OPTIONS=detect_leaks=0 {test_cmd}"
+        elif args.sanitizer == "ubsan":
+            test_cmd = f"UBSAN_OPTIONS=print_stacktrace=1 {test_cmd}"
+        elif args.sanitizer == "tsan":
+            test_cmd = f"TSAN_OPTIONS=report_atomic_races=1 {test_cmd}"
+    cmd.append(test_cmd)
+
     # Minimal shell-out; users can expand
     try:
-        run([cvise, args.input, "--", "bash", "-lc", args.test_cmd], check=False)
-        report["note"] = "cvise run attempted"
+        result = run(cmd, check=False)
+        report["note"] = f"{reducer_name} run completed"
+        report["returncode"] = result.returncode
+        
+        post_mortem_path = repros/"post-mortem.txt"
+        with open(post_mortem_path, "w") as f:
+            f.write(f"# {reducer_name} Post-Mortem\n\n")
+            f.write(f"## Configuration\n")
+            f.write(f"- Input: {args.input}\n")
+            f.write(f"- Test Command: {args.test_cmd}\n")
+            f.write(f"- Timeout: {args.timeout}\n")
+            f.write(f"- Sanitizer: {args.sanitizer}\n\n")
+            f.write(f"## Output\n")
+            f.write(f"### STDOUT\n```\n{result.stdout}\n```\n\n")
+            f.write(f"### STDERR\n```\n{result.stderr}\n```\n")
+        report["post_mortem"] = str(post_mortem_path)
+
     except Exception as e:
         report["error"] = str(e)
     write_json(repros/"report.json", report)
@@ -1896,6 +2427,20 @@ def main():
     an.add_argument("--sarif", action="store_true", help="Output results in SARIF format")
     an.set_defaults(fn=cmd_analyze)
 
+    stderr_parser = sub.add_parser("stderr-thin", help="Collapse compiler stderr into budget-aware highlights")
+    stderr_parser.add_argument("--log", help="Path to an existing stderr log to thin")
+    stderr_parser.add_argument("--compile", help="Substring to select compile command from compile_commands.json")
+    stderr_parser.add_argument("--compile-index", type=int, help="Index in compile_commands.json to run")
+    stderr_parser.add_argument("--compile-db", help="Path to compile_commands.json to use")
+    stderr_parser.add_argument("--level", choices=["summary", "focused", "detailed"], default="focused", help="Detail level for the thinned output")
+    stderr_parser.add_argument("--context-budget", type=int, help="Maximum characters to keep in the thinned view")
+    stderr_parser.add_argument("--json", help="Custom path for JSON summary output")
+    stderr_parser.add_argument("--text", help="Custom path for thinned text output")
+    stderr_parser.add_argument("--raw", help="Custom path for captured raw stderr")
+    stderr_parser.add_argument("--cwd", help="Working directory when executing a command")
+    stderr_parser.add_argument("cmd", nargs=argparse.REMAINDER, help="Command to execute (use -- to separate)")
+    stderr_parser.set_defaults(fn=cmd_stderr_thin)
+
     # Add tidy command
     tidy_parser = sub.add_parser("tidy", help="Run clang-tidy with fix options")
     tidy_parser.add_argument("paths", nargs="*", help="Paths to tidy")
@@ -1920,7 +2465,10 @@ def main():
     gate_parser.add_argument("--config", help="Path to gate configuration file")
     gate_parser.set_defaults(fn=cmd_gate)
 
-    rd = sub.add_parser("reduce"); rd.add_argument("input"); rd.add_argument("test_cmd"); rd.set_defaults(fn=cmd_reduce)
+    rd = sub.add_parser("reduce"); rd.add_argument("input"); rd.add_argument("test_cmd")
+    rd.add_argument("--timeout", type=int, help="Timeout for the reduction process")
+    rd.add_argument("--sanitizer", help="Sanitizer to use during testing")
+    rd.set_defaults(fn=cmd_reduce)
 
     sub.add_parser("docs").set_defaults(fn=cmd_docs)
     sub.add_parser("capabilities").set_defaults(fn=cmd_capabilities)
