@@ -395,3 +395,88 @@ From here you can:
 * Read `exports/context.json` to discover where everything lives.
 * Run `llmtk analyze src/ include/` and parse `exports/reports/*.json`.
 * Propose patches, then optionally `llmtk reduce repro.cpp -- test.sh` to shrink a failing case.
+
+### Example Contracts
+
+#### `llmtk doctor`
+
+An agent can use the `doctor` command to verify the user's environment.
+
+**Command**:
+```bash
+llmtk doctor
+```
+
+**Output (`exports/doctor.json`)**:
+```json
+{
+  "clangd": {
+    "found": true,
+    "path": "/usr/bin/clangd",
+    "version_line": "clangd version 18.1.8"
+  },
+  "cmake": {
+    "found": true,
+    "path": "/usr/bin/cmake",
+    "version_line": "cmake version 3.28.3"
+  },
+  "_summary": {
+    "total_tools": 20,
+    "found": 18,
+    "missing": 2,
+    "missing_core": [],
+    "missing_recommended": [
+      "cvise",
+      "creduce"
+    ]
+  }
+}
+```
+
+#### `llmtk context export --deep`
+
+For a detailed understanding of the project structure, an agent can request a deep context export.
+
+**Command**:
+```bash
+llmtk context export --deep
+```
+
+**Output (`exports/context.json`)**:
+```json
+{
+  "deep_export": true,
+  "compile_commands": "exports/compile_commands.json",
+  "cmake_file_api": {
+    "dir": "exports/cmake-file-api/",
+    "files": [
+      "cache-v2-...",
+      "codemodel-v2-...",
+      "toolchains-v1-..."
+    ]
+  },
+  "generated_at": "...",
+  "deep_info": {
+    "codemodel": {
+      "configurations": [
+        "Debug"
+      ],
+      "targets": [
+        "my-awesome-project"
+      ]
+    },
+    "cache": {
+      "CMAKE_CXX_COMPILER": "/usr/bin/g++",
+      "CMAKE_CXX_STANDARD": "23"
+    },
+    "toolchains": {
+      "cxx": {
+        "compiler": {
+          "id": "GNU",
+          "version": "13.2.0"
+        }
+      }
+    }
+  }
+}
+```

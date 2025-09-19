@@ -212,6 +212,7 @@ def generate_capabilities_json(out_path: pathlib.Path):
     commands = load_yaml(commands_manifest) or {}
 
     data = {
+        "$schema": f"https://llmtk.ai/schemas/capabilities-v1.json",
         "_meta": {
             "generated_at": datetime.datetime.now(datetime.UTC).isoformat(),
             "toolkit_version": get_version(),
@@ -231,6 +232,7 @@ def generate_capabilities_json(out_path: pathlib.Path):
                 "min_version": entry.get("min_version"),
                 "provides": entry.get("provides") or [],
                 "role": entry.get("role", "optional"),
+                "invocation": entry.get("invocation") or {},
                 "install": entry.get("install") or {},
                 "check": entry.get("check") or {},
                 "fallbacks": entry.get("fallbacks") or [],

@@ -17,6 +17,11 @@ tools:
     role: core
     min_version: ">=17"
     provides: ["lint", "analysis"]
+    invocation:
+      supports_json: true
+      supports_sarif: true
+      default_timeout_seconds: 120
+      avg_latency_ms: 1500
     install:
       apt: ["clang-tidy-18", "clang-tidy", "clang-tools-extra"]
       dnf: ["clang-tools-extra"]

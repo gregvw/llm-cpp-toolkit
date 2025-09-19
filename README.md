@@ -18,6 +18,29 @@ llmtk --version
 
 📖 **[Complete Installation Guide](docs/INSTALLATION.md)** | 🚀 **[Quick Start Guide](QUICKSTART.md)** | 🎓 **[Agent Tutorial](docs/TUTORIAL.md)**
 
+## 🚀 90-Second New User Path
+
+1.  **Install `llmtk`**:
+    ```bash
+    curl -sSL https://raw.githubusercontent.com/gregvw/llm-cpp-toolkit/main/install.sh | bash
+    ```
+2.  **Initialize a project**:
+    ```bash
+    # Create a new project
+    llmtk init my-awesome-project && cd my-awesome-project
+    
+    # Or adopt an existing one
+    # cd path/to/your/project && llmtk init --existing
+    ```
+3.  **Export build context**:
+    ```bash
+    llmtk context export
+    ```
+4.  **Analyze your code**:
+    ```bash
+    llmtk analyze
+    ```
+
 ### Basic Usage
 ```bash
 # Bootstrap a new project or adopt an existing one
