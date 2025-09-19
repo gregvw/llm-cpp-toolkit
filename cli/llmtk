@@ -1236,7 +1236,283 @@ def cmd_analyze(args):
         cppcheck_report["diagnostics"] = diags
     write_json(reports/"cppcheck.json", cppcheck_report)
 
+    # Generate SARIF output if requested
+    if getattr(args, 'sarif', False):
+        try:
+            # Import the SARIF converter
+            sarif_converter_path = MODULES / "sarif_converter.py"
+            if sarif_converter_path.exists():
+                # Run the SARIF converter
+                cmd = [
+                    sys.executable, str(sarif_converter_path),
+                    str(reports / "analysis.sarif"),
+                    str(reports / "clang-tidy.json"),
+                    str(reports / "cppcheck.json"),
+                    str(reports / "iwyu.json")
+                ]
+                result = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
+                if result.returncode == 0:
+                    print(f"SARIF report: {reports / 'analysis.sarif'}")
+                else:
+                    print(f"Warning: SARIF conversion failed: {result.stderr}")
+            else:
+                print("Warning: SARIF converter not found")
+        except Exception as e:
+            print(f"Warning: SARIF conversion failed: {e}")
+
     print(str(reports))
+
+def cmd_tidy(args):
+    """Run clang-tidy with optional fix application."""
+    compile_db = EXPORTS / "compile_commands.json"
+    paths = args.paths or []
+
+    clang_tidy = shutil.which("clang-tidy")
+    if not clang_tidy:
+        print("Error: clang-tidy not found in PATH")
+        return 1
+
+    if not compile_db.exists():
+        print("Error: compile_commands.json not found. Run 'llmtk context export' first.")
+        return 1
+
+    # Collect files to analyze
+    files_to_analyze = []
+    if compile_db.exists():
+        try:
+            data = json.loads(compile_db.read_text())
+            all_files = [pathlib.Path(entry.get("file", "")) for entry in data if entry.get("file")]
+
+            if paths:
+                # Filter by provided paths
+                for file_path in all_files:
+                    for path_filter in paths:
+                        filter_path = pathlib.Path(path_filter).resolve()
+                        try:
+                            if filter_path.is_dir():
+                                if file_path.is_relative_to(filter_path):
+                                    files_to_analyze.append(file_path)
+                            elif filter_path.is_file() and file_path.resolve() == filter_path:
+                                files_to_analyze.append(file_path)
+                        except Exception:
+                            # Fallback for path matching
+                            if str(file_path).startswith(str(filter_path)):
+                                files_to_analyze.append(file_path)
+            else:
+                files_to_analyze = all_files
+
+        except Exception as e:
+            print(f"Error reading compile_commands.json: {e}")
+            return 1
+
+    if not files_to_analyze:
+        print("No files found to analyze")
+        return 0
+
+    # Deduplicate while preserving order
+    seen = set()
+    unique_files = []
+    for f in files_to_analyze:
+        if str(f) not in seen:
+            seen.add(str(f))
+            unique_files.append(f)
+
+    print(f"Running clang-tidy on {len(unique_files)} files...")
+
+    # Build clang-tidy command
+    cmd = [clang_tidy, "-p", str(compile_db.parent)]
+
+    if args.checks:
+        cmd.extend(["-checks", args.checks])
+
+    if args.apply:
+        cmd.append("--fix")
+        print("Applying fixes automatically...")
+
+    # Add files
+    cmd.extend([str(f) for f in unique_files[:100]])  # Limit to prevent command line too long
+
+    try:
+        result = run(cmd, check=False)
+        print(result.stdout)
+        if result.stderr:
+            print("Warnings/Errors:", file=sys.stderr)
+            print(result.stderr, file=sys.stderr)
+
+        if args.apply:
+            print("Fixes applied. Review changes before committing.")
+
+        return result.returncode
+    except Exception as e:
+        print(f"Error running clang-tidy: {e}")
+        return 1
+
+def cmd_format(args):
+    """Run clang-format with check or apply options."""
+    paths = args.paths or ["."]
+
+    clang_format = shutil.which("clang-format")
+    if not clang_format:
+        print("Error: clang-format not found in PATH")
+        return 1
+
+    # Collect C++ files to format
+    cpp_extensions = {".c", ".cc", ".cpp", ".cxx", ".c++", ".h", ".hh", ".hpp", ".hxx", ".inl"}
+    files_to_format = []
+
+    for path_str in paths:
+        path = pathlib.Path(path_str)
+        if path.is_file():
+            if path.suffix in cpp_extensions:
+                files_to_format.append(path)
+        elif path.is_dir():
+            for file_path in path.rglob("*"):
+                if file_path.is_file() and file_path.suffix in cpp_extensions:
+                    files_to_format.append(file_path)
+
+    if not files_to_format:
+        print("No C++ files found to format")
+        return 0
+
+    print(f"Found {len(files_to_format)} files to format")
+
+    # Build clang-format command
+    cmd = [clang_format]
+
+    if args.style:
+        cmd.extend(["-style", args.style])
+    else:
+        # Look for .clang-format file, default to LLVM if not found
+        if pathlib.Path(".clang-format").exists():
+            cmd.extend(["-style", "file"])
+        else:
+            cmd.extend(["-style", "LLVM"])
+
+    if args.check:
+        cmd.append("--dry-run")
+        cmd.append("--Werror")
+        print("Checking formatting (dry run)...")
+    elif args.apply:
+        cmd.append("-i")  # In-place modification
+        print("Applying formatting changes...")
+    else:
+        # Default to check mode if neither specified
+        cmd.append("--dry-run")
+        cmd.append("--Werror")
+        print("Checking formatting (dry run)... Use --apply to format files")
+
+    # Run clang-format on files in batches to avoid command line length limits
+    batch_size = 50
+    total_errors = 0
+
+    for i in range(0, len(files_to_format), batch_size):
+        batch = files_to_format[i:i + batch_size]
+        batch_cmd = cmd + [str(f) for f in batch]
+
+        try:
+            result = run(batch_cmd, check=False)
+
+            if result.returncode != 0:
+                total_errors += 1
+                if args.check:
+                    print(f"Formatting issues found in batch {i//batch_size + 1}")
+                    if result.stdout:
+                        print(result.stdout)
+                    if result.stderr:
+                        print(result.stderr)
+                else:
+                    print(f"Error formatting batch {i//batch_size + 1}: {result.stderr}")
+
+        except Exception as e:
+            print(f"Error running clang-format on batch {i//batch_size + 1}: {e}")
+            total_errors += 1
+
+    if args.check:
+        if total_errors == 0:
+            print("✅ All files are properly formatted")
+            return 0
+        else:
+            print(f"❌ Found formatting issues in {total_errors} batches")
+            return 1
+    elif args.apply:
+        if total_errors == 0:
+            print("✅ Formatting applied successfully")
+        else:
+            print(f"⚠️ Completed with {total_errors} errors")
+        return total_errors
+    else:
+        return total_errors
+
+def cmd_gate(args):
+    """Enforce SARIF severity budgets for CI gating."""
+    sarif_file = pathlib.Path(args.sarif_file)
+
+    if not sarif_file.exists():
+        print(f"Error: SARIF file not found: {sarif_file}")
+        return 1
+
+    # Load configuration if provided
+    config = {
+        "max_errors": args.max_errors,
+        "max_warnings": args.max_warnings,
+        "max_notes": args.max_notes
+    }
+
+    if args.config:
+        config_file = pathlib.Path(args.config)
+        if config_file.exists():
+            try:
+                config_data = load_yaml(config_file)
+                if config_data:
+                    config.update(config_data)
+                print(f"Loaded configuration from {config_file}")
+            except Exception as e:
+                print(f"Warning: Failed to load config file {config_file}: {e}")
+
+    # Load and analyze SARIF file
+    try:
+        with open(sarif_file) as f:
+            sarif_doc = json.load(f)
+    except Exception as e:
+        print(f"Error: Failed to read SARIF file: {e}")
+        return 1
+
+    # Count results by severity
+    counts = {"error": 0, "warning": 0, "note": 0, "unknown": 0}
+    total_results = 0
+
+    for run in sarif_doc.get("runs", []):
+        for result in run.get("results", []):
+            level = result.get("level", "warning").lower()
+            counts[level] = counts.get(level, 0) + 1
+            total_results += 1
+
+    # Report findings
+    print(f"📊 SARIF Analysis Results")
+    print(f"=" * 40)
+    print(f"Total results: {total_results}")
+    print(f"Errors:        {counts['error']:3d} (limit: {config['max_errors']})")
+    print(f"Warnings:      {counts['warning']:3d} (limit: {config['max_warnings']})")
+    print(f"Notes:         {counts['note']:3d} (limit: {config['max_notes']})")
+    print(f"Unknown:       {counts['unknown']:3d}")
+
+    # Check against limits
+    violations = []
+    if counts["error"] > config["max_errors"]:
+        violations.append(f"Errors: {counts['error']} > {config['max_errors']}")
+    if counts["warning"] > config["max_warnings"]:
+        violations.append(f"Warnings: {counts['warning']} > {config['max_warnings']}")
+    if counts["note"] > config["max_notes"]:
+        violations.append(f"Notes: {counts['note']} > {config['max_notes']}")
+
+    if violations:
+        print(f"\n❌ GATE FAILED - Budget violations:")
+        for violation in violations:
+            print(f"   • {violation}")
+        return 1
+    else:
+        print(f"\n✅ GATE PASSED - All severity budgets within limits")
+        return 0
 
 def cmd_reduce(args):
     repros = EXPORTS/"repros"; repros.mkdir(exist_ok=True)
@@ -1559,7 +1835,34 @@ def main():
     cx_exp.add_argument("--require-cmake", action="store_true", help="Require CMAKE_GUIDANCE.md compliance")
     cx_exp.set_defaults(fn=cmd_context_export)
 
-    an = sub.add_parser("analyze"); an.add_argument("paths", nargs="*"); an.set_defaults(fn=cmd_analyze)
+    an = sub.add_parser("analyze", help="Run static analysis tools")
+    an.add_argument("paths", nargs="*", help="Paths to analyze")
+    an.add_argument("--sarif", action="store_true", help="Output results in SARIF format")
+    an.set_defaults(fn=cmd_analyze)
+
+    # Add tidy command
+    tidy_parser = sub.add_parser("tidy", help="Run clang-tidy with fix options")
+    tidy_parser.add_argument("paths", nargs="*", help="Paths to tidy")
+    tidy_parser.add_argument("--apply", action="store_true", help="Apply suggested fixes")
+    tidy_parser.add_argument("--checks", help="Specify which checks to run")
+    tidy_parser.set_defaults(fn=cmd_tidy)
+
+    # Add format command
+    format_parser = sub.add_parser("format", help="Run clang-format on code")
+    format_parser.add_argument("paths", nargs="*", help="Paths to format")
+    format_parser.add_argument("--check", action="store_true", help="Check if files are formatted (dry run)")
+    format_parser.add_argument("--apply", action="store_true", help="Apply formatting changes")
+    format_parser.add_argument("--style", help="Formatting style (file, LLVM, Google, etc.)")
+    format_parser.set_defaults(fn=cmd_format)
+
+    # Add gate command for SARIF severity budgets
+    gate_parser = sub.add_parser("gate", help="Enforce SARIF severity budgets for CI")
+    gate_parser.add_argument("sarif_file", help="Path to SARIF file to check")
+    gate_parser.add_argument("--max-errors", type=int, default=0, help="Maximum allowed errors")
+    gate_parser.add_argument("--max-warnings", type=int, default=10, help="Maximum allowed warnings")
+    gate_parser.add_argument("--max-notes", type=int, default=50, help="Maximum allowed notes")
+    gate_parser.add_argument("--config", help="Path to gate configuration file")
+    gate_parser.set_defaults(fn=cmd_gate)
 
     rd = sub.add_parser("reduce"); rd.add_argument("input"); rd.add_argument("test_cmd"); rd.set_defaults(fn=cmd_reduce)
 

@@ -1,0 +1,30 @@
+# Example llmtk gate configuration file
+# This file defines severity budgets for SARIF analysis results
+
+# Maximum number of errors allowed (default: 0)
+max_errors: 0
+
+# Maximum number of warnings allowed (default: 10)
+max_warnings: 15
+
+# Maximum number of notes/info messages allowed (default: 50)
+max_notes: 100
+
+# Optional: Rule-specific overrides
+# rule_overrides:
+#   clang-tidy:
+#     max_warnings: 5
+#   cppcheck:
+#     max_errors: 1
+
+# Optional: File pattern exclusions
+# exclude_patterns:
+#   - "*/third_party/*"
+#   - "*/generated/*"
+#   - "test_*.cpp"
+
+# Optional: Custom severity mapping
+# severity_mapping:
+#   style: note
+#   performance: warning
+#   security: error

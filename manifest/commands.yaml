@@ -34,6 +34,9 @@ commands:
     args:
       - name: paths
         variadic: true
+      - name: sarif
+        flag: true
+        description: "Output results in SARIF format"
     runs:
       - "modules/analyze.sh"
     outputs:
@@ -79,6 +82,23 @@ commands:
                 - file: string
                   line: int
                   column: int
+      - path: "exports/reports/analysis.sarif"
+        condition: "sarif flag set"
+        schema:
+          version: string
+          "$schema": string
+          runs:
+            - tool:
+                driver:
+                  name: string
+                  version: string
+                  rules: [object]
+              results:
+                - ruleId: string
+                  message:
+                    text: string
+                  level: string
+                  locations: [object]
 
   reduce:
     description: Minimize a failing repro with cvise.
@@ -107,3 +127,57 @@ commands:
             commands_manifest: string
           tools: object
           commands: object
+
+  tidy:
+    description: Run clang-tidy with optional fix application.
+    args:
+      - name: paths
+        variadic: true
+      - name: apply
+        flag: true
+        description: "Apply suggested fixes"
+      - name: checks
+        description: "Specify which checks to run"
+    examples:
+      - "llmtk tidy src/"
+      - "llmtk tidy --apply src/"
+      - "llmtk tidy --checks='*' src/"
+
+  format:
+    description: Run clang-format on code with check or apply options.
+    args:
+      - name: paths
+        variadic: true
+      - name: check
+        flag: true
+        description: "Check if files are formatted (dry run)"
+      - name: apply
+        flag: true
+        description: "Apply formatting changes"
+      - name: style
+        description: "Formatting style (file, LLVM, Google, etc.)"
+    examples:
+      - "llmtk format --check src/"
+      - "llmtk format --apply src/"
+      - "llmtk format --style=Google src/"
+
+  gate:
+    description: Enforce SARIF severity budgets for CI gating.
+    args:
+      - name: sarif_file
+        required: true
+        description: "Path to SARIF file to check"
+      - name: max-errors
+        description: "Maximum allowed errors (default: 0)"
+      - name: max-warnings
+        description: "Maximum allowed warnings (default: 10)"
+      - name: max-notes
+        description: "Maximum allowed notes (default: 50)"
+      - name: config
+        description: "Path to gate configuration file"
+    outputs:
+      - exit_code: "0 for pass, 1 for fail"
+    examples:
+      - "llmtk gate exports/reports/analysis.sarif"
+      - "llmtk gate --max-warnings=5 analysis.sarif"
+      - "llmtk gate --config=.llmtk-gate.yaml analysis.sarif"
