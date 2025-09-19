@@ -10,7 +10,7 @@
 - [X] Capabilities schema and documentation refresh: version `exports/capabilities.json` with `$schema`, per-tool invocation metadata (JSON and SARIF support, output limits, latency), and extend docs with a 90-second new-user path in README, a cookbook with token budgets, context reduction benchmarks, and expanded `AGENTS.md` contract examples.
 - [ ] Preset and template expansion: add `--preset=oss-hardening`, `--preset=fast-iter`, `--preset=tsan-ci`, plus domain templates (`embedded`, `gamedev`, `scientific`, `systemsprog`) with documented inheritance and toggles for sanitizers, PIC, RTTI, exceptions, SIMD, and concurrency knobs.
 - [X] Supply-chain ready distribution: publish a `pipx` installer, reproducible GHCR image and `devcontainer.json`, signed release artifacts with checksums, and ensure manifest pin alignment across Bash, Brew, and Nix installers.
-- [ ] Incremental and cached analysis: support `llmtk analyze --incremental` and `--cache-key` to reuse previous tool runs, share caches between clang-tidy, IWYU, and cppcheck, and expose cache management commands.
+- [X] Incremental and cached analysis: support `llmtk analyze --incremental` and `--cache-key` to reuse previous tool runs, share caches between clang-tidy, IWYU, and cppcheck, and expose cache management commands.
 - [ ] Structured testing exports: add `llmtk test --json` by parsing CTest XML, surface pass and fail reasons, integrate with SARIF gating, and allow dry previews of expensive test or context operations.
 - [ ] Error knowledge base: maintain a YAML library of diagnostic patterns with remediation guidance and required context tiers to help agents prioritize fixes.
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import argparse, json, os, shutil, subprocess, sys, pathlib, datetime, re, tempfile, textwrap, tarfile, time, shlex
+import argparse, json, os, shutil, subprocess, sys, pathlib, datetime, re, tempfile, textwrap, tarfile, time, shlex, hashlib
 
 # Import template engine
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent / "modules"))
@@ -1472,8 +1472,27 @@ def cmd_context_pack(args):
 
 def cmd_analyze(args):
     reports = EXPORTS/"reports"; reports.mkdir(exist_ok=True)
+    cache_dir = ROOT / ".llmtk" / "cache" / "analyze"; cache_dir.mkdir(parents=True, exist_ok=True)
     compile_db = EXPORTS/"compile_commands.json"
     paths = args.paths or []
+
+    def get_file_hash(path):
+        h = hashlib.sha256()
+        with open(path, 'rb') as f:
+            while True:
+                data = f.read(65536)
+                if not data:
+                    break
+                h.update(data)
+        return h.hexdigest()
+
+    def get_changed_files():
+        try:
+            result = run(["git", "diff", "--name-only", "HEAD"], check=True)
+            return [pathlib.Path(p).resolve() for p in result.stdout.splitlines()]
+        except Exception as e:
+            print(f"Warning: Could not get changed files from git: {e}")
+            return None
 
     def read_compile_db_files():
         files = []
@@ -1483,26 +1502,62 @@ def cmd_analyze(args):
                 files = [entry.get("file") for entry in data if entry.get("file")]
             except Exception:
                 files = []
+        
+        # Convert to absolute paths for comparison
+        files = [pathlib.Path(f).resolve() for f in files]
+
         # Filter by user-provided paths if any
         if paths:
             keep = []
             for f in files:
                 for p in paths:
-                    if pathlib.Path(f).is_absolute():
-                        if str(f).startswith(str(pathlib.Path(p).resolve())) or str(f).find("/"+p+"/") != -1:
-                            keep.append(f); break
-                    else:
-                        if str(f).startswith(p):
-                            keep.append(f); break
+                    p_abs = pathlib.Path(p).resolve()
+                    if p_abs.is_dir():
+                        if f.is_relative_to(p_abs):
+                            keep.append(f)
+                            break
+                    elif f == p_abs:
+                        keep.append(f)
+                        break
             files = keep
+        
+        # Incremental filtering
+        if args.incremental:
+            changed_files = get_changed_files()
+            if changed_files is not None:
+                files = [f for f in files if f in changed_files]
+
         # Dedup while preserving order
         seen = set(); uniq = []
         for f in files:
             if f not in seen:
-                seen.add(f); uniq.append(f)
+                seen.add(f); uniq.append(str(f))
         return uniq
 
     files_in_db = read_compile_db_files()
+
+    # Caching logic
+    cache_key_str = args.cache_key or ""
+    if files_in_db:
+        files_hash = hashlib.sha256("".join(sorted(files_in_db)).encode()).hexdigest()
+        content_hash = hashlib.sha256()
+        for f in files_in_db:
+            try:
+                content_hash.update(get_file_hash(f).encode())
+            except Exception:
+                pass # Ignore files that can't be read
+        cache_key_str += files_hash + content_hash.hexdigest()
+
+    cache_key = hashlib.sha256(cache_key_str.encode()).hexdigest()
+    cache_file = cache_dir / f"{cache_key}.json"
+
+    if cache_file.exists():
+        print(f"Using cached analysis results from {cache_file}")
+        cached_data = json.loads(cache_file.read_text())
+        for report_name, report_data in cached_data.items():
+            write_json(reports/f"{report_name}.json", report_data)
+        print(str(reports))
+        return
 
     def run_proc(cmd, cwd=None):
         return subprocess.run(cmd, cwd=cwd, text=True, capture_output=True)
@@ -1677,6 +1732,15 @@ def cmd_analyze(args):
             diags = [{"raw": xml_data[:200000]}]
         cppcheck_report["diagnostics"] = diags
     write_json(reports/"cppcheck.json", cppcheck_report)
+
+    # Save results to cache
+    all_reports = {
+        "clang-tidy": clang_tidy_report,
+        "iwyu": iwyu_report,
+        "cppcheck": cppcheck_report
+    }
+    write_json(cache_file, all_reports)
+    print(f"Saved analysis results to cache: {cache_file}")
 
     # Generate SARIF output if requested
     if getattr(args, 'sarif', False):
@@ -2512,6 +2576,23 @@ def cmd_install(args):
 
     return 0 if installed else 1
 
+def cmd_cache(args):
+    """Manage the analysis cache."""
+    cache_dir = ROOT / ".llmtk" / "cache" / "analyze"
+    if args.cache_cmd == "clear":
+        if cache_dir.exists():
+            shutil.rmtree(cache_dir)
+            print(f"Cache cleared at {cache_dir}")
+        else:
+            print("Cache is already empty.")
+    elif args.cache_cmd == "show":
+        if cache_dir.exists():
+            print(f"Cache contents at {cache_dir}:")
+            for item in cache_dir.iterdir():
+                print(f"- {item.name}")
+        else:
+            print("Cache is empty.")
+
 def main():
     ap = argparse.ArgumentParser(prog="llmtk", description="LLM-friendly C++/CMake toolkit")
     ap.add_argument("--version", action="version", version=f"llmtk {get_version()}")
@@ -2533,6 +2614,8 @@ def main():
     an = sub.add_parser("analyze", help="Run static analysis tools")
     an.add_argument("paths", nargs="*", help="Paths to analyze")
     an.add_argument("--sarif", action="store_true", help="Output results in SARIF format")
+    an.add_argument("--incremental", action="store_true", help="Analyze only changed files")
+    an.add_argument("--cache-key", help="Manual cache key for analysis results")
     an.set_defaults(fn=cmd_analyze)
 
     stderr_parser = sub.add_parser("stderr-thin", help="Collapse compiler stderr into budget-aware highlights")
@@ -2609,6 +2692,11 @@ def main():
     install_parser.add_argument("--local", action="store_true", help="Force local installation (no sudo)")
     install_parser.add_argument("tools", nargs="*", help="Specific tools to install")
     install_parser.set_defaults(fn=cmd_install)
+
+    cache_parser = sub.add_parser("cache", help="Manage analysis cache")
+    cache_subparsers = cache_parser.add_subparsers(dest="cache_cmd", required=True)
+    cache_subparsers.add_parser("clear", help="Clear the analysis cache").set_defaults(fn=cmd_cache)
+    cache_subparsers.add_parser("show", help="Show cache contents").set_defaults(fn=cmd_cache)
 
     args = ap.parse_args()
     # map nested subcommand
