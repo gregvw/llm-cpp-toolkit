@@ -43,6 +43,10 @@ build_package() {
 # Parse command line arguments
 PACKAGES=()
 BUILD_ALL=false
+GENERATE_CHECKSUMS=false
+SIGN_ARTIFACTS=false
+ARTIFACT_DIR=${ARTIFACT_DIR:-dist}
+GPG_KEY=${GPG_KEY:-}
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -66,6 +70,23 @@ while [[ $# -gt 0 ]]; do
             PACKAGES+=("npm")
             shift
             ;;
+        --checksums)
+            GENERATE_CHECKSUMS=true
+            shift
+            ;;
+        --sign)
+            GENERATE_CHECKSUMS=true
+            SIGN_ARTIFACTS=true
+            shift
+            ;;
+        --artifacts)
+            ARTIFACT_DIR="$2"
+            shift 2
+            ;;
+        --gpg-key)
+            GPG_KEY="$2"
+            shift 2
+            ;;
         --help|-h)
             echo "Usage: $0 [OPTIONS]"
             echo "Options:"
@@ -74,6 +95,10 @@ while [[ $# -gt 0 ]]; do
             echo "  --snap       Build Snap package"
             echo "  --flatpak    Build Flatpak package"
             echo "  --npm        Build npm package"
+            echo "  --checksums  Generate SHA256SUMS for artifacts"
+            echo "  --sign       Generate checksums and GPG signature"
+            echo "  --artifacts DIR  Directory containing release artifacts (default: dist)"
+            echo "  --gpg-key KEY    GPG key id to use for signing"
             echo "  --help       Show this help message"
             exit 0
             ;;
@@ -109,3 +134,20 @@ echo "Built packages:"
 for package in "${PACKAGES[@]}"; do
     echo "  - ${package}"
 done
+
+if [[ "$GENERATE_CHECKSUMS" == true ]]; then
+    echo "----------------------------------------"
+    echo "Generating checksums in ${ARTIFACT_DIR}"
+    cmd=(python3 scripts/release/sign_artifacts.py "${ARTIFACT_DIR}")
+    if [[ "$SIGN_ARTIFACTS" == true ]]; then
+        if [[ -n "$GPG_KEY" ]]; then
+            cmd+=(--key "$GPG_KEY")
+        fi
+    else
+        cmd+=(--skip-sign)
+    fi
+    "${cmd[@]}" || {
+        echo "Failed to generate release checksums" >&2
+        exit 1
+    }
+fi

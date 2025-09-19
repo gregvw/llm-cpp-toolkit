@@ -2,7 +2,7 @@ class LlmCppToolkit < Formula
   desc "A comprehensive toolkit for working with LLM C++ implementations"
   homepage "https://github.com/gregvw/llm-cpp-toolkit"
   url "https://github.com/gregvw/llm-cpp-toolkit/archive/v0.1.0.tar.gz"
-  sha256 "" # This will need to be updated when you create a release
+  sha256 "1c8b7d41a55be6417eb851282717074e34e935737297880379bdecdb9ecfe21e"
   license "BSD-3-Clause"
   head "https://github.com/gregvw/llm-cpp-toolkit.git", branch: "main"
 

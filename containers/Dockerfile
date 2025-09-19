@@ -1,147 +1,78 @@
-# Multi-stage Dockerfile for llm-cpp-toolkit
-FROM ubuntu:24.04 AS base
+# syntax=docker/dockerfile:1.6
+ARG UBUNTU_IMAGE="docker.io/library/ubuntu:24.04@sha256:7c99632956543d4d6acdfb5a12dd0bafcd1e386bc9b87222e130c5daca7f8eab"
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    # Build essentials
-    build-essential \
-    cmake \
-    ninja-build \
-    git \
-    curl \
-    wget \
-    unzip \
-    # Python
-    python3 \
-    python3-pip \
-    python3-venv \
-    # Core tools
-    clang-18 \
-    clang-tools-18 \
-    clang-tidy-18 \
-    clang-format-18 \
-    bear \
-    # Search and file tools
-    ripgrep \
-    fd-find \
-    # JSON/YAML tools
-    jq \
-    # Optional but useful
-    include-what-you-use \
-    cppcheck \
-    universal-ctags \
-    # Clean up
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+FROM ${UBUNTU_IMAGE} AS base
 
-# Create symbolic links for clang tools
-RUN ln -sf clang-18 /usr/bin/clang && \
-    ln -sf clang++-18 /usr/bin/clang++ && \
-    ln -sf clang-tidy-18 /usr/bin/clang-tidy && \
-    ln -sf clang-format-18 /usr/bin/clang-format
+LABEL org.opencontainers.image.source="https://github.com/gregvw/llm-cpp-toolkit"
+LABEL org.opencontainers.image.licenses="BSD-3-Clause"
+LABEL org.opencontainers.image.title="LLM C++ Toolkit"
 
-# Install additional tools via pip
-RUN python3 -m pip install --no-cache-dir \
-    yq \
-    pre-commit
+ENV DEBIAN_FRONTEND=noninteractive \
+    TZ=UTC
 
-# Development stage with additional tools
-FROM base AS development
+ARG LLVM_VERSION=18
+ARG CORE_PACKAGES="build-essential cmake ninja-build git curl wget unzip python3 python3-pip python3-venv bear ripgrep fd-find jq"
 
-# Install development and ergonomic tools
-RUN apt-get update && apt-get install -y \
-    # Additional dev tools
-    gdb \
-    valgrind \
-    strace \
-    # Ergonomic tools
-    fzf \
-    bat \
-    tree \
-    htop \
-    # Version control
-    git-extras \
-    # Network tools
-    httpie \
-    # Documentation
-    man-db \
-    # Clean up
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt/lists \
+    apt-get update && \
+    apt-get install -y --no-install-recommends ${CORE_PACKAGES} "clang-${LLVM_VERSION}" "clangd-${LLVM_VERSION}" "clang-tidy-${LLVM_VERSION}" "clang-format-${LLVM_VERSION}" && \
+    ln -sf "clang-${LLVM_VERSION}" /usr/bin/clang && \
+    ln -sf "clang++-${LLVM_VERSION}" /usr/bin/clang++ && \
+    ln -sf "clang-tidy-${LLVM_VERSION}" /usr/bin/clang-tidy && \
+    ln -sf "clang-format-${LLVM_VERSION}" /usr/bin/clang-format && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install additional tools from GitHub releases
-RUN curl -fsSL https://github.com/sharkdp/tokei/releases/latest/download/tokei-x86_64-unknown-linux-gnu.tar.gz | \
-    tar -xzC /usr/local/bin tokei && \
-    curl -fsSL https://github.com/sharkdp/hyperfine/releases/latest/download/hyperfine-v1.18.0-x86_64-unknown-linux-gnu.tar.gz | \
-    tar -xzC /tmp && \
-    mv /tmp/hyperfine-v1.18.0-x86_64-unknown-linux-gnu/hyperfine /usr/local/bin/ && \
-    rm -rf /tmp/hyperfine-*
+ARG PIP_PACKAGES="yq==3.2.3 pre-commit==3.7.0"
+RUN python3 -m pip install --no-cache-dir ${PIP_PACKAGES}
 
-# Production stage
-FROM base AS production
+ARG TOKEI_VERSION="12.1.2"
+ARG TOKEI_SHA256="8fa0d30fd512d4d3080ca26b76adbe8c672705bca8dfe88902523b47c07c2c29"
+ARG HYPERFINE_VERSION="1.18.0"
+ARG HYPERFINE_SHA256="b7c0055e70bd6561f711c7f471a1f0ae8e7f1392f1c6dcc8ac0d4f1891e6c5ae"
 
-# Set working directory
+RUN set -eux; \
+    tmpdir="$(mktemp -d)"; \
+    cd "$tmpdir"; \
+    curl -fsSLo tokei.tar.gz "https://github.com/XAMPPRocky/tokei/releases/download/v${TOKEI_VERSION}/tokei-${TOKEI_VERSION}-x86_64-unknown-linux-gnu.tar.gz"; \
+    echo "${TOKEI_SHA256}  tokei.tar.gz" | sha256sum -c -; \
+    tar -xzf tokei.tar.gz --strip-components=1; \
+    mv tokei /usr/local/bin/tokei; \
+    curl -fsSLo hyperfine.tar.gz "https://github.com/sharkdp/hyperfine/releases/download/v${HYPERFINE_VERSION}/hyperfine-v${HYPERFINE_VERSION}-x86_64-unknown-linux-gnu.tar.gz"; \
+    echo "${HYPERFINE_SHA256}  hyperfine.tar.gz" | sha256sum -c -; \
+    tar -xzf hyperfine.tar.gz --strip-components=1; \
+    mv hyperfine /usr/local/bin/hyperfine; \
+    rm -rf "$tmpdir"
+
+FROM base AS runtime
 WORKDIR /opt/llmtk
 
-# Copy toolkit source
 COPY . .
 
-# Install llmtk
-RUN python3 -m pip install --no-cache-dir -e .
+RUN python3 -m pip install --no-cache-dir .
 
-# Create wrapper script
-RUN echo '#!/bin/bash\nexec python3 /opt/llmtk/cli/llmtk "$@"' > /usr/local/bin/llmtk && \
-    chmod +x /usr/local/bin/llmtk
+ENV LLMTK_DIR=/opt/llmtk \
+    LLMTK_BOOTSTRAP_USE_SOURCE=/opt/llmtk \
+    PATH="/opt/llmtk/.llmtk/bin:$PATH"
 
-# Set up environment
-ENV LLMTK_DIR=/opt/llmtk
-ENV PATH="/opt/llmtk/.llmtk/bin:$PATH"
-
-# Create non-root user
 RUN groupadd -r llmtk && useradd -r -g llmtk -s /bin/bash -c "LLMTK User" llmtk && \
-    mkdir -p /home/llmtk && \
-    chown -R llmtk:llmtk /home/llmtk /opt/llmtk
+    mkdir -p /home/llmtk && chown -R llmtk:llmtk /home/llmtk /opt/llmtk
 
 USER llmtk
 WORKDIR /home/llmtk
 
-# Install local tools
-RUN llmtk install --local
+RUN llmtk --bootstrap-info >/tmp/bootstrap.json && llmtk install --local
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD llmtk doctor || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 CMD llmtk doctor || exit 1
+ENTRYPOINT ["llmtk"]
+CMD ["--help"]
 
-# Default command
-CMD ["llmtk", "--help"]
-
-# Development variant
-FROM development AS dev
-
-# Install additional development tools
-RUN python3 -m pip install --no-cache-dir \
-    pytest \
-    black \
-    isort \
-    mypy \
-    ruff
-
-# Set working directory
+FROM base AS dev
 WORKDIR /workspace
-
-# Copy toolkit for development
 COPY . /opt/llmtk/
-
-# Set up development environment
-ENV LLMTK_DIR=/opt/llmtk
-ENV PATH="/opt/llmtk/.llmtk/bin:$PATH"
-
-# Create development wrapper
-RUN echo '#!/bin/bash\nexec python3 /opt/llmtk/cli/llmtk "$@"' > /usr/local/bin/llmtk && \
-    chmod +x /usr/local/bin/llmtk
-
-# Default to development user
-USER root
-
-# Entry point for development
+RUN if [ -f /opt/llmtk/requirements-dev.txt ]; then \
+      python3 -m pip install --no-cache-dir -r /opt/llmtk/requirements-dev.txt; \
+    fi
+ENV LLMTK_DIR=/opt/llmtk \
+    LLMTK_BOOTSTRAP_USE_SOURCE=/opt/llmtk \
+    PATH="/opt/llmtk/.llmtk/bin:$PATH"
 ENTRYPOINT ["/bin/bash"]

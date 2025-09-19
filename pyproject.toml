@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-cpp-toolkit"
+description = "Bootstrapper for the llmtk CLI with checksum-validated releases"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+dynamic = ["version"]
+keywords = ["llm", "cpp", "tooling", "cli"]
+authors = [
+  { name = "LLM C++ Toolkit Maintainers" }
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "License :: OSI Approved :: BSD License",
+  "Operating System :: POSIX :: Linux",
+  "Intended Audience :: Developers",
+  "Topic :: Software Development :: Build Tools"
+]
+dependencies = []
+
+[project.scripts]
+llmtk = "llmtk_bootstrap.bootstrap:main"
+llmtk-bootstrap = "llmtk_bootstrap.bootstrap:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+packages = ["llmtk_bootstrap"]
+include-package-data = true
+
+[tool.setuptools.dynamic.version]
+file = "VERSION"
+
+[tool.setuptools.package-data]
+llmtk_bootstrap = ["data/releases.json"]

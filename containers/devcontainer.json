@@ -1,8 +1,7 @@
 {
   "name": "LLM C++ Toolkit",
-  "dockerFile": "Dockerfile",
-  "target": "dev",
-  "context": "..",
+  "image": "ghcr.io/gregvw/llm-cpp-toolkit:latest",
+  "overrideCommand": false,
 
   // Configure tool-specific properties
   "customizations": {
@@ -70,7 +69,7 @@
   "forwardPorts": [],
 
   // Use 'postCreateCommand' to run commands after the container is created
-  "postCreateCommand": "llmtk doctor && echo 'Development environment ready!'",
+  "postCreateCommand": "llmtk doctor --cmake",
 
   // Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root
   "remoteUser": "root",
@@ -107,15 +106,9 @@
   },
 
   // Lifecycle scripts
-  "initializeCommand": "echo 'Initializing LLM C++ Toolkit development container...'",
-  "onCreateCommand": [
-    "bash", "-c",
-    "cd /opt/llmtk && llmtk install --local && llmtk doctor"
-  ],
-  "updateContentCommand": [
-    "bash", "-c",
-    "cd /opt/llmtk && git pull && llmtk doctor"
-  ],
+  "initializeCommand": "echo 'Initializing LLMTK devcontainer'",
+  "onCreateCommand": "llmtk doctor",
+  "updateContentCommand": "llmtk doctor",
 
   // Working directory
   "workspaceFolder": "/workspace",

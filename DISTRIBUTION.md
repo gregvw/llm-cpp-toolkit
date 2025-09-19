@@ -88,6 +88,28 @@ brew install llm-cpp-toolkit
 2. Copy `homebrew/llm-cpp-toolkit.rb` to `Formula/llm-cpp-toolkit.rb`
 3. Update SHA256 hash for releases
 
+### 6. pipx (Python virtualised CLI)
+**Best for:** Users who want an isolated Python environment with checksum
+verification.
+
+```bash
+pipx install llm-cpp-toolkit
+llmtk --bootstrap-info
+```
+
+Update `src/llmtk_bootstrap/data/releases.json` with the new release URL and
+SHA256 before publishing to ensure the bootstrapper trusts the artifact.
+
+### 7. GHCR Container Image
+**Best for:** Reproducible CI environments and devcontainers.
+
+```bash
+docker run --rm ghcr.io/gregvw/llm-cpp-toolkit:latest llmtk doctor
+```
+
+The `containers/Dockerfile` builds two stages (`runtime` and `dev`) and is
+pinned to an Ubuntu digest plus explicit tool versions for reproducibility.
+
 ## Building All Packages
 
 Use the unified build script to build all or specific packages:
@@ -107,16 +129,23 @@ Use the unified build script to build all or specific packages:
 
 ### Automated (Recommended)
 
-1. Create a new release on GitHub
-2. GitHub Actions will automatically build all packages
-3. Packages will be uploaded as release assets
-4. npm package will be published automatically
+1. Update `VERSION` and regeneration artifacts (`llmtk docs`, etc.).
+2. Update `src/llmtk_bootstrap/data/releases.json` with the new tarball URL and
+   checksum (see `scripts/release/sign_artifacts.py`).
+3. Run `python3 scripts/release/check_version_pins.py` to verify installers
+   reference the new version.
+4. Commit and tag the release.
+5. Create a new release on GitHub; CI can produce the packaging assets.
+6. Run `scripts/release/sign_artifacts.py dist --sign --key <KEY>` on the
+   downloaded artifacts to generate `SHA256SUMS(.sig)`.
 
 ### Manual
 
-1. Update the version in `VERSION` file
-2. Run `./build-packages.sh --all`
-3. Upload packages to respective distribution channels
+1. Update `VERSION` and release manifest.
+2. Run `./build-packages.sh --all --checksums --artifacts dist`.
+3. Optionally re-sign with `./build-packages.sh --sign --gpg-key KEY`.
+4. Upload packages and accompanying `SHA256SUMS` (and `.sig`) files to the
+   release.
 
 ## Distribution Channels
 

@@ -10,6 +10,16 @@ curl -sSL https://raw.githubusercontent.com/gregvw/llm-cpp-toolkit/main/install.
 llmtk --version
 ```
 
+### pipx Install (Checksummed Release)
+```bash
+pipx install llm-cpp-toolkit
+llmtk --bootstrap-info      # inspect cached release metadata
+```
+
+The pipx package bootstraps a published tarball, verifies its SHA256 sum, and
+then executes the toolkit in-place. To work from a local checkout while testing
+packaged changes, run `LLMTK_BOOTSTRAP_USE_SOURCE=$PWD llmtk doctor`.
+
 ### Alternative Installation Methods
 - **Local (no sudo):** `git clone ... && llmtk install --local`
 - **Nix:** `nix develop github:gregvw/llm-cpp-toolkit`
@@ -92,6 +102,7 @@ entire `exports/` directory is ignored by default via `.gitignore`.
 - **📦 Context Export** - Generate compilation databases and CMake introspection data
 - **🔬 Code Analysis** - Run clang-tidy, include-what-you-use, and cppcheck with JSON output
 - **🧠 Deterministic Diagnostics** - Collapse compiler stderr with `llmtk stderr-thin` into budget-aware highlights
+- **🔏 Supply-Chain Ready** - pipx bootstrap with checksum enforcement and signed release artifacts
 - **🧪 Advanced Sanitizer Support** - Multiple sanitizer variants with proper isolation
 - **🪚 Test Case Reduction** - Minimize failing code with cvise integration
 - **🤖 LLM-Optimized** - JSON outputs designed for AI agent consumption
@@ -171,6 +182,15 @@ The `capabilities.json` file is automatically generated during `llmtk init` and 
 - **[Full Documentation](docs/README.md)** - Complete toolkit overview
 - **[Tool Reference](docs/REFERENCE.md)** - Auto-generated from manifests
 - **[Distribution Guide](DISTRIBUTION.md)** - Building and packaging
+
+## 🔐 Release Integrity
+
+- `scripts/release/check_version_pins.py` ensures that Homebrew, Nix, Docker, and
+  release manifests target the same toolkit version in `VERSION`.
+- `scripts/release/sign_artifacts.py` produces `SHA256SUMS` (and optional GPG
+  signatures) for the contents of `dist/` or any artifact directory.
+- `src/llmtk_bootstrap/data/releases.json` records the tarball URL and checksum
+  consumed by the pipx bootstrapper; update it for every tagged release.
 
 ## 🏗️ Architecture
 

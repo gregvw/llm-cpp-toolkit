@@ -279,6 +279,7 @@ Short answer: **yes—build this as a CLI-first toolkit** and let Codex/CLI agen
 * `llmtk reduce` – cvise wrapper to minimize repros.
 * `llmtk capabilities` – regenerate the manifest-driven `exports/capabilities.json` summary.
 * `llmtk stderr-thin` – collapse compiler stderr into structured, budget-aware highlights for agents.
+* `pipx install llm-cpp-toolkit` – installs the verified bootstrap and executes tagged releases with SHA256 checks.
 
 `llmtk stderr-thin` always emits three artifacts under `exports/diagnostics/`:
 
@@ -288,6 +289,10 @@ Short answer: **yes—build this as a CLI-first toolkit** and let Codex/CLI agen
 
 Provide either a stored log (`--log`), a compile database entry (`--compile` or `--compile-index`), or a command to run (`-- …`).
 Every invocation accepts `--context-budget` to bound token usage, and agents should default to `--level=focused` for interactive fix-it loops.
+
+For reproducible installs in ephemeral environments, prefer `pipx install llm-cpp-toolkit`.
+When developing against a working tree, export `LLMTK_BOOTSTRAP_USE_SOURCE=$PWD` so the
+bootstrapper bypasses network downloads.
 * **Outputs** always land under `exports/` and include at least one JSON file per command.
 * A **manifest** (YAML) drives installs, versions, and docs generation.
 * Optional adapters for agents/editors later (but the CLI is the source of truth).
