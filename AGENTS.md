@@ -433,6 +433,34 @@ From here you can:
 * Add `install` and `doctor --fix` that read a `tools.yaml` and install via apt/dnf/pacman/brew/nix.
 * Layer a Nix flake / Brew formula / Dockerfile for easy distribution.
 
+## Agent feedback loop protocol
+
+`llmtk agent` now accepts structured JSON requests and mirrors the same surface through an MCP endpoint (`llmtk agent mcp`). A single payload can batch multiple actions:
+
+```json
+{
+  "requests": [
+    {"id": "ls", "kind": "list_directory", "params": {"path": "src"}},
+    {"id": "ctx", "kind": "expand_context", "params": {"deep": true}},
+    {"id": "caps", "kind": "get_capabilities"}
+  ]
+}
+```
+
+Supported `kind` values include:
+
+- `read_file` / `write_file` / `delete_file` – basic filesystem verbs scoped to the workspace root.
+- `list_directory` – structured directory listings with size metadata so agents can budget context before reading files.
+- `list_exports` – enumerate artifacts under `exports/` (supports `glob` filters).
+- `get_capabilities` – regenerates `exports/capabilities.json` directly from the manifests and returns the JSON payload inline.
+- `expand_context` – drives `llmtk context export` (with `deep`, `level`, `preview`, and `build` parameters) and returns the parsed `exports/context.json` summary alongside captured stdout.
+
+The CLI automatically rejects paths that escape the current working directory, so agents can treat `cmd.agent` responses as safe defaults. Any error is surfaced with `status: "error"` and a human-readable message.
+
+### MCP surface
+
+`llmtk agent mcp` speaks the Model Context Protocol over stdio. It exposes the operations above as MCP tools (`llmtk.read_file`, `llmtk.list_exports`, `llmtk.expand_context`, etc.). Drop the sample adapters under `integrations/` into Cursor, Continue, or aider to connect without writing glue code. Tool results are returned as `application/json` blobs so hosts can forward them directly to language models.
+
 ## How an agent (Codex, etc.) would use it
 
 * Ask user to run `llmtk context export`.

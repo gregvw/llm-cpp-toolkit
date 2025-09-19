@@ -1,0 +1,11 @@
+# Drop this into ~/.config/aider/tools.d/llmtk.yaml
+# Requires aider >= 0.50 with MCP tool support.
+tool:
+  name: llmtk
+  mode: mcp
+  command:
+    - llmtk
+    - agent
+    - mcp
+  env:
+    LLMTK_BOOTSTRAP_USE_SOURCE: "${PWD}"

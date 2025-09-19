@@ -15,7 +15,8 @@
 - [X] Error knowledge base: maintain a YAML library of diagnostic patterns with remediation guidance and required context tiers to help agents prioritize fixes.
 
 ## P2 - Agent Experience Enhancements
-- [ ] Agent feedback loop and adapters: design a JSON request channel (`expand_context`, etc.), expose llmtk via an MCP server and lightweight adapters for Cursor, Continue, and Aider, and ensure capability discovery comes from the manifest.
+- [X] Agent feedback loop and adapters: design a JSON request channel (`expand_context`, etc.), expose llmtk via an MCP server and lightweight adapters for Cursor, Continue, and Aider, and ensure capability discovery comes from the manifest.
+- [X] Initial implementation of a JSON-based request/response protocol and an `llmtk agent` command to handle `read_file`, `list_directory`, `write_file`, and `delete_file` requests.
 - [ ] Build and performance insights: ship `llmtk bench` around hyperfine for configure, build, and test, report ccache stats, parallelism utilization, slowest translation units, and peak memory, and record these metrics in context exports.
 - [ ] Dependency and symbol graph exports: derive target graphs from the CMake codemodel, emit JSON or Graphviz, include symbol-level dependency summaries around failures, and capture external package manager locks (vcpkg, conan) for agents.
 - [ ] Incremental diff-oriented context: allow diff-based context packs, minimal dependency graphs per error, and an automated bisect helper that guides agents through regression hunts.

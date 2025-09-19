@@ -1,0 +1,18 @@
+{
+  "$schema": "https://app.cursor.sh/schemas/cursor-tools.v1.json",
+  "version": 1,
+  "tools": [
+    {
+      "name": "llmtk",
+      "description": "Expose llmtk agent operations over MCP",
+      "type": "mcp",
+      "command": "llmtk",
+      "args": ["agent", "mcp"],
+      "env": {
+        "LLMTK_BOOTSTRAP_USE_SOURCE": "${workspaceRoot}"
+      },
+      "workingDirectory": "${workspaceRoot}",
+      "timeoutSeconds": 120
+    }
+  ]
+}

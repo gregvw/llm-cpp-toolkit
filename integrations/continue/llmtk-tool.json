@@ -1,0 +1,15 @@
+{
+  "$schema": "https://www.continue.dev/schema/continue-config.schema.json",
+  "tools": [
+    {
+      "name": "llmtk",
+      "type": "mcp",
+      "command": "llmtk",
+      "args": ["agent", "mcp"],
+      "env": {
+        "LLMTK_BOOTSTRAP_USE_SOURCE": "{workspaceDir}"
+      },
+      "cwd": "{workspaceDir}"
+    }
+  ]
+}

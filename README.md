@@ -80,6 +80,10 @@ llmtk stderr-thin --compile main.cpp --level=focused
 # Regenerate machine-readable capabilities summary
 llmtk capabilities
 
+# Drive the JSON agent loop or expose MCP tools
+llmtk agent request '{"requests":[{"id":"caps","kind":"get_capabilities"}]}'
+llmtk agent mcp
+
 # Reduce a failing test case
 llmtk reduce test.cpp "gcc test.cpp && ./a.out"
 ```
