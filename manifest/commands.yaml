@@ -390,3 +390,95 @@ commands:
       - "llmtk deps --graphviz"
       - "llmtk deps --json --graphviz --symbols"
       - "llmtk deps --build-dir=custom_build --output-dir=custom_exports"
+
+  diff-context:
+    description: Export diff-oriented context packs for incremental analysis and regression hunting.
+    args:
+      - name: command
+        required: true
+        description: "Subcommand: diff, incremental, or bisect"
+        choices: ["diff", "incremental", "bisect"]
+    subcommands:
+      diff:
+        description: "Export diff-based context between git references"
+        args:
+          - name: base
+            description: "Base git reference (default: HEAD~1)"
+          - name: target
+            description: "Target git reference (default: HEAD)"
+          - name: output
+            description: "Output file path"
+          - name: include-deps
+            flag: true
+            description: "Include dependency analysis (default: true)"
+          - name: include-errors
+            flag: true
+            description: "Include error analysis"
+          - name: error-log
+            description: "Path to error log file"
+        outputs:
+          - path: "exports/diff_context/diff.json"
+            schema:
+              _meta:
+                generated_at: number
+                base_ref: string
+                target_ref: string
+                is_git_repo: bool
+                include_dependencies: bool
+                include_errors: bool
+              git_info:
+                base_commit: object
+                target_commit: object
+                commits_between: [object]
+              changed_files: [string]
+              diffs:
+                file_path:
+                  content: string
+                  size: number
+                  is_source: bool
+              dependencies:
+                changed_files: object
+                dependency_graph: object
+                affected_targets: [string]
+                include_paths: [string]
+                compile_definitions: [string]
+              errors:
+                errors: [object]
+                affected_files: [string]
+                minimal_dependencies: object
+                suggested_fixes: [string]
+      incremental:
+        description: "Export incremental context focusing on recent changes"
+        args:
+          - name: cache
+            description: "Cache file path for tracking state"
+          - name: output
+            description: "Output file path"
+        outputs:
+          - path: "exports/diff_context/incremental.json"
+          - path: "exports/diff_context/incremental.cache"
+      bisect:
+        description: "Set up automated bisect for regression hunting"
+        args:
+          - name: good
+            required: true
+            description: "Good git reference"
+          - name: bad
+            required: true
+            description: "Bad git reference"
+          - name: test-cmd
+            required: true
+            description: "Test command to run during bisect"
+          - name: output
+            description: "Output file path"
+          - name: script
+            description: "Generate bisect script at this path"
+        outputs:
+          - path: "exports/diff_context/bisect.json"
+          - path: "bisect_script.sh"
+            condition: "when --script is specified"
+    examples:
+      - "llmtk diff-context diff --base=main --target=feature-branch"
+      - "llmtk diff-context incremental --cache=.llmtk-cache"
+      - "llmtk diff-context bisect --good=v1.0 --bad=HEAD --test-cmd='make test'"
+      - "llmtk diff-context diff --include-errors --error-log=build.log"

@@ -23,8 +23,12 @@ case "$1" in
         shift
         "$MODULES_DIR/deps.sh" "$@"
         ;;
+    "diff-context")
+        shift
+        "$MODULES_DIR/diff-context.sh" "$@"
+        ;;
     *)
-        echo "Usage: llmtk {doctor|context export|analyze|deps} [options]"
+        echo "Usage: llmtk {doctor|context export|analyze|deps|diff-context} [options]"
         exit 1
         ;;
 esac

@@ -74,6 +74,10 @@ llmtk analyze src/ include/
 # Extract dependency graphs
 llmtk deps --json --graphviz
 
+# Export diff-oriented context for incremental analysis
+llmtk diff-context diff --base=main --target=feature-branch
+llmtk diff-context incremental --cache=.llmtk-cache
+
 # Benchmark configure/build/test with performance exports
 llmtk bench --runs 3 --warmup 1
 
@@ -130,6 +134,7 @@ entire `exports/` directory is ignored by default via `.gitignore`.
 - **📦 Context Export** - Generate compilation databases and CMake introspection data
 - **🔬 Code Analysis** - Run clang-tidy, include-what-you-use, and cppcheck with JSON output
 - **📊 Dependency Graphs** - Extract target dependency graphs from CMake codemodel with JSON and Graphviz export
+- **🔄 Incremental Context** - Diff-oriented context packs, minimal dependency graphs per error, and automated bisect helpers for regression hunting
 - **🧾 Structured Testing** - Parse CTest results into JSON and SARIF for gating workflows
 - **📈 Build & Performance Insights** - Benchmark configure/build/test, inspect ccache hit rates, parallelism, slow translation units, and peak memory via `llmtk bench`
 - **🧠 Deterministic Diagnostics** - Collapse compiler stderr with `llmtk stderr-thin` into budget-aware highlights
