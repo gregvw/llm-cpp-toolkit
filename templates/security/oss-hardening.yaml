@@ -1,0 +1,87 @@
+name: oss-hardening
+description: "Open-source security hardening preset with maximum safety features"
+type: security
+inherits: full
+
+overrides:
+  sanitizers: true
+  pic: true
+  fortify_source: true
+  stack_protector: strong
+  warnings_as_errors: true
+  extra_warnings: true
+
+compiler_flags:
+  - "-D_FORTIFY_SOURCE=2"
+  - "-fstack-protector-strong"
+  - "-fstack-clash-protection"
+  - "-fcf-protection=full"  # Intel CET
+  - "-Wformat-security"
+  - "-Werror"
+  - "-Wconversion"
+  - "-Wsign-conversion"
+  - "-Wcast-qual"
+  - "-Wcast-align"
+  - "-Wshadow"
+  - "-Wnull-dereference"
+  - "-Wdouble-promotion"
+
+linker_flags:
+  - "-Wl,-z,relro,-z,now"    # Full RELRO
+  - "-Wl,-z,noexecstack"     # NX bit
+  - "-Wl,--as-needed"        # Reduce dependencies
+  - "-pie"                   # Position independent executable
+
+cmake_options:
+  - "CMAKE_POSITION_INDEPENDENT_CODE=ON"
+  - "CMAKE_INTERPROCEDURAL_OPTIMIZATION=ON"
+
+clang_tidy_checks:
+  enable:
+    - "cert-*"
+    - "security-*"
+    - "misc-*"
+    - "bugprone-*"
+    - "modernize-*"
+    - "performance-*"
+  disable:
+    - "cert-err58-cpp"  # Can be too strict for some use cases
+
+cppcheck_rules:
+  - "all"
+  - "style"
+  - "performance"
+  - "portability"
+  - "unusedFunction"
+
+cmake_template_additions: |
+  # Security hardening options
+  if(NOT MSVC)
+    target_compile_options(project_warnings INTERFACE
+      -D_FORTIFY_SOURCE=2
+      -fstack-protector-strong
+      -fstack-clash-protection
+      $<$<CXX_COMPILER_ID:GNU>:-fcf-protection=full>
+      -Wformat-security
+      -Werror
+    )
+
+    target_link_options(project_warnings INTERFACE
+      -Wl,-z,relro,-z,now
+      -Wl,-z,noexecstack
+      -pie
+    )
+  endif()
+
+documentation: |
+  This preset enables comprehensive security hardening suitable for open-source
+  projects that need to demonstrate security best practices:
+
+  - Stack protection against buffer overflows
+  - Fortified source functions with bounds checking
+  - Full RELRO (RELocation Read-Only)
+  - NX bit (No eXecute) stack protection
+  - Position independent executables (PIE)
+  - Control Flow Integrity (Intel CET) where supported
+  - Comprehensive static analysis rules
+  - Warnings treated as errors for clean builds

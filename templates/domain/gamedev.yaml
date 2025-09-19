@@ -1,0 +1,198 @@
+name: gamedev
+description: "Game development template with performance focus"
+type: domain
+inherits: full
+
+overrides:
+  optimization: true
+  simd: true
+  fast_math: true
+  pic: false
+  lto: true
+  profile_guided_optimization: true
+
+compiler_flags:
+  - "-O3"
+  - "-march=native"
+  - "-ffast-math"
+  - "-DNDEBUG"
+  - "-fomit-frame-pointer"
+  - "-funroll-loops"
+  - "-ftree-vectorize"
+
+cmake_options:
+  - "CMAKE_BUILD_TYPE=Release"
+  - "CMAKE_INTERPROCEDURAL_OPTIMIZATION=ON"
+
+cmake_template_additions: |
+  # Game development optimizations
+  target_compile_definitions(project_warnings INTERFACE
+    NDEBUG=1
+    GAME_BUILD=1
+    $<$<CONFIG:Release>:RELEASE_BUILD=1>
+  )
+
+  # Performance-focused compiler options
+  target_compile_options(project_warnings INTERFACE
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:
+      -O3
+      -march=native
+      -ffast-math
+      -fomit-frame-pointer
+      -funroll-loops
+      -ftree-vectorize
+    >
+    $<$<CXX_COMPILER_ID:MSVC>:
+      /O2
+      /Ob2
+      /fp:fast
+    >
+  )
+
+  # Optional: Profile-guided optimization setup
+  option(ENABLE_PGO "Enable Profile-Guided Optimization" OFF)
+  if(ENABLE_PGO AND NOT MSVC)
+    target_compile_options(project_warnings INTERFACE
+      $<$<CONFIG:Release>:-fprofile-generate>
+    )
+    target_link_options(project_warnings INTERFACE
+      $<$<CONFIG:Release>:-fprofile-generate>
+    )
+  endif()
+
+libraries:
+  graphics:
+    - "OpenGL"
+    - "Vulkan"  # Optional
+    - "SDL2"
+  audio:
+    - "OpenAL"
+    - "FMOD"    # Commercial option
+  math:
+    - "GLM"     # Header-only math library
+    - "Eigen3"  # For complex linear algebra
+
+files:
+  - path: "main.cpp"
+    content: |
+      #include <iostream>
+      #include <chrono>
+      #include <vector>
+
+      // Game development main loop template
+      class GameEngine {
+      private:
+          bool running = true;
+          std::chrono::high_resolution_clock::time_point lastTime;
+
+      public:
+          void initialize() {
+              lastTime = std::chrono::high_resolution_clock::now();
+              std::cout << "Game Engine Initialized\n";
+          }
+
+          void run() {
+              while (running) {
+                  auto currentTime = std::chrono::high_resolution_clock::now();
+                  auto deltaTime = std::chrono::duration<float>(currentTime - lastTime).count();
+                  lastTime = currentTime;
+
+                  update(deltaTime);
+                  render();
+
+                  // Cap frame rate (example: 60 FPS)
+                  constexpr float targetFrameTime = 1.0f / 60.0f;
+                  if (deltaTime < targetFrameTime) {
+                      auto sleepTime = std::chrono::duration<float>(targetFrameTime - deltaTime);
+                      std::this_thread::sleep_for(sleepTime);
+                  }
+              }
+          }
+
+          void update(float deltaTime) {
+              // Game logic update
+              (void)deltaTime; // Suppress unused parameter warning
+          }
+
+          void render() {
+              // Render frame
+          }
+
+          void shutdown() {
+              running = false;
+              std::cout << "Game Engine Shutdown\n";
+          }
+      };
+
+      int main() {
+          GameEngine engine;
+          engine.initialize();
+          engine.run();
+          engine.shutdown();
+          return 0;
+      }
+
+  - path: "game_config.h"
+    content: |
+      #pragma once
+
+      // Game development configuration
+      #define GAME_BUILD 1
+      #define TARGET_FPS 60
+      #define ENABLE_PROFILING 1
+
+      // Performance settings
+      #define FAST_MATH 1
+      #define VECTORIZATION_ENABLED 1
+      #define SIMD_OPTIMIZATIONS 1
+
+      // Memory pool sizes (adjust based on game requirements)
+      #define TEXTURE_POOL_SIZE (64 * 1024 * 1024)  // 64MB
+      #define AUDIO_POOL_SIZE   (16 * 1024 * 1024)  // 16MB
+      #define ENTITY_POOL_SIZE  (8 * 1024 * 1024)   // 8MB
+
+build_configurations:
+  debug:
+    optimization: false
+    debug_info: full
+    sanitizers: true
+    defines: ["DEBUG=1", "ENABLE_ASSERTIONS=1"]
+
+  release:
+    optimization: maximum
+    debug_info: minimal
+    sanitizers: false
+    defines: ["NDEBUG=1", "RELEASE_BUILD=1"]
+
+  profiling:
+    optimization: true
+    debug_info: full
+    profiling: true
+    defines: ["PROFILING_BUILD=1"]
+
+documentation: |
+  This template is optimized for game development performance:
+
+  - Maximum optimization flags (-O3, -march=native)
+  - Fast math operations enabled
+  - SIMD vectorization support
+  - Link-time optimization (LTO)
+  - Frame pointer omission for performance
+  - Loop unrolling and tree vectorization
+
+  Features included:
+  - Game loop template with delta time
+  - Frame rate capping example
+  - Multiple build configurations (debug/release/profiling)
+  - Performance-focused compiler settings
+  - Memory pool configuration examples
+
+  Best for:
+  - Real-time games and simulations
+  - Performance-critical applications
+  - Graphics and audio processing
+  - Game engines and frameworks
+  - VR/AR applications
+
+  Note: Profile-guided optimization can be enabled with -DENABLE_PGO=ON
+  for even better performance on target hardware.

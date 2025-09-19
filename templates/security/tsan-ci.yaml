@@ -1,0 +1,111 @@
+name: tsan-ci
+description: "ThreadSanitizer-focused CI preset for concurrency testing"
+type: security
+inherits: full
+
+overrides:
+  sanitizers: tsan-only
+  testing: true
+  parallel_build: false
+  optimization: minimal
+
+compiler_flags:
+  - "-fsanitize=thread"
+  - "-fno-omit-frame-pointer"
+  - "-g"
+  - "-O1"  # Minimal optimization for reasonable performance
+
+linker_flags:
+  - "-fsanitize=thread"
+
+cmake_options:
+  - "CMAKE_BUILD_PARALLEL_LEVEL=1"  # Single-threaded build to avoid race conditions
+  - "CMAKE_BUILD_TYPE=RelWithDebInfo"
+
+cmake_template_additions: |
+  # ThreadSanitizer-specific configuration
+  if(NOT MSVC)
+    # Create TSAN-only target variants
+    function(add_tsan_target base_target)
+      if(NOT TARGET "${base_target}")
+        message(FATAL_ERROR "Base target '${base_target}' does not exist")
+      endif()
+
+      get_target_property(target_type "${base_target}" TYPE)
+      get_target_property(sources "${base_target}" SOURCES)
+
+      set(tsan_target "${base_target}_tsan")
+
+      if(target_type STREQUAL "EXECUTABLE")
+        add_executable("${tsan_target}" EXCLUDE_FROM_ALL ${sources})
+      else()
+        add_library("${tsan_target}" EXCLUDE_FROM_ALL ${sources})
+      endif()
+
+      # Copy properties from base target
+      target_include_directories("${tsan_target}" PRIVATE
+        $<TARGET_PROPERTY:${base_target},INCLUDE_DIRECTORIES>
+      )
+      target_compile_definitions("${tsan_target}" PRIVATE
+        $<TARGET_PROPERTY:${base_target},COMPILE_DEFINITIONS>
+      )
+      target_link_libraries("${tsan_target}" PRIVATE
+        $<TARGET_PROPERTY:${base_target},LINK_LIBRARIES>
+      )
+
+      # Add ThreadSanitizer flags
+      target_compile_options("${tsan_target}" PRIVATE
+        -fsanitize=thread
+        -fno-omit-frame-pointer
+        -g
+        -O1
+      )
+      target_link_options("${tsan_target}" PRIVATE
+        -fsanitize=thread
+      )
+
+      # TSAN environment variables for runtime
+      set_target_properties("${tsan_target}" PROPERTIES
+        ENVIRONMENT "TSAN_OPTIONS=halt_on_error=1:abort_on_error=1:print_stats=1"
+      )
+    endfunction()
+
+    # Apply to main target
+    add_tsan_target({project_name})
+  endif()
+
+environment_variables:
+  TSAN_OPTIONS: "halt_on_error=1:abort_on_error=1:print_stats=1:verbosity=1"
+  TSAN_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer"
+
+test_configuration:
+  timeout_multiplier: 3  # TSAN is slower
+  retry_count: 1
+  parallel_tests: false
+
+ci_hints:
+  memory_requirement: "4GB"
+  timeout_minutes: 30
+  artifacts:
+    - "tsan_reports/**"
+    - "core.*"
+
+documentation: |
+  This preset is specifically designed for CI/CD environments that need to detect
+  race conditions and threading issues:
+
+  - Only ThreadSanitizer enabled (no conflicting sanitizers)
+  - Single-threaded builds to avoid build-time race conditions
+  - Optimized TSAN runtime options for CI environments
+  - Extended timeouts for slower TSAN execution
+  - Proper symbolizer configuration for readable reports
+  - Environment variables pre-configured for deterministic runs
+
+  Best for:
+  - Continuous integration race condition detection
+  - Nightly builds with concurrency testing
+  - Pre-merge validation of threading changes
+  - Automated testing of multi-threaded code
+
+  Note: TSAN is incompatible with AddressSanitizer, so this preset
+  creates TSAN-only builds for focused thread safety testing.

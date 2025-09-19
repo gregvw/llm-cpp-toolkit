@@ -1,0 +1,212 @@
+schema: 1
+template_system:
+  version: 1
+  description: "Template inheritance system for LLM C++ Toolkit presets and domain-specific configurations"
+
+# Base template definitions - foundation templates that can be inherited
+base_templates:
+  minimal:
+    description: "Basic executable with minimal features"
+    settings:
+      sanitizers: false
+      target_type: "executable"
+      lint_support: false
+      testing: false
+      pic: false
+      rtti: true
+      exceptions: true
+
+  full:
+    description: "Full-featured development setup with sanitizers and linting"
+    settings:
+      sanitizers: true
+      target_type: "executable"
+      lint_support: true
+      testing: true
+      pic: false
+      rtti: true
+      exceptions: true
+
+  library:
+    description: "Library template with example executable"
+    settings:
+      sanitizers: true
+      target_type: "library"
+      lint_support: true
+      testing: true
+      pic: true
+      rtti: true
+      exceptions: true
+      has_example: true
+
+# New security/performance oriented presets
+security_presets:
+  oss-hardening:
+    description: "Open-source security hardening preset with maximum safety"
+    inherits: "full"
+    overrides:
+      sanitizers: true
+      pic: true
+      fortify_source: true
+      stack_protector: "strong"
+      warnings_as_errors: true
+      extra_warnings: true
+    compiler_flags:
+      - "-D_FORTIFY_SOURCE=2"
+      - "-fstack-protector-strong"
+      - "-fstack-clash-protection"
+      - "-fcf-protection=full"
+      - "-Wformat-security"
+      - "-Wl,-z,relro,-z,now"
+    clang_tidy_checks:
+      - "cert-*"
+      - "security-*"
+      - "misc-*"
+      - "bugprone-*"
+
+  fast-iter:
+    description: "Fast iteration preset optimized for development speed"
+    inherits: "minimal"
+    overrides:
+      sanitizers: false
+      optimization: false
+      debug_info: "minimal"
+      unity_build: true
+      ccache: true
+    compiler_flags:
+      - "-O0"
+      - "-g1"
+      - "-fno-omit-frame-pointer"
+    cmake_options:
+      - "CMAKE_UNITY_BUILD=ON"
+      - "CMAKE_CXX_COMPILER_LAUNCHER=ccache"
+
+  tsan-ci:
+    description: "ThreadSanitizer-focused CI preset"
+    inherits: "full"
+    overrides:
+      sanitizers: "tsan-only"
+      testing: true
+      parallel_build: false
+    compiler_flags:
+      - "-fsanitize=thread"
+      - "-fno-omit-frame-pointer"
+    cmake_options:
+      - "CMAKE_BUILD_PARALLEL_LEVEL=1"
+
+# Domain-specific templates
+domain_templates:
+  embedded:
+    description: "Embedded systems development template"
+    inherits: "minimal"
+    overrides:
+      sanitizers: false
+      exceptions: false
+      rtti: false
+      pic: false
+      stdlib: "none"
+      freestanding: true
+    compiler_flags:
+      - "-fno-exceptions"
+      - "-fno-rtti"
+      - "-ffreestanding"
+      - "-fno-use-cxa-atexit"
+    cmake_options:
+      - "CMAKE_CXX_STANDARD_LIBRARIES=\"\""
+
+  gamedev:
+    description: "Game development template with performance focus"
+    inherits: "full"
+    overrides:
+      optimization: true
+      simd: true
+      fast_math: true
+      pic: false
+    compiler_flags:
+      - "-O3"
+      - "-march=native"
+      - "-ffast-math"
+      - "-DNDEBUG"
+    cmake_options:
+      - "CMAKE_INTERPROCEDURAL_OPTIMIZATION=ON"
+
+  scientific:
+    description: "Scientific computing template with numerical precision"
+    inherits: "library"
+    overrides:
+      openmp: true
+      simd: true
+      pic: true
+      testing: true
+    compiler_flags:
+      - "-fopenmp"
+      - "-march=native"
+      - "-fPIC"
+    dependencies:
+      - "find_package(OpenMP REQUIRED)"
+
+  systemsprog:
+    description: "Systems programming template with low-level focus"
+    inherits: "full"
+    overrides:
+      pic: true
+      stack_protector: "all"
+      fortify_source: true
+    compiler_flags:
+      - "-fPIC"
+      - "-fstack-protector-all"
+      - "-D_FORTIFY_SOURCE=2"
+
+# Configuration toggles that can be applied to any template
+toggles:
+  sanitizers:
+    description: "Enable/disable sanitizer variants"
+    values: [true, false, "asan-only", "tsan-only", "msan-only", "ubsan-only"]
+    default: true
+
+  pic:
+    description: "Position Independent Code"
+    values: [true, false]
+    default: false
+    cmake_flag: "CMAKE_POSITION_INDEPENDENT_CODE"
+
+  rtti:
+    description: "Runtime Type Information"
+    values: [true, false]
+    default: true
+    compiler_flags:
+      false: ["-fno-rtti"]
+
+  exceptions:
+    description: "C++ Exception handling"
+    values: [true, false]
+    default: true
+    compiler_flags:
+      false: ["-fno-exceptions"]
+
+  simd:
+    description: "SIMD optimizations"
+    values: [true, false, "auto", "native"]
+    default: false
+    compiler_flags:
+      true: ["-msse4.2"]
+      native: ["-march=native"]
+      auto: ["-march=native", "-mtune=native"]
+
+  concurrency:
+    description: "Concurrency support (threads, OpenMP)"
+    values: ["none", "std", "openmp", "both"]
+    default: "std"
+    dependencies:
+      std: ["find_package(Threads REQUIRED)"]
+      openmp: ["find_package(OpenMP REQUIRED)"]
+      both: ["find_package(Threads REQUIRED)", "find_package(OpenMP REQUIRED)"]
+    compiler_flags:
+      openmp: ["-fopenmp"]
+      both: ["-fopenmp"]
+
+# Template resolution rules
+resolution:
+  inheritance_order: ["base_templates", "security_presets", "domain_templates"]
+  override_precedence: ["user_flags", "domain_templates", "security_presets", "base_templates"]
+  conflict_resolution: "last_wins"

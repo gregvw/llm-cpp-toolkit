@@ -1,0 +1,266 @@
+name: scientific
+description: "Scientific computing template with numerical precision and parallelization"
+type: domain
+inherits: library
+
+overrides:
+  openmp: true
+  simd: true
+  pic: true
+  testing: true
+  precision: high
+  vectorization: true
+
+compiler_flags:
+  - "-fopenmp"
+  - "-march=native"
+  - "-fPIC"
+  - "-ffast-math"  # Use with caution for numerical code
+  - "-ftree-vectorize"
+
+cmake_options:
+  - "CMAKE_POSITION_INDEPENDENT_CODE=ON"
+
+cmake_template_additions: |
+  # Scientific computing dependencies
+  find_package(OpenMP REQUIRED)
+  find_package(Threads REQUIRED)
+
+  # Optional: BLAS/LAPACK for linear algebra
+  find_package(BLAS)
+  find_package(LAPACK)
+
+  # Optional: MPI for distributed computing
+  find_package(MPI)
+
+  # Scientific computing optimizations
+  target_compile_definitions(project_warnings INTERFACE
+    SCIENTIFIC_BUILD=1
+    $<$<BOOL:${OpenMP_FOUND}>:OPENMP_ENABLED=1>
+    $<$<BOOL:${MPI_FOUND}>:MPI_ENABLED=1>
+  )
+
+  target_compile_options(project_warnings INTERFACE
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:
+      -march=native
+      -ftree-vectorize
+      $<$<BOOL:${OpenMP_FOUND}>:${OpenMP_CXX_FLAGS}>
+    >
+  )
+
+  target_link_libraries(project_warnings INTERFACE
+    $<$<BOOL:${OpenMP_FOUND}>:OpenMP::OpenMP_CXX>
+    Threads::Threads
+    $<$<BOOL:${BLAS_FOUND}>:${BLAS_LIBRARIES}>
+    $<$<BOOL:${LAPACK_FOUND}>:${LAPACK_LIBRARIES}>
+    $<$<BOOL:${MPI_FOUND}>:MPI::MPI_CXX>
+  )
+
+libraries:
+  math:
+    - "Eigen3"      # Linear algebra
+    - "GSL"         # Scientific library
+    - "FFTW3"       # Fast Fourier Transform
+    - "HDF5"        # Data format
+  parallel:
+    - "OpenMP"      # Shared memory parallelism
+    - "MPI"         # Distributed parallelism
+    - "TBB"         # Threading Building Blocks
+  optional:
+    - "CUDA"        # GPU computing
+    - "OpenCL"      # Heterogeneous computing
+    - "Boost"       # Additional utilities
+
+files:
+  - path: "src/{project_name}.hpp"
+    content: |
+      #pragma once
+
+      #include <vector>
+      #include <numeric>
+      #include <algorithm>
+      #include <execution>
+
+      #ifdef OPENMP_ENABLED
+      #include <omp.h>
+      #endif
+
+      namespace {project_name} {
+
+      // Example scientific computing class
+      template<typename T>
+      class NumericalArray {
+      private:
+          std::vector<T> data_;
+          size_t rows_, cols_;
+
+      public:
+          NumericalArray(size_t rows, size_t cols)
+              : data_(rows * cols), rows_(rows), cols_(cols) {}
+
+          // Parallel initialization
+          void initialize(T value) {
+              #ifdef OPENMP_ENABLED
+              #pragma omp parallel for
+              #endif
+              for (size_t i = 0; i < data_.size(); ++i) {
+                  data_[i] = value;
+              }
+          }
+
+          // Vectorized operations
+          void multiply_scalar(T scalar) {
+              #ifdef OPENMP_ENABLED
+              #pragma omp simd
+              #endif
+              for (auto& element : data_) {
+                  element *= scalar;
+              }
+          }
+
+          // Reduction operations
+          T sum() const {
+              #ifdef OPENMP_ENABLED
+              return std::reduce(std::execution::par_unseq,
+                               data_.begin(), data_.end(), T{0});
+              #else
+              return std::accumulate(data_.begin(), data_.end(), T{0});
+              #endif
+          }
+
+          // Element access
+          T& operator()(size_t row, size_t col) {
+              return data_[row * cols_ + col];
+          }
+
+          const T& operator()(size_t row, size_t col) const {
+              return data_[row * cols_ + col];
+          }
+
+          size_t rows() const { return rows_; }
+          size_t cols() const { return cols_; }
+      };
+
+      } // namespace {project_name}
+
+  - path: "src/{project_name}.cpp"
+    content: |
+      #include "{project_name}.hpp"
+      #include <iostream>
+      #include <chrono>
+
+      using namespace {project_name};
+
+      // Example numerical computation function
+      template<typename T>
+      void perform_computation(NumericalArray<T>& array) {
+          const auto start = std::chrono::high_resolution_clock::now();
+
+          // Initialize with parallel loop
+          array.initialize(static_cast<T>(1.0));
+
+          // Perform scalar multiplication
+          array.multiply_scalar(static_cast<T>(2.0));
+
+          // Compute sum (reduction)
+          T result = array.sum();
+
+          const auto end = std::chrono::high_resolution_clock::now();
+          const auto duration = std::chrono::duration<double>(end - start);
+
+          std::cout << "Computation result: " << result << "\n";
+          std::cout << "Time taken: " << duration.count() << " seconds\n";
+
+          #ifdef OPENMP_ENABLED
+          std::cout << "OpenMP threads: " << omp_get_max_threads() << "\n";
+          #endif
+      }
+
+      // Explicit instantiation for common types
+      template void perform_computation<float>(NumericalArray<float>&);
+      template void perform_computation<double>(NumericalArray<double>&);
+
+  - path: "examples/main.cpp"
+    content: |
+      #include <iostream>
+      #include "{project_name}.hpp"
+
+      int main() {
+          constexpr size_t rows = 1000;
+          constexpr size_t cols = 1000;
+
+          std::cout << "Scientific Computing Example\n";
+          std::cout << "Array size: " << rows << "x" << cols << "\n";
+
+          // Create numerical array
+          {project_name}::NumericalArray<double> array(rows, cols);
+
+          // Perform computation
+          {project_name}::perform_computation(array);
+
+          return 0;
+      }
+
+  - path: "scientific_config.h"
+    content: |
+      #pragma once
+
+      // Scientific computing configuration
+      #define SCIENTIFIC_BUILD 1
+
+      // Numerical precision settings
+      #define HIGH_PRECISION 1
+      #define USE_LONG_DOUBLE 0
+
+      // Parallelization settings
+      #ifdef OPENMP_ENABLED
+      #define MAX_THREADS 0  // 0 = use all available
+      #define ENABLE_NESTED_PARALLELISM 1
+      #endif
+
+      // Vectorization hints
+      #define PREFER_SIMD 1
+      #define ALIGNMENT_BYTES 64
+
+      // Memory management
+      #define USE_ALIGNED_ALLOCATION 1
+      #define DEFAULT_ALIGNMENT 32
+
+performance_notes: |
+  Compiler flags balance performance with numerical accuracy:
+  - -ffast-math: Use with caution, may affect precision
+  - -march=native: Optimizes for build machine architecture
+  - -ftree-vectorize: Enables automatic vectorization
+  - OpenMP: Provides parallel loop and SIMD support
+
+documentation: |
+  This template is optimized for scientific and numerical computing:
+
+  - OpenMP parallelization for shared-memory systems
+  - SIMD vectorization support
+  - Position-independent code for shared libraries
+  - Integration with common scientific libraries (BLAS, LAPACK, MPI)
+  - Example numerical array class with parallel operations
+  - Alignment-aware memory management
+
+  Features included:
+  - Parallel algorithms and reductions
+  - Vectorized mathematical operations
+  - High-precision arithmetic support
+  - Performance timing utilities
+  - Optional GPU computing support (CUDA/OpenCL)
+
+  Best for:
+  - Numerical simulations
+  - Data analysis and processing
+  - Machine learning applications
+  - High-performance computing (HPC)
+  - Research and academic projects
+  - Scientific visualization tools
+
+  Dependencies that may be useful:
+  - Eigen3: Template library for linear algebra
+  - GSL: GNU Scientific Library
+  - FFTW: Fast Fourier Transform library
+  - HDF5: Hierarchical data format
+  - MPI: Message Passing Interface for distributed computing

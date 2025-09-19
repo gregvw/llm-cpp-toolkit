@@ -1,7 +1,30 @@
 #!/usr/bin/env python3
 import argparse, json, os, shutil, subprocess, sys, pathlib, datetime, re, tempfile, textwrap, tarfile, time, shlex
 
+# Import template engine
+sys.path.insert(0, str(pathlib.Path(__file__).parent.parent / "modules"))
+try:
+    from template_engine import TemplateEngine
+    TEMPLATE_ENGINE_AVAILABLE = True
+except ImportError:
+    TEMPLATE_ENGINE_AVAILABLE = False
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+def get_available_presets():
+    """Get list of available presets from template engine or fallback to legacy"""
+    if TEMPLATE_ENGINE_AVAILABLE:
+        try:
+            template_dir = ROOT / "templates"
+            manifest_dir = ROOT / "manifest"
+            if template_dir.exists() and manifest_dir.exists():
+                engine = TemplateEngine(template_dir, manifest_dir)
+                return engine.get_available_presets()
+        except Exception as e:
+            print(f"Warning: Failed to load template engine: {e}")
+
+    # Fallback to legacy presets
+    return ["minimal", "full", "library"]
 
 def get_version() -> str:
     try:
@@ -655,6 +678,89 @@ def cmd_init(args):
     if cmake_file.exists() and not args.force:
         return adopt_existing_project(project_dir, project_name)
 
+    # Use template engine if available, otherwise fall back to legacy generation
+    if TEMPLATE_ENGINE_AVAILABLE:
+        return init_with_template_engine(args, project_name, project_dir)
+    else:
+        return init_with_legacy_generation(args, project_name, project_dir)
+
+def init_with_template_engine(args, project_name, project_dir):
+    """Initialize project using the template engine"""
+    try:
+        template_dir = ROOT / "templates"
+        manifest_dir = ROOT / "manifest"
+        engine = TemplateEngine(template_dir, manifest_dir)
+
+        # Build user overrides from command line arguments
+        user_overrides = {}
+
+        # Handle legacy arguments
+        if getattr(args, 'pic', False):
+            user_overrides['pic'] = True
+        if getattr(args, 'no_sanitizers', False):
+            user_overrides['sanitizers'] = False
+        if getattr(args, 'no_rtti', False):
+            user_overrides['rtti'] = False
+        if getattr(args, 'no_exceptions', False):
+            user_overrides['exceptions'] = False
+        if getattr(args, 'enable_simd', False):
+            user_overrides['simd'] = 'native'
+        if getattr(args, 'openmp', False):
+            user_overrides['concurrency'] = 'openmp'
+        if getattr(args, 'static_linking', False):
+            user_overrides['static_linking'] = True
+
+        # Resolve template
+        preset = getattr(args, 'preset', 'full')
+        template = engine.resolve_template(preset, user_overrides)
+
+        print(f"📋 Using template: {template.name}")
+        if template.description:
+            print(f"   {template.description}")
+
+        # Generate CMakeLists.txt
+        cmake_min_version = getattr(args, 'cmake_min', '3.28')
+        cxx_standard = getattr(args, 'std', '23')
+
+        cmake_content = engine.generate_cmake_content(
+            template, project_name, cmake_min_version, cxx_standard
+        )
+
+        # Write CMakeLists.txt
+        cmake_file = project_dir / "CMakeLists.txt"
+        cmake_file.write_text(cmake_content)
+
+        # Create additional files from template
+        for file_spec in template.files:
+            file_path = project_dir / file_spec['path']
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                content = file_spec['content'].format(project_name=project_name)
+            except (KeyError, ValueError) as e:
+                # Fallback: use simple replacement for problematic templates
+                content = file_spec['content'].replace('{project_name}', project_name)
+            file_path.write_text(content)
+            print(f"📄 Created {file_spec['path']}")
+
+        # Generate capabilities.json
+        capabilities_path = project_dir / "exports" / "capabilities.json"
+        capabilities_path.parent.mkdir(parents=True, exist_ok=True)
+        generate_capabilities_json(capabilities_path)
+
+        print(f"✅ Project '{project_name}' initialized successfully with preset '{preset}'")
+        if template.documentation:
+            print(f"\n📖 Template documentation:")
+            print(textwrap.indent(template.documentation, "   "))
+
+        return 0
+
+    except Exception as e:
+        print(f"❌ Failed to initialize with template engine: {e}")
+        print("   Falling back to legacy generation...")
+        return init_with_legacy_generation(args, project_name, project_dir)
+
+def init_with_legacy_generation(args, project_name, project_dir):
+    """Initialize project using legacy hardcoded generation"""
     # Generate CMAKE_GUIDANCE.md compliant CMakeLists.txt with user options
     cmake_min_version = getattr(args, 'cmake_min', '3.28')
     cxx_standard = getattr(args, 'std', '23')
@@ -2485,7 +2591,17 @@ def main():
     init_parser.add_argument("--cmake-min", default="3.28", help="Minimum CMake version required")
     init_parser.add_argument("--pic", action="store_true", help="Enable position independent code by default")
     init_parser.add_argument("--no-sanitizers", action="store_true", help="Disable sanitizer options")
-    init_parser.add_argument("--preset", choices=["minimal", "full", "library"], default="full", help="Project template preset")
+    # Get available presets dynamically
+    available_presets = get_available_presets()
+    init_parser.add_argument("--preset", choices=available_presets, default="full",
+                           help=f"Project template preset. Available: {', '.join(available_presets)}")
+
+    # Add toggle arguments for fine-grained control
+    init_parser.add_argument("--no-rtti", action="store_true", help="Disable C++ RTTI")
+    init_parser.add_argument("--no-exceptions", action="store_true", help="Disable C++ exceptions")
+    init_parser.add_argument("--enable-simd", action="store_true", help="Enable SIMD optimizations")
+    init_parser.add_argument("--openmp", action="store_true", help="Enable OpenMP support")
+    init_parser.add_argument("--static-linking", action="store_true", help="Use static linking")
 
     init_parser.set_defaults(fn=cmd_init)
 

@@ -1,0 +1,80 @@
+name: fast-iter
+description: "Fast iteration preset optimized for development speed"
+type: security
+inherits: minimal
+
+overrides:
+  sanitizers: false
+  optimization: false
+  debug_info: minimal
+  unity_build: true
+  ccache: true
+  incremental_linking: true
+
+compiler_flags:
+  - "-O0"           # No optimization for fastest compile
+  - "-g1"           # Minimal debug info
+  - "-fno-omit-frame-pointer"  # Better stack traces
+  - "-ftime-trace"  # Clang compilation time tracing
+
+cmake_options:
+  - "CMAKE_UNITY_BUILD=ON"
+  - "CMAKE_CXX_COMPILER_LAUNCHER=ccache"
+  - "CMAKE_BUILD_TYPE=Debug"
+  - "CMAKE_EXPORT_COMPILE_COMMANDS=ON"
+
+cmake_template_additions: |
+  # Fast iteration optimizations
+  set(CMAKE_UNITY_BUILD ON)
+
+  # Use ccache if available
+  find_program(CCACHE_PROGRAM ccache)
+  if(CCACHE_PROGRAM)
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
+  endif()
+
+  # Minimal debug info for faster linking
+  if(NOT MSVC)
+    target_compile_options(project_warnings INTERFACE
+      -O0
+      -g1
+      -fno-omit-frame-pointer
+      $<$<CXX_COMPILER_ID:Clang>:-ftime-trace>
+    )
+  else()
+    target_compile_options(project_warnings INTERFACE
+      /Od     # No optimization
+      /Zi     # Debug info
+    )
+  endif()
+
+  # Reduce template instantiation depth for faster compiles
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(project_warnings INTERFACE
+      -ftemplate-depth=128
+      -fconstexpr-depth=128
+    )
+  endif()
+
+build_hints:
+  parallel_jobs: "auto"
+  prefer_ninja: true
+  incremental: true
+
+documentation: |
+  This preset is optimized for the fastest possible edit-compile-test cycle:
+
+  - Unity builds reduce compilation units
+  - Ccache enabled for build artifact caching
+  - Minimal debug information (-g1)
+  - No optimizations (-O0) for fastest compile
+  - Reduced template instantiation depths
+  - Clang time-trace support for build analysis
+  - Incremental linking where supported
+
+  Best for:
+  - Active development with frequent rebuilds
+  - Large codebases where compile time matters
+  - Debug/testing workflows
+  - CI where artifacts are cached between runs

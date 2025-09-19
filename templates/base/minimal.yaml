@@ -1,0 +1,41 @@
+name: minimal
+description: "Basic executable with minimal features - fastest setup"
+type: base
+
+settings:
+  sanitizers: false
+  target_type: executable
+  lint_support: false
+  testing: false
+  pic: false
+  rtti: true
+  exceptions: true
+
+cmake_template: |
+  cmake_minimum_required(VERSION {cmake_min_version})
+  project({project_name} LANGUAGES CXX)
+
+  set(CMAKE_CXX_STANDARD {cxx_standard})
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+  set(CMAKE_CXX_EXTENSIONS OFF)
+
+  # Basic warnings
+  add_library(project_warnings INTERFACE)
+  target_compile_options(project_warnings INTERFACE
+    $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra>
+    $<$<CXX_COMPILER_ID:MSVC>:/W4>
+  )
+
+  # Main target
+  add_executable({project_name} main.cpp)
+  target_link_libraries({project_name} PRIVATE project_warnings)
+
+files:
+  - path: "main.cpp"
+    content: |
+      #include <iostream>
+
+      int main() {
+          std::cout << "Hello from {project_name}!\n";
+          return 0;
+      }

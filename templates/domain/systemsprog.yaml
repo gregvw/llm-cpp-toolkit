@@ -1,0 +1,374 @@
+name: systemsprog
+description: "Systems programming template with low-level focus and security"
+type: domain
+inherits: full
+
+overrides:
+  pic: true
+  stack_protector: all
+  fortify_source: true
+  static_analysis: comprehensive
+  memory_safety: strict
+
+compiler_flags:
+  - "-fPIC"
+  - "-fstack-protector-all"
+  - "-D_FORTIFY_SOURCE=2"
+  - "-Wformat-security"
+  - "-Wcast-align"
+  - "-Wconversion"
+
+cmake_options:
+  - "CMAKE_POSITION_INDEPENDENT_CODE=ON"
+
+cmake_template_additions: |
+  # Systems programming specific configuration
+  target_compile_definitions(project_warnings INTERFACE
+    SYSTEMSPROG_BUILD=1
+    _GNU_SOURCE=1  # Enable GNU extensions on Linux
+    $<$<PLATFORM_ID:Linux>:_DEFAULT_SOURCE=1>
+  )
+
+  # Enhanced security and reliability flags
+  target_compile_options(project_warnings INTERFACE
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:
+      -fPIC
+      -fstack-protector-all
+      -Wformat-security
+      -Wcast-align
+      -Wconversion
+      -Wsign-conversion
+      -Wlogical-op
+      -Wduplicated-cond
+      -Wduplicated-branches
+      -Wnull-dereference
+    >
+    $<$<CXX_COMPILER_ID:MSVC>:
+      /GS      # Buffer security check
+      /guard:cf # Control Flow Guard
+    >
+  )
+
+  # Systems programming libraries
+  find_package(Threads REQUIRED)
+  target_link_libraries(project_warnings INTERFACE
+    Threads::Threads
+    $<$<PLATFORM_ID:Linux>:dl>  # Dynamic loading
+    $<$<PLATFORM_ID:Linux>:rt>  # Real-time extensions
+  )
+
+system_libraries:
+  posix:
+    - "pthread"   # POSIX threads
+    - "dl"        # Dynamic loading
+    - "rt"        # Real-time extensions
+  linux:
+    - "cap"       # Capabilities
+    - "seccomp"   # Secure computing
+    - "apparmor"  # MAC framework
+  bsd:
+    - "kvm"       # Kernel virtual memory
+    - "util"      # BSD utility functions
+
+files:
+  - path: "src/{project_name}.hpp"
+    content: |
+      #pragma once
+
+      #include <string>
+      #include <vector>
+      #include <memory>
+      #include <system_error>
+
+      // Platform-specific includes
+      #ifdef __linux__
+      #include <sys/types.h>
+      #include <sys/stat.h>
+      #include <unistd.h>
+      #include <fcntl.h>
+      #include <sys/mman.h>
+      #elif defined(_WIN32)
+      #include <windows.h>
+      #endif
+
+      namespace {project_name} {
+
+      // RAII wrapper for file descriptors
+      class FileDescriptor {
+      private:
+          int fd_;
+
+      public:
+          explicit FileDescriptor(int fd = -1) noexcept : fd_(fd) {}
+
+          ~FileDescriptor() {
+              close();
+          }
+
+          // Move semantics
+          FileDescriptor(FileDescriptor&& other) noexcept : fd_(other.fd_) {
+              other.fd_ = -1;
+          }
+
+          FileDescriptor& operator=(FileDescriptor&& other) noexcept {
+              if (this != &other) {
+                  close();
+                  fd_ = other.fd_;
+                  other.fd_ = -1;
+              }
+              return *this;
+          }
+
+          // Disable copy
+          FileDescriptor(const FileDescriptor&) = delete;
+          FileDescriptor& operator=(const FileDescriptor&) = delete;
+
+          bool is_valid() const noexcept { return fd_ >= 0; }
+          int get() const noexcept { return fd_; }
+
+          void close() noexcept {
+              if (is_valid()) {
+      #ifdef __linux__
+                  ::close(fd_);
+      #elif defined(_WIN32)
+                  CloseHandle(reinterpret_cast<HANDLE>(fd_));
+      #endif
+                  fd_ = -1;
+              }
+          }
+
+          int release() noexcept {
+              int fd = fd_;
+              fd_ = -1;
+              return fd;
+          }
+      };
+
+      // Memory mapping wrapper
+      class MemoryMap {
+      private:
+          void* addr_;
+          size_t size_;
+
+      public:
+          MemoryMap(size_t size, int prot = 0x3, int flags = 0x22);  // PROT_READ|WRITE, MAP_PRIVATE|ANON
+          ~MemoryMap();
+
+          // Move semantics
+          MemoryMap(MemoryMap&& other) noexcept;
+          MemoryMap& operator=(MemoryMap&& other) noexcept;
+
+          // Disable copy
+          MemoryMap(const MemoryMap&) = delete;
+          MemoryMap& operator=(const MemoryMap&) = delete;
+
+          void* data() const noexcept { return addr_; }
+          size_t size() const noexcept { return size_; }
+          bool is_valid() const noexcept { return addr_ != nullptr; }
+      };
+
+      // System call wrapper with error handling
+      template<typename Func, typename... Args>
+      auto syscall_wrapper(Func&& func, Args&&... args) -> decltype(func(args...)) {
+          auto result = func(std::forward<Args>(args)...);
+          if (result == -1) {
+              throw std::system_error(errno, std::system_category());
+          }
+          return result;
+      }
+
+      } // namespace {project_name}
+
+  - path: "src/{project_name}.cpp"
+    content: |
+      #include "{project_name}.hpp"
+      #include <stdexcept>
+      #include <cstring>
+
+      #ifdef __linux__
+      #include <sys/mman.h>
+      #include <errno.h>
+      #elif defined(_WIN32)
+      #include <windows.h>
+      #endif
+
+      namespace {project_name} {
+
+      MemoryMap::MemoryMap(size_t size, int prot, int flags)
+          : addr_(nullptr), size_(size) {
+      #ifdef __linux__
+          addr_ = mmap(nullptr, size, prot, flags, -1, 0);
+          if (addr_ == MAP_FAILED) {
+              addr_ = nullptr;
+              throw std::system_error(errno, std::system_category(), "mmap failed");
+          }
+      #elif defined(_WIN32)
+          HANDLE mapping = CreateFileMapping(INVALID_HANDLE_VALUE, nullptr,
+                                           PAGE_READWRITE, 0, size, nullptr);
+          if (mapping == nullptr) {
+              throw std::system_error(GetLastError(), std::system_category(),
+                                    "CreateFileMapping failed");
+          }
+
+          addr_ = MapViewOfFile(mapping, FILE_MAP_ALL_ACCESS, 0, 0, size);
+          CloseHandle(mapping);
+
+          if (addr_ == nullptr) {
+              throw std::system_error(GetLastError(), std::system_category(),
+                                    "MapViewOfFile failed");
+          }
+      #endif
+      }
+
+      MemoryMap::~MemoryMap() {
+          if (is_valid()) {
+      #ifdef __linux__
+              munmap(addr_, size_);
+      #elif defined(_WIN32)
+              UnmapViewOfFile(addr_);
+      #endif
+          }
+      }
+
+      MemoryMap::MemoryMap(MemoryMap&& other) noexcept
+          : addr_(other.addr_), size_(other.size_) {
+          other.addr_ = nullptr;
+          other.size_ = 0;
+      }
+
+      MemoryMap& MemoryMap::operator=(MemoryMap&& other) noexcept {
+          if (this != &other) {
+              if (is_valid()) {
+      #ifdef __linux__
+                  munmap(addr_, size_);
+      #elif defined(_WIN32)
+                  UnmapViewOfFile(addr_);
+      #endif
+              }
+              addr_ = other.addr_;
+              size_ = other.size_;
+              other.addr_ = nullptr;
+              other.size_ = 0;
+          }
+          return *this;
+      }
+
+      } // namespace {project_name}
+
+  - path: "examples/main.cpp"
+    content: |
+      #include <iostream>
+      #include <system_error>
+      #include "{project_name}.hpp"
+
+      int main() {
+          try {
+              std::cout << "Systems Programming Example\n";
+
+              // Test memory mapping
+              constexpr size_t map_size = 4096;  // One page
+              {project_name}::MemoryMap memory(map_size);
+
+              if (memory.is_valid()) {
+                  std::cout << "Successfully mapped " << memory.size() << " bytes\n";
+
+                  // Write to mapped memory
+                  char* data = static_cast<char*>(memory.data());
+                  std::strcpy(data, "Hello from mapped memory!");
+                  std::cout << "Wrote: " << data << "\n";
+              }
+
+              // Test file descriptor wrapper
+              {project_name}::FileDescriptor fd;
+              std::cout << "File descriptor wrapper created\n";
+
+              return 0;
+
+          } catch (const std::system_error& e) {
+              std::cerr << "System error: " << e.what() << " (code: " << e.code() << ")\n";
+              return 1;
+          } catch (const std::exception& e) {
+              std::cerr << "Error: " << e.what() << "\n";
+              return 1;
+          }
+      }
+
+  - path: "systemsprog_config.h"
+    content: |
+      #pragma once
+
+      // Systems programming configuration
+      #define SYSTEMSPROG_BUILD 1
+
+      // Platform detection
+      #ifdef __linux__
+      #define PLATFORM_LINUX 1
+      #define _GNU_SOURCE 1
+      #define _DEFAULT_SOURCE 1
+      #elif defined(_WIN32)
+      #define PLATFORM_WINDOWS 1
+      #define WIN32_LEAN_AND_MEAN 1
+      #elif defined(__APPLE__)
+      #define PLATFORM_MACOS 1
+      #define _DARWIN_C_SOURCE 1
+      #endif
+
+      // Security features
+      #define ENABLE_STACK_PROTECTION 1
+      #define ENABLE_FORTIFY_SOURCE 1
+      #define STRICT_MEMORY_SAFETY 1
+
+      // Performance tuning
+      #define PREFER_SYSTEM_CALLS 1
+      #define MINIMIZE_ALLOCATIONS 1
+
+security_features:
+  stack_protection: all
+  fortify_source: level_2
+  memory_safety: strict
+  static_analysis: comprehensive
+
+clang_tidy_checks:
+  enable:
+    - "cert-*"
+    - "security-*"
+    - "misc-*"
+    - "bugprone-*"
+    - "performance-*"
+    - "portability-*"
+
+documentation: |
+  This template is designed for systems programming with emphasis on:
+
+  - Low-level system interaction
+  - Memory safety and security
+  - RAII wrappers for system resources
+  - Cross-platform compatibility
+  - Comprehensive error handling
+
+  Security features:
+  - Stack protection against buffer overflows
+  - Fortified source functions
+  - Position-independent code
+  - Enhanced compiler warnings
+  - Static analysis integration
+
+  Included utilities:
+  - RAII file descriptor wrapper
+  - Memory mapping abstraction
+  - System call error handling
+  - Platform-specific optimizations
+
+  Best for:
+  - Operating system components
+  - Device drivers (userspace)
+  - Network services and daemons
+  - System utilities and tools
+  - Performance-critical system software
+  - Security-sensitive applications
+
+  Platform support:
+  - Linux (primary focus)
+  - Windows (basic support)
+  - macOS (basic support)
+  - BSD variants (partial support)
