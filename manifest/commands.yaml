@@ -163,6 +163,50 @@ commands:
       - path: "exports/tests/ctest_stdout.txt"
       - path: "exports/tests/ctest_stderr.txt"
 
+  bench:
+    description: Benchmark configure/build/test workflows and report performance insights.
+    args:
+      - name: build-dir
+        description: "CMake build directory to use"
+      - name: std
+        description: "C++ standard for configure"
+      - name: build-type
+        description: "CMake build type"
+      - name: generator
+        description: "CMake generator"
+      - name: runs
+        description: "Hyperfine runs per stage"
+      - name: warmup
+        description: "Hyperfine warmup runs"
+      - name: target
+        description: "Optional build target"
+      - name: jobs
+        description: "Parallel build jobs"
+      - name: skip-configure
+        flag: true
+        description: "Skip the configure stage"
+      - name: skip-build
+        flag: true
+        description: "Skip the build stage"
+      - name: skip-test
+        flag: true
+        description: "Skip the test stage"
+      - name: fresh
+        flag: true
+        description: "Remove the build directory before configuring"
+      - name: keep-output
+        flag: true
+        description: "Stream full command output instead of filtered highlights"
+      - name: top-slowest
+        description: "Number of slow translation units to report"
+    outputs:
+      - path: "exports/perf/bench.json"
+      - path: "exports/perf/*/bench.json"
+      - path: "exports/perf/*/logs/*.log"
+      - path: "exports/perf/*/metrics/*.jsonl"
+      - path: "exports/perf/*/hyperfine/*.json"
+    json_summary: "exports/perf/bench.json"
+
   stderr-thin:
     description: Collapse compiler stderr into deterministic, budget-aware highlights.
     args:

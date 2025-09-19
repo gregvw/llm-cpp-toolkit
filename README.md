@@ -74,6 +74,9 @@ llmtk analyze src/ include/
 # Extract dependency graphs
 llmtk deps --json --graphviz
 
+# Benchmark configure/build/test with performance exports
+llmtk bench --runs 3 --warmup 1
+
 # Run tests with structured outputs
 llmtk test --json
 
@@ -90,6 +93,16 @@ llmtk agent mcp
 # Reduce a failing test case
 llmtk reduce test.cpp "gcc test.cpp && ./a.out"
 ```
+
+### Strict Build Helper
+
+Need a single command that enforces hard warnings, sanitizers, and filtered logs? Use the bundled helper:
+
+```bash
+python scripts/strict_build.py full --build build/strict --logs logs/strict --jobs 8
+```
+
+This wrapper injects `-Wall -Wextra -Wconversion -Wshadow -Werror`, Address/UB sanitizers, and sensible clang-tidy checks while keeping raw logs under `logs/strict_build/`.
 
 ### Project Initialization Options
 ```bash
@@ -118,6 +131,7 @@ entire `exports/` directory is ignored by default via `.gitignore`.
 - **🔬 Code Analysis** - Run clang-tidy, include-what-you-use, and cppcheck with JSON output
 - **📊 Dependency Graphs** - Extract target dependency graphs from CMake codemodel with JSON and Graphviz export
 - **🧾 Structured Testing** - Parse CTest results into JSON and SARIF for gating workflows
+- **📈 Build & Performance Insights** - Benchmark configure/build/test, inspect ccache hit rates, parallelism, slow translation units, and peak memory via `llmtk bench`
 - **🧠 Deterministic Diagnostics** - Collapse compiler stderr with `llmtk stderr-thin` into budget-aware highlights
 - **🔏 Supply-Chain Ready** - pipx bootstrap with checksum enforcement and signed release artifacts
 - **🧪 Advanced Sanitizer Support** - Multiple sanitizer variants with proper isolation

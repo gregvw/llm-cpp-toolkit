@@ -552,3 +552,55 @@ llmtk context export --deep
   }
 }
 ```
+
+#### `llmtk bench --runs 3`
+
+Capture build and test performance characteristics in one sweep.
+
+**Command**:
+```bash
+llmtk bench --runs 3 --warmup 1
+```
+
+**Output (`exports/perf/bench.json`)**:
+```json
+{
+  "_meta": {
+    "generated_at": "...",
+    "run_id": "20240919_193511",
+    "runs": 3,
+    "build_type": "Debug",
+    "generator": "Ninja"
+  },
+  "stages": {
+    "configure": {
+      "duration_seconds": 2.41,
+      "peak_memory_kib": 51200,
+      "return_code": 0
+    },
+    "build": {
+      "duration_seconds": 18.32,
+      "peak_memory_kib": 286720,
+      "return_code": 0
+    },
+    "test": {
+      "duration_seconds": 4.77,
+      "peak_memory_kib": 131072,
+      "return_code": 0
+    }
+  },
+  "parallelism": {
+    "entries": 142,
+    "makespan_seconds": 18.29,
+    "average_parallelism": 6.4,
+    "max_parallelism": 12
+  },
+  "slow_translation_units": [
+    {
+      "output": "CMakeFiles/app.dir/src/server/http_server.cpp.o",
+      "source": "src/server/http_server.cpp",
+      "duration_seconds": 1.87
+    }
+  ]
+}
+```

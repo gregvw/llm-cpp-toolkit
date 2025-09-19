@@ -1,6 +1,6 @@
 # Toolkit Reference
 
-Generated from manifests on 2025-09-19T04:30:34.265831+00:00.
+Generated from manifests on 2025-09-19T20:03:39.834196+00:00.
 
 ## Tools
 - bat
@@ -225,6 +225,15 @@ Generated from manifests on 2025-09-19T04:30:34.265831+00:00.
       ]
     }
     ```
+- bench
+  - description: Benchmark configure/build/test workflows and report performance insights.
+  - args: build-dir, std, build-type, generator, runs, warmup, target, jobs, skip-configure, skip-build, skip-test, fresh, keep-output, top-slowest
+  - output: exports/perf/bench.json
+  - output: exports/perf/*/bench.json
+  - output: exports/perf/*/logs/*.log
+  - output: exports/perf/*/metrics/*.jsonl
+  - output: exports/perf/*/hyperfine/*.json
+  - json_summary: exports/perf/bench.json
 - capabilities
   - description: Emit machine-readable toolkit capabilities summary.
   - output: exports/capabilities.json
@@ -261,6 +270,83 @@ Generated from manifests on 2025-09-19T04:30:34.265831+00:00.
     }
     ```
   - json_summary: exports/context.json
+- deps
+  - description: Extract and export CMake target dependency graphs for agent consumption.
+  - args: build-dir, output-dir, json, graphviz, symbols
+  - output: exports/dependency_graphs/dependencies.json
+    schema:
+    ```json
+    {
+      "_meta": {
+        "generated_at": "number",
+        "build_dir": "string",
+        "codemodel_available": "bool",
+        "targets_count": "int",
+        "symbol_analysis_available": "bool"
+      },
+      "targets": {
+        "target_name": {
+          "name": "string",
+          "type": "string",
+          "sources": [
+            "string"
+          ],
+          "link_libraries": [
+            "string"
+          ],
+          "dependencies": [
+            {
+              "name": "string",
+              "type": "string",
+              "path": "string|null"
+            }
+          ],
+          "compile_definitions": [
+            "string"
+          ],
+          "include_directories": [
+            "string"
+          ],
+          "install_destination": "string|null"
+        }
+      },
+      "symbol_dependencies": {
+        "target_name": {
+          "defined_symbols": [
+            "string"
+          ],
+          "undefined_symbols": [
+            "string"
+          ],
+          "exported_symbols": [
+            "string"
+          ],
+          "symbol_dependencies": [
+            "string"
+          ]
+        }
+      },
+      "package_managers": {
+        "vcpkg": "object|null",
+        "conan": "object|null",
+        "find_package_calls": [
+          {
+            "package": "string",
+            "file": "string"
+          }
+        ]
+      },
+      "dependency_matrix": [
+        [
+          "string"
+        ]
+      ],
+      "build_order": [
+        "string"
+      ]
+    }
+    ```
+  - output: exports/dependency_graphs/dependencies.dot
 - doctor
   - description: Inspect environment and report tool availability.
   - output: exports/doctor.json

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-import argparse, json, os, shutil, subprocess, sys, pathlib, datetime, re, tempfile, textwrap, tarfile, time, shlex, hashlib, io, contextlib, traceback
+import argparse, json, os, shutil, subprocess, sys, pathlib, datetime, re, tempfile, textwrap, tarfile, time, shlex, hashlib, io, contextlib, traceback, statistics
 import xml.etree.ElementTree as ET
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 from urllib.request import pathname2url
 
 # Import template engine
@@ -11,6 +11,35 @@ try:
     TEMPLATE_ENGINE_AVAILABLE = True
 except ImportError:
     TEMPLATE_ENGINE_AVAILABLE = False
+
+try:
+    from strict_build import (
+        DEFAULT_BUILD_TYPE as STRICT_DEFAULT_BUILD_TYPE,
+        DEFAULT_GENERATOR as STRICT_DEFAULT_GENERATOR,
+        DEFAULT_STD as STRICT_DEFAULT_STD,
+        DEFAULT_TIDY_CHECKS as STRICT_DEFAULT_TIDY_CHECKS,
+        SANITIZER_FLAGS,
+        STRICT_WARNING_FLAGS,
+        strict_build_command,
+        strict_configure_command,
+        strict_test_command,
+    )
+except ImportError:
+    STRICT_DEFAULT_STD = "23"
+    STRICT_DEFAULT_BUILD_TYPE = "Debug"
+    STRICT_DEFAULT_GENERATOR = "Ninja"
+    STRICT_DEFAULT_TIDY_CHECKS = "cppcoreguidelines-*"
+    STRICT_WARNING_FLAGS = ["-Wall", "-Wextra", "-Wconversion", "-Wshadow", "-Werror"]
+    SANITIZER_FLAGS = ["-fsanitize=address", "-fsanitize=undefined"]
+
+    def strict_configure_command(*args, **kwargs):  # type: ignore
+        raise RuntimeError("strict_build module unavailable")
+
+    def strict_build_command(*args, **kwargs):  # type: ignore
+        raise RuntimeError("strict_build module unavailable")
+
+    def strict_test_command(*args, **kwargs):  # type: ignore
+        raise RuntimeError("strict_build module unavailable")
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 PROJECT_ROOT = pathlib.Path.cwd().resolve()
@@ -530,6 +559,165 @@ def _fallback_parse_ctest_output(output: str) -> Dict[str, Any]:
         'failures': tests,
         'warning': 'Structured XML not found; derived summary from stdout only.'
     }
+
+
+def _load_json_lines(path: pathlib.Path) -> List[Dict[str, Any]]:
+    records: List[Dict[str, Any]] = []
+    if not path.exists():
+        return records
+    for raw in path.read_text().splitlines():
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            obj = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(obj, dict):
+            records.append(obj)
+    return records
+
+
+def _ninja_log_raw_lines(path: pathlib.Path) -> Set[str]:
+    lines: Set[str] = set()
+    if not path.exists():
+        return lines
+    with open(path, 'r', encoding='utf-8', errors='replace') as fh:
+        for line in fh:
+            stripped = line.rstrip()
+            if not stripped or stripped.startswith('#'):
+                continue
+            lines.add(stripped)
+    return lines
+
+
+def _ninja_log_new_entries(path: pathlib.Path, baseline: Optional[Set[str]] = None) -> Tuple[List[Dict[str, Any]], Set[str]]:
+    entries: List[Dict[str, Any]] = []
+    seen: Set[str] = set()
+    if not path.exists():
+        return entries, seen
+
+    with open(path, 'r', encoding='utf-8', errors='replace') as fh:
+        for line in fh:
+            raw = line.rstrip()
+            if not raw or raw.startswith('#'):
+                continue
+            seen.add(raw)
+            if baseline and raw in baseline:
+                continue
+            parts = raw.split('\t')
+            if len(parts) < 4:
+                continue
+            try:
+                start = int(parts[0])
+                end = int(parts[1])
+            except ValueError:
+                continue
+            duration = max(end - start, 0)
+            output = parts[3] if len(parts) >= 4 else parts[-1]
+            entries.append({
+                'start': start,
+                'end': end,
+                'duration_ms': duration,
+                'output': output,
+                'raw': raw,
+            })
+    entries.sort(key=lambda item: item['end'])
+    return entries, seen
+
+
+def _compute_parallelism(entries: Sequence[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    if not entries:
+        return None
+
+    min_start = min(item['start'] for item in entries)
+    max_end = max(item['end'] for item in entries)
+    makespan_ms = max(max_end - min_start, 0)
+    total_duration_ms = sum(item.get('duration_ms', 0) for item in entries)
+
+    average_parallelism = None
+    makespan_seconds = None
+    total_duration_seconds = None
+    if makespan_ms > 0:
+        makespan_seconds = makespan_ms / 1000.0
+        total_duration_seconds = total_duration_ms / 1000.0
+        if makespan_seconds:
+            average_parallelism = total_duration_seconds / makespan_seconds
+
+    events: List[Tuple[int, int]] = []
+    for item in entries:
+        events.append((int(item.get('start', 0)), 1))
+        events.append((int(item.get('end', 0)), -1))
+    events.sort()
+
+    concurrency = 0
+    max_concurrency = 0
+    for _, delta in events:
+        concurrency += delta
+        if concurrency > max_concurrency:
+            max_concurrency = concurrency
+
+    return {
+        'entries': len(entries),
+        'makespan_seconds': round(makespan_seconds, 4) if makespan_seconds is not None else None,
+        'total_duration_seconds': round(total_duration_seconds, 4) if total_duration_seconds is not None else None,
+        'average_parallelism': round(average_parallelism, 3) if average_parallelism is not None else None,
+        'max_parallelism': max_concurrency,
+    }
+
+
+def _load_compile_command_index(path_hint: Optional[pathlib.Path] = None) -> Dict[str, str]:
+    compile_db_path = _find_compile_database(path_hint)
+    if not compile_db_path or not compile_db_path.exists():
+        return {}
+    try:
+        data = json.loads(compile_db_path.read_text())
+    except Exception:
+        return {}
+    mapping: Dict[str, str] = {}
+    if isinstance(data, list):
+        for entry in data:
+            if not isinstance(entry, dict):
+                continue
+            file_path = entry.get('file')
+            if not file_path:
+                continue
+            name = pathlib.Path(file_path).name
+            mapping.setdefault(name, file_path)
+    return mapping
+
+
+def _slow_translation_units(
+    entries: Sequence[Dict[str, Any]],
+    compile_index: Dict[str, str],
+    *,
+    top_n: int = 10,
+) -> List[Dict[str, Any]]:
+    if not entries:
+        return []
+    ranked = sorted(entries, key=lambda item: item.get('duration_ms', 0), reverse=True)[:top_n]
+    results: List[Dict[str, Any]] = []
+    for item in ranked:
+        output = item.get('output') or ''
+        output_name = pathlib.Path(output).name
+        source_name = pathlib.Path(output_name).stem
+        source_path = None
+        candidate_names = []
+        if source_name:
+            if pathlib.Path(source_name).suffix:
+                candidate_names.append(source_name)
+            else:
+                candidate_names.extend(source_name + ext for ext in ('.cpp', '.cc', '.cxx', '.c', '.mm', '.m'))
+        for candidate in candidate_names:
+            if candidate in compile_index:
+                source_path = compile_index[candidate]
+                break
+        results.append({
+            'output': output,
+            'source': source_path,
+            'duration_seconds': round(item.get('duration_ms', 0) / 1000.0, 4),
+        })
+    return results
 
 
 def _ctest_status_to_level(status: str) -> str:
@@ -1797,6 +1985,30 @@ def cmd_context_export(args):
             except Exception:
                 pass
 
+    bench_latest = EXPORTS / "perf" / "bench.json"
+    if bench_latest.exists():
+        try:
+            bench_data = json.loads(bench_latest.read_text())
+            stage_summaries = {}
+            for name, info in (bench_data.get("stages") or {}).items():
+                if not isinstance(info, dict):
+                    continue
+                stage_summaries[name] = {
+                    "duration_seconds": info.get("duration_seconds"),
+                    "peak_memory_kib": info.get("peak_memory_kib"),
+                    "return_code": info.get("return_code"),
+                }
+            performance_summary: Dict[str, Any] = {
+                "bench": "exports/perf/bench.json",
+                "generated_at": bench_data.get("_meta", {}).get("generated_at"),
+                "parallelism": bench_data.get("parallelism"),
+                "slow_translation_units": bench_data.get("slow_translation_units"),
+                "stages": stage_summaries,
+            }
+            summary["performance"] = performance_summary
+        except Exception:
+            summary["performance"] = {"bench": "exports/perf/bench.json"}
+
     write_json(EXPORTS/"context.json", summary)
     print(str(EXPORTS/"context.json"))
 
@@ -2244,6 +2456,276 @@ def cmd_test(args):
         print(f"🧾 SARIF: {sarif_path}")
 
     return result.returncode
+
+def cmd_bench(args):
+    bench_runner = ROOT / "scripts" / "bench_runner.py"
+    if not bench_runner.exists():
+        print(f"Error: bench runner not found: {bench_runner}")
+        return 1
+
+    hyperfine_path = shutil.which("hyperfine")
+    if not hyperfine_path:
+        print("⚠️ hyperfine not found; falling back to single-run measurements without statistical summaries.")
+
+    perf_dir = EXPORTS / "perf"
+    perf_dir.mkdir(parents=True, exist_ok=True)
+    run_id = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d_%H%M%S")
+    run_dir = perf_dir / run_id
+    logs_dir = run_dir / "logs"
+    metrics_dir = run_dir / "metrics"
+    hf_dir = run_dir / "hyperfine"
+    for directory in (run_dir, logs_dir, metrics_dir, hf_dir):
+        directory.mkdir(parents=True, exist_ok=True)
+
+    build_dir = pathlib.Path(args.build_dir).resolve()
+    source_dir = pathlib.Path.cwd()
+
+    if args.fresh and not args.skip_configure and build_dir.exists():
+        print(f"🧹 Removing existing build directory for fresh configure: {build_dir}")
+        shutil.rmtree(build_dir)
+
+    def _rel(path: pathlib.Path) -> str:
+        try:
+            return str(path.relative_to(EXPORTS))
+        except ValueError:
+            return str(path)
+
+    def _collect_ccache_stats() -> Optional[Dict[str, Any]]:
+        stats: Dict[str, Any] = {}
+        ccache = shutil.which("ccache")
+        if ccache:
+            try:
+                proc = subprocess.run([ccache, "--show-stats", "--format=json"], text=True, capture_output=True)
+                if proc.returncode == 0 and proc.stdout.strip():
+                    stats["ccache"] = json.loads(proc.stdout)
+                else:
+                    fallback = subprocess.run([ccache, "-s"], text=True, capture_output=True)
+                    if fallback.returncode == 0:
+                        stats["ccache_raw"] = fallback.stdout.strip()
+            except Exception as exc:
+                stats["ccache_error"] = str(exc)
+        sccache = shutil.which("sccache")
+        if sccache:
+            try:
+                proc = subprocess.run([sccache, "--show-stats"], text=True, capture_output=True)
+                if proc.returncode == 0:
+                    stats["sccache"] = proc.stdout.strip()
+            except Exception as exc:
+                stats.setdefault("sccache_errors", []).append(str(exc))
+        return stats or None
+
+    compile_index: Dict[str, str] = {}
+    stage_results: Dict[str, Dict[str, Any]] = {}
+    stage_order: List[str] = []
+    exit_code = 0
+
+    is_ninja = "ninja" in args.generator.lower()
+    ninja_log_path = build_dir / ".ninja_log"
+    ninja_entries: List[Dict[str, Any]] = []
+
+    def run_stage(stage: str, command: List[str]) -> Tuple[Dict[str, Any], int]:
+        metrics_file = metrics_dir / f"{stage}.jsonl"
+        if metrics_file.exists():
+            metrics_file.unlink()
+        log_path = logs_dir / f"{stage}.log"
+
+        wrapper_cmd: List[str] = [
+            sys.executable,
+            str(bench_runner),
+            "--metrics", str(metrics_file),
+            "--stage", stage,
+            "--log", str(log_path),
+        ]
+        if args.keep_output:
+            wrapper_cmd.append("--keep-output")
+        wrapper_cmd.append("--")
+        wrapper_cmd.extend(command)
+
+        hf_json = hf_dir / f"{stage}.json"
+        if hf_json.exists():
+            hf_json.unlink()
+
+        start_wall = time.perf_counter()
+        if hyperfine_path:
+            hf_cmd = [
+                hyperfine_path,
+                "--runs", str(max(args.runs, 1)),
+                "--warmup", str(max(args.warmup, 0)),
+                "--export-json", str(hf_json),
+                "--style", "basic",
+                "--command-name", stage,
+                shlex.join(wrapper_cmd),
+            ]
+            proc = subprocess.run(hf_cmd, text=True)
+            return_code = proc.returncode
+        else:
+            proc = subprocess.run(wrapper_cmd)
+            return_code = proc.returncode
+        elapsed = time.perf_counter() - start_wall
+
+        run_metrics = _load_json_lines(metrics_file)
+        durations = [float(m.get("duration_seconds", 0.0)) for m in run_metrics]
+        peak_memory = None
+        if run_metrics:
+            peak_memory = max((float(m.get("peak_rss_kib", 0.0)) for m in run_metrics), default=0.0)
+
+        hyperfine_summary = None
+        if hyperfine_path and hf_json.exists():
+            try:
+                hf_data = json.loads(hf_json.read_text())
+                if isinstance(hf_data, dict) and hf_data.get("results"):
+                    res = hf_data["results"][0]
+                    times = res.get("times") or []
+                    hyperfine_summary = {
+                        "mean_seconds": res.get("mean"),
+                        "stddev_seconds": res.get("stddev"),
+                        "min_seconds": res.get("min"),
+                        "max_seconds": res.get("max"),
+                        "median_seconds": res.get("median"),
+                        "runs": len(times) if isinstance(times, list) else None,
+                        "user_seconds": res.get("user"),
+                        "system_seconds": res.get("system"),
+                        "exit_codes": res.get("exit_codes"),
+                        "json": _rel(hf_json),
+                    }
+            except Exception as exc:
+                hyperfine_summary = {"error": str(exc)}
+
+        duration_avg = statistics.mean(durations) if durations else elapsed
+        stage_result: Dict[str, Any] = {
+            "command": command,
+            "command_str": shlex.join(command),
+            "log": _rel(log_path),
+            "metrics": _rel(metrics_file) if metrics_file.exists() else None,
+            "hyperfine": hyperfine_summary,
+            "runs": run_metrics,
+            "return_code": int(run_metrics[-1].get("returncode", return_code)) if run_metrics else int(return_code),
+            "duration_seconds": round(duration_avg, 4),
+            "peak_memory_kib": round(peak_memory, 2) if peak_memory is not None else None,
+        }
+        return stage_result, stage_result["return_code"]
+
+    # Configure stage
+    if not args.skip_configure:
+        configure_cmd = strict_configure_command(
+            source_dir,
+            build_dir,
+            std=args.std,
+            build_type=args.build_type,
+            generator=args.generator,
+            use_ccache=not args.no_ccache,
+            enable_tidy=not args.no_tidy,
+            tidy_checks=args.tidy_checks,
+            extra_defines=args.cmake_arg,
+            extra_args=args.cmake_extra,
+        )
+        cfg_result, cfg_rc = run_stage("configure", configure_cmd)
+        stage_results["configure"] = cfg_result
+        stage_order.append("configure")
+        exit_code = cfg_rc
+        if cfg_rc != 0:
+            summary_path = run_dir / "bench.json"
+            summary = {
+                "_meta": {
+                    "generated_at": datetime.datetime.now(datetime.UTC).isoformat(),
+                    "run_id": run_id,
+                    "runs": args.runs,
+                    "warmup": args.warmup,
+                    "std": args.std,
+                    "build_type": args.build_type,
+                    "generator": args.generator,
+                    "strict_warnings": STRICT_WARNING_FLAGS,
+                    "sanitizers": SANITIZER_FLAGS,
+                },
+                "stage_order": stage_order,
+                "stages": stage_results,
+                "artifacts": {
+                    "run_dir": _rel(run_dir),
+                    "logs": _rel(logs_dir),
+                    "metrics": _rel(metrics_dir),
+                },
+            }
+            write_json(summary_path, summary)
+            write_json(perf_dir / "bench.json", summary)
+            print(f"📊 Benchmark summary: {summary_path}")
+            return exit_code
+        compile_index = _load_compile_command_index(build_dir / "compile_commands.json")
+
+    # Build stage
+    if not args.skip_build:
+        baseline = _ninja_log_raw_lines(ninja_log_path) if is_ninja else set()
+        build_cmd = strict_build_command(
+            build_dir,
+            target=args.target,
+            jobs=args.jobs,
+            build_tool_args=args.build_arg,
+        )
+        build_result, build_rc = run_stage("build", build_cmd)
+        stage_results["build"] = build_result
+        stage_order.append("build")
+        if build_rc != 0:
+            exit_code = build_rc
+        if is_ninja:
+            new_entries, _ = _ninja_log_new_entries(ninja_log_path, baseline)
+            ninja_entries = new_entries
+        if not compile_index:
+            compile_index = _load_compile_command_index(build_dir / "compile_commands.json")
+
+    # Test stage
+    if not args.skip_test and exit_code == 0:
+        test_cmd = strict_test_command(
+            build_dir,
+            label=args.label,
+            regex=args.regex,
+            jobs=args.ctest_jobs,
+            extra_args=args.ctest_arg,
+        )
+        test_result, test_rc = run_stage("test", test_cmd)
+        stage_results["test"] = test_result
+        stage_order.append("test")
+        if test_rc != 0:
+            exit_code = test_rc
+
+    ccache_stats = _collect_ccache_stats()
+    parallelism = _compute_parallelism(ninja_entries) if ninja_entries else None
+    slow_units = _slow_translation_units(ninja_entries, compile_index, top_n=args.top_slowest)
+
+    summary = {
+        "_meta": {
+            "generated_at": datetime.datetime.now(datetime.UTC).isoformat(),
+            "run_id": run_id,
+            "runs": args.runs,
+            "warmup": args.warmup,
+            "std": args.std,
+            "build_type": args.build_type,
+            "generator": args.generator,
+            "strict_warnings": STRICT_WARNING_FLAGS,
+            "sanitizers": SANITIZER_FLAGS,
+        },
+        "stage_order": stage_order,
+        "stages": stage_results,
+        "artifacts": {
+            "run_dir": _rel(run_dir),
+            "logs": _rel(logs_dir),
+            "metrics": _rel(metrics_dir),
+            "hyperfine": _rel(hf_dir),
+        },
+    }
+    if hyperfine_path:
+        summary["_meta"]["hyperfine"] = {"path": hyperfine_path}
+    if ccache_stats:
+        summary["ccache"] = ccache_stats
+    if parallelism:
+        summary["parallelism"] = parallelism
+    if slow_units:
+        summary["slow_translation_units"] = slow_units
+
+    summary_path = run_dir / "bench.json"
+    write_json(summary_path, summary)
+    write_json(perf_dir / "bench.json", summary)
+    print(f"📊 Benchmark summary: {summary_path}")
+    return exit_code
+
 
 def cmd_stderr_thin(args):
     diagnostics_dir = EXPORTS / "diagnostics"
@@ -3638,6 +4120,33 @@ def main():
     test_parser.add_argument("--dry-run", dest="preview", action="store_true", help=argparse.SUPPRESS)
     test_parser.add_argument("--list", dest="preview", action="store_true", help=argparse.SUPPRESS)
     test_parser.set_defaults(fn=cmd_test)
+
+    bench_parser = sub.add_parser("bench", help="Benchmark configure/build/test workflows and gather performance metrics")
+    bench_parser.add_argument("--build-dir", default="build", help="CMake build directory")
+    bench_parser.add_argument("--std", default=STRICT_DEFAULT_STD, help="C++ standard for configure")
+    bench_parser.add_argument("--build-type", default=STRICT_DEFAULT_BUILD_TYPE, help="CMake build type")
+    bench_parser.add_argument("--generator", default=STRICT_DEFAULT_GENERATOR, help="CMake generator (default: Ninja)")
+    bench_parser.add_argument("--runs", type=int, default=1, help="Number of hyperfine runs per stage")
+    bench_parser.add_argument("--warmup", type=int, default=0, help="Number of warmup runs for hyperfine")
+    bench_parser.add_argument("--target", help="Specific build target")
+    bench_parser.add_argument("--jobs", type=int, help="Parallel build jobs")
+    bench_parser.add_argument("--label", help="CTest label filter")
+    bench_parser.add_argument("--regex", help="CTest regex filter")
+    bench_parser.add_argument("--ctest-jobs", type=int, dest="ctest_jobs", help="Parallel jobs for CTest")
+    bench_parser.add_argument("--cmake-arg", action="append", dest="cmake_arg", help="Additional -D style definitions for configure")
+    bench_parser.add_argument("--cmake-extra", action="append", dest="cmake_extra", help="Extra raw arguments passed to cmake configure")
+    bench_parser.add_argument("--build-arg", action="append", dest="build_arg", help="Extra arguments forwarded to the build tool")
+    bench_parser.add_argument("--ctest-arg", action="append", dest="ctest_arg", help="Additional arguments forwarded to ctest")
+    bench_parser.add_argument("--skip-configure", action="store_true", help="Skip configure stage")
+    bench_parser.add_argument("--skip-build", action="store_true", help="Skip build stage")
+    bench_parser.add_argument("--skip-test", action="store_true", help="Skip test stage")
+    bench_parser.add_argument("--fresh", action="store_true", help="Remove the build directory before configuring")
+    bench_parser.add_argument("--keep-output", action="store_true", help="Stream full command output instead of filtered highlights")
+    bench_parser.add_argument("--no-ccache", action="store_true", help="Disable ccache launcher injection")
+    bench_parser.add_argument("--no-tidy", action="store_true", help="Disable clang-tidy integration during configure")
+    bench_parser.add_argument("--tidy-checks", default=STRICT_DEFAULT_TIDY_CHECKS, help="clang-tidy checks list")
+    bench_parser.add_argument("--top-slowest", type=int, default=10, help="Number of slow translation units to report")
+    bench_parser.set_defaults(fn=cmd_bench)
 
     stderr_parser = sub.add_parser("stderr-thin", help="Collapse compiler stderr into budget-aware highlights")
     stderr_parser.add_argument("--log", help="Path to an existing stderr log to thin")

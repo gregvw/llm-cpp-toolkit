@@ -18,7 +18,7 @@
 - [X] Agent feedback loop and adapters: design a JSON request channel (`expand_context`, etc.), expose llmtk via an MCP server and lightweight adapters for Cursor, Continue, and Aider, and ensure capability discovery comes from the manifest.
 - [X] Initial implementation of a JSON-based request/response protocol and an `llmtk agent` command to handle `read_file`, `list_directory`, `write_file`, and `delete_file` requests.
 - [X] Dependency and symbol graph exports: derive target graphs from the CMake codemodel, emit JSON or Graphviz, include symbol-level dependency summaries around failures, and capture external package manager locks (vcpkg, conan) for agents.
-- [ ] Build and performance insights: ship `llmtk bench` around hyperfine for configure, build, and test, report ccache stats, parallelism utilization, slowest translation units, and peak memory, and record these metrics in context exports.
+- [X] Build and performance insights: ship `llmtk bench` around hyperfine for configure, build, and test, report ccache stats, parallelism utilization, slowest translation units, and peak memory, and record these metrics in context exports.
 - [ ] Incremental diff-oriented context: allow diff-based context packs, minimal dependency graphs per error, and an automated bisect helper that guides agents through regression hunts.
 - [ ] LSP and structured diagnostics bridges: add `llmtk lsp-bridge` for clangd with diagnostic filtering, favor LLVM structured diagnostics over text parsing, and surface filtered results consistently with stderr thinning.
 - [ ] Optional telemetry and dry-run controls: introduce opt-in, anonymized feature usage metrics, a global `--dry-run` preview mode for commands, and clear privacy documentation.
