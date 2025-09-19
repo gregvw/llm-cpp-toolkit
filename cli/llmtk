@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import argparse, json, os, shutil, subprocess, sys, pathlib, datetime, re, tempfile, textwrap
+import argparse, json, os, shutil, subprocess, sys, pathlib, datetime, re, tempfile, textwrap, tarfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -1010,6 +1010,9 @@ def cmd_context_export(args):
     # CMake File API codemodel
     q = build/".cmake"/"api"/"v1"/"query"; q.mkdir(parents=True, exist_ok=True)
     (q/"codemodel-v2").write_text("")
+    if args.deep:
+        (q/"cache-v2").write_text("")
+        (q/"toolchains-v1").write_text("")
     run(["cmake","--build",str(build)], check=False)
     reply = build/".cmake"/"api"/"v1"/"reply"
     if reply.exists():
@@ -1018,6 +1021,7 @@ def cmd_context_export(args):
             (EXPORTS/"cmake-file-api"/p.name).write_bytes(p.read_bytes())
 
     summary = {
+        "deep_export": args.deep,
         "compile_commands": "exports/compile_commands.json" if (EXPORTS/"compile_commands.json").exists() else None,
         "cmake_file_api": {
             "dir": "exports/cmake-file-api/",
@@ -1025,8 +1029,56 @@ def cmd_context_export(args):
         } if (EXPORTS/"cmake-file-api").exists() else None,
         "generated_at": datetime.datetime.now(datetime.UTC).isoformat()
     }
+
+    if args.deep and (EXPORTS/"cmake-file-api").exists():
+        summary["deep_info"] = {}
+        # Try to find the codemodel file
+        codemodel_file = next((p for p in (EXPORTS/"cmake-file-api").iterdir() if p.name.startswith("codemodel-v2-")), None)
+        if codemodel_file:
+            try:
+                codemodel = json.loads(codemodel_file.read_text())
+                summary["deep_info"]["codemodel"] = {
+                    "configurations": [conf.get("name") for conf in codemodel.get("configurations", [])],
+                    "targets": [t.get("name") for conf in codemodel.get("configurations", []) for t in conf.get("targets", [])]
+                }
+            except Exception:
+                pass # ignore malformed json
+
+        # Try to find the cache file
+        cache_file = next((p for p in (EXPORTS/"cmake-file-api").iterdir() if p.name.startswith("cache-v2-")), None)
+        if cache_file:
+            try:
+                cache = json.loads(cache_file.read_text())
+                summary["deep_info"]["cache"] = {
+                    "CMAKE_CXX_COMPILER": next((item.get("value") for item in cache.get("entries", []) if item.get("name") == "CMAKE_CXX_COMPILER"), None),
+                    "CMAKE_CXX_STANDARD": next((item.get("value") for item in cache.get("entries", []) if item.get("name") == "CMAKE_CXX_STANDARD"), None),
+                }
+            except Exception:
+                pass
+
+        # Try to find the toolchains file
+        toolchains_file = next((p for p in (EXPORTS/"cmake-file-api").iterdir() if p.name.startswith("toolchains-v1-")), None)
+        if toolchains_file:
+            try:
+                toolchains = json.loads(toolchains_file.read_text())
+                if toolchains.get("toolchains"):
+                    summary["deep_info"]["toolchains"] = toolchains.get("toolchains")
+            except Exception:
+                pass
+
     write_json(EXPORTS/"context.json", summary)
     print(str(EXPORTS/"context.json"))
+
+def cmd_context_pack(args):
+    """Pack the context export into a tarball."""
+    if args.redact:
+        print("Note: Redaction is not yet implemented.")
+
+    output_filename = EXPORTS.parent / "context-export.tar.gz"
+    with tarfile.open(output_filename, "w:gz") as tar:
+        tar.add(EXPORTS, arcname=EXPORTS.name)
+
+    print(f"Context export packed to: {output_filename}")
 
 def cmd_analyze(args):
     reports = EXPORTS/"reports"; reports.mkdir(exist_ok=True)
@@ -1833,7 +1885,11 @@ def main():
     cx_exp = cx.add_parser("export", help="Export build context for LLMs")
     cx_exp.add_argument("--build", default="build", help="Build directory path")
     cx_exp.add_argument("--require-cmake", action="store_true", help="Require CMAKE_GUIDANCE.md compliance")
+    cx_exp.add_argument("--deep", action="store_true", help="Perform a deep context export, gathering more detailed information.")
     cx_exp.set_defaults(fn=cmd_context_export)
+    cx_pack = cx.add_parser("pack", help="Pack context export into a tarball")
+    cx_pack.add_argument("--redact", action="store_true", help="Redact sensitive information from the export")
+    cx_pack.set_defaults(fn=cmd_context_pack)
 
     an = sub.add_parser("analyze", help="Run static analysis tools")
     an.add_argument("paths", nargs="*", help="Paths to analyze")
