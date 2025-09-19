@@ -1,6 +1,10 @@
 # LLM C++ Toolkit
 
-A comprehensive CLI toolkit designed to help LLMs and AI agents work effectively with C++ and CMake projects. Provides standardized environment checks, context export, code analysis, and repro reduction with JSON outputs optimized for AI consumption.
+A comprehensive CLI toolkit designed to help LLMs and AI agents work effectively with C++ and CMake projects. Provides standardized environment checks, context export, code analysis, and repro reduction with JSON outputs optimized for AI consumption. This toolkit is directly targets three well-known "pain points" of AI-assisted C++ development:
+
+1. Repeatable tool bootstrapping
+2. Exporting machine-readable project context
+3. Producing analysis output an agent can actually digest
 
 ## 🚀 Quick Start
 
