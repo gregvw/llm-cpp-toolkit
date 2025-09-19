@@ -1,6 +1,6 @@
 # Toolkit Reference
 
-Generated from manifests on 2025-09-19T03:02:51.082122+00:00.
+Generated from manifests on 2025-09-19T04:30:34.265831+00:00.
 
 ## Tools
 - bat
@@ -333,6 +333,58 @@ Generated from manifests on 2025-09-19T03:02:51.082122+00:00.
     ```
   - output: exports/diagnostics/stderr-thin.txt
   - output: exports/diagnostics/stderr-raw.txt
+- test
+  - description: Run CTest suites and emit structured results for LLM consumption.
+  - args: build-dir, regex, exclude, label, parallel, timeout, rerun-failed, preview, json, sarif
+  - output: exports/tests/ctest_results.json
+    schema:
+    ```json
+    {
+      "_meta": {
+        "generated_at": "string",
+        "ctest_command": "string",
+        "build_dir": "string",
+        "ctest_version": "string|null",
+        "return_code": "int",
+        "duration_seconds": "number",
+        "stdout": "string",
+        "stderr": "string",
+        "xml": "string|null"
+      },
+      "stats": {
+        "total": "int",
+        "passed": "int",
+        "failed": "int",
+        "timeout": "int",
+        "notrun": "int",
+        "skipped": "int",
+        "unknown": "int",
+        "duration_seconds": "number"
+      },
+      "failures": [
+        {
+          "name": "string",
+          "status": "string",
+          "fail_reason": "string|null"
+        }
+      ],
+      "tests": [
+        {
+          "name": "string",
+          "status": "string",
+          "duration": "number|null",
+          "labels": [
+            "string"
+          ],
+          "fail_reason": "string|null"
+        }
+      ]
+    }
+    ```
+  - output: exports/tests/ctest_results.sarif
+  - output: exports/tests/Test.xml
+  - output: exports/tests/ctest_stdout.txt
+  - output: exports/tests/ctest_stderr.txt
 - tidy
   - description: Run clang-tidy with optional fix application.
   - args: paths (variadic), apply, checks

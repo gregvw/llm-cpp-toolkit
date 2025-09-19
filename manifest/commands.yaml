@@ -100,6 +100,69 @@ commands:
                   level: string
                   locations: [object]
 
+  test:
+    description: Run CTest suites and emit structured results for LLM consumption.
+    args:
+      - name: build-dir
+        description: "CMake build directory to run tests from"
+      - name: regex
+        description: "Only run tests matching this regular expression (-R)"
+      - name: exclude
+        description: "Exclude tests matching this regular expression (-E)"
+      - name: label
+        description: "Only run tests with labels matching this regex (-L)"
+      - name: parallel
+        description: "Number of parallel test jobs (-j)"
+      - name: timeout
+        description: "Timeout in seconds for each test"
+      - name: rerun-failed
+        flag: true
+        description: "Re-run tests that previously failed"
+      - name: preview
+        flag: true
+        description: "List tests without executing them"
+      - name: json
+        description: "Optional path for the JSON summary"
+      - name: sarif
+        description: "Optional path for the SARIF report"
+    outputs:
+      - path: "exports/tests/ctest_results.json"
+        schema:
+          _meta:
+            generated_at: string
+            ctest_command: string
+            build_dir: string
+            ctest_version: string|null
+            return_code: int
+            duration_seconds: number
+            stdout: string
+            stderr: string
+            xml: string|null
+          stats:
+            total: int
+            passed: int
+            failed: int
+            timeout: int
+            notrun: int
+            skipped: int
+            unknown: int
+            duration_seconds: number
+          failures:
+            - name: string
+              status: string
+              fail_reason: string|null
+          tests:
+            - name: string
+              status: string
+              duration: number|null
+              labels: [string]
+              fail_reason: string|null
+      - path: "exports/tests/ctest_results.sarif"
+      - path: "exports/tests/Test.xml"
+        condition: "when CTest XML is generated"
+      - path: "exports/tests/ctest_stdout.txt"
+      - path: "exports/tests/ctest_stderr.txt"
+
   stderr-thin:
     description: Collapse compiler stderr into deterministic, budget-aware highlights.
     args:

@@ -62,9 +62,13 @@ llmtk doctor
 
 # Export project context for LLMs
 llmtk context export
+llmtk context export --preview   # Show planned steps without executing
 
 # Analyze code with multiple tools
 llmtk analyze src/ include/
+
+# Run tests with structured outputs
+llmtk test --json
 
 # Thin compiler diagnostics with context budgets
 llmtk stderr-thin --compile main.cpp --level=focused
@@ -101,6 +105,7 @@ entire `exports/` directory is ignored by default via `.gitignore`.
 - **🧱 Project Bootstrap/Adoption** - Generate starter scaffolding or adopt existing CMake projects with guidance
 - **📦 Context Export** - Generate compilation databases and CMake introspection data
 - **🔬 Code Analysis** - Run clang-tidy, include-what-you-use, and cppcheck with JSON output
+- **🧾 Structured Testing** - Parse CTest results into JSON and SARIF for gating workflows
 - **🧠 Deterministic Diagnostics** - Collapse compiler stderr with `llmtk stderr-thin` into budget-aware highlights
 - **🔏 Supply-Chain Ready** - pipx bootstrap with checksum enforcement and signed release artifacts
 - **🧪 Advanced Sanitizer Support** - Multiple sanitizer variants with proper isolation
@@ -153,6 +158,11 @@ exports/
 │   ├── clang-tidy.json
 │   ├── iwyu.json
 │   └── cppcheck.json
+├── tests/                  # Structured CTest exports
+│   ├── ctest_results.json
+│   ├── ctest_results.sarif
+│   ├── Test.xml
+│   └── ctest_stdout.txt
 ├── diagnostics/            # Deterministic stderr thinning outputs
 │   ├── stderr-thin.json
 │   ├── stderr-thin.txt

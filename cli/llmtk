@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 import argparse, json, os, shutil, subprocess, sys, pathlib, datetime, re, tempfile, textwrap, tarfile, time, shlex, hashlib
+import xml.etree.ElementTree as ET
+from typing import Any, Dict, Iterable, List, Optional
+from urllib.request import pathname2url
 
 # Import template engine
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent / "modules"))
@@ -278,6 +281,325 @@ def generate_capabilities_json(out_path: pathlib.Path):
     write_json(out_path, data)
     return out_path
 
+
+def _ctest_filter_args(args: argparse.Namespace) -> List[str]:
+    filters: List[str] = []
+    if getattr(args, "regex", None):
+        filters.extend(["-R", args.regex])
+    if getattr(args, "exclude", None):
+        filters.extend(["-E", args.exclude])
+    if getattr(args, "label", None):
+        filters.extend(["-L", args.label])
+    return filters
+
+
+def _resolve_optional_path(default: pathlib.Path, override: Optional[str]) -> pathlib.Path:
+    if override is None or override == "":
+        return default
+    return pathlib.Path(override)
+
+
+def _describe_ctest_preview(stdout: str) -> Dict[str, Any]:
+    try:
+        data = json.loads(stdout)
+    except json.JSONDecodeError:
+        return {"raw": stdout.strip()}
+
+    tests = data.get("tests") or []
+    summary = {
+        "total": len(tests),
+        "by_label": {},
+        "tests": [],
+    }
+
+    for entry in tests:
+        labels = entry.get("labels") or []
+        for label in labels:
+            summary["by_label"].setdefault(label, 0)
+            summary["by_label"][label] += 1
+        summary["tests"].append({
+            "name": entry.get("name"),
+            "command": entry.get("command"),
+            "timeout": entry.get("properties", {}).get("timeout")
+        })
+
+    return summary
+
+
+def _find_latest_ctest_xml(build_dir: pathlib.Path) -> Optional[pathlib.Path]:
+    testing_dir = build_dir / "Testing"
+    if not testing_dir.exists():
+        return None
+
+    latest_xml: Optional[pathlib.Path] = None
+    latest_mtime = -1.0
+
+    for candidate in testing_dir.iterdir():
+        if not candidate.is_dir():
+            continue
+        xml_path = candidate / "Test.xml"
+        if not xml_path.exists():
+            continue
+        try:
+            mtime = xml_path.stat().st_mtime
+        except OSError:
+            continue
+        if mtime > latest_mtime:
+            latest_mtime = mtime
+            latest_xml = xml_path
+
+    return latest_xml
+
+
+def _normalize_status(raw_status: Optional[str]) -> str:
+    if not raw_status:
+        return "unknown"
+    status = raw_status.strip().lower()
+    if status in {"passed", "success", "completed"}:
+        return "passed"
+    if status in {"failed", "fail"}:
+        return "failed"
+    if status in {"timeout"}:
+        return "timeout"
+    if status in {"notrun", "not run", "disabled"}:
+        return "notrun"
+    if status in {"skipped"}:
+        return "skipped"
+    return status.replace(" ", "_")
+
+
+def _parse_ctest_xml(xml_path: pathlib.Path) -> Dict[str, Any]:
+    try:
+        tree = ET.parse(xml_path)
+    except ET.ParseError as exc:
+        return {"error": f"Failed to parse {xml_path}: {exc}"}
+
+    root = tree.getroot()
+    tests: List[Dict[str, Any]] = []
+    stats: Dict[str, int] = {"passed": 0, "failed": 0, "timeout": 0, "notrun": 0, "skipped": 0, "unknown": 0}
+    total_duration = 0.0
+
+    for test_el in root.findall('.//Test'):
+        status = _normalize_status(test_el.attrib.get('Status'))
+        name = test_el.findtext('Name') or test_el.attrib.get('Name') or "(unknown)"
+        full_name = test_el.findtext('FullName') or name
+        path_text = test_el.findtext('Path')
+        command = test_el.findtext('FullCommandLine')
+        labels = [lab.text.strip() for lab in test_el.findall('./Labels/Label') if lab.text]
+
+        results = test_el.find('Results')
+        measurements: Dict[str, Any] = {}
+        output_snippets: List[str] = []
+        execution_time: Optional[float] = None
+        completion_status: Optional[str] = None
+
+        if results is not None:
+            for named in results.findall('NamedMeasurement'):
+                key = named.attrib.get('name') or ''
+                value = named.findtext('Value') or ''
+                measurements[key] = value
+                key_lower = key.lower()
+                if key_lower == 'execution time':
+                    try:
+                        execution_time = float(value)
+                        total_duration += execution_time
+                    except ValueError:
+                        pass
+                elif key_lower == 'completion status':
+                    completion_status = value
+                elif key_lower in {'test output', 'exit condition', 'stdout', 'stderr'}:
+                    if value:
+                        output_snippets.append(value)
+                elif key_lower in {'command'} and not command:
+                    command = value
+
+            for measurement in results.findall('Measurement'):
+                value = measurement.findtext('Value')
+                if value:
+                    output_snippets.append(value)
+
+            for failure in results.findall('.//Failure'):
+                parts = [part.strip() for part in failure.itertext() if part and part.strip()]
+                if parts:
+                    output_snippets.append(' '.join(parts))
+
+        if status == 'unknown' and completion_status:
+            status = _normalize_status(completion_status)
+
+        if status not in stats:
+            stats[status] = 0
+        stats[status] += 1
+
+        fail_reason = None
+        if status not in {'passed'}:
+            fail_reason = measurements.get('Completion Status') or measurements.get('Exit Value') or measurements.get('Exit Code')
+            if not fail_reason and output_snippets:
+                fail_reason = output_snippets[0]
+
+        pass_reason = None
+        if status == 'passed':
+            pass_reason = measurements.get('Completion Status') or 'Completed'
+
+        tests.append({
+            'name': name,
+            'full_name': full_name,
+            'status': status,
+            'path': path_text,
+            'command': command,
+            'labels': labels,
+            'duration': execution_time,
+            'measurements': measurements,
+            'output_snippets': output_snippets[:5],
+            'fail_reason': fail_reason,
+            'pass_reason': pass_reason,
+        })
+
+    total = sum(stats.values())
+    failures = [test for test in tests if test['status'] not in {'passed'}]
+
+    return {
+        'tests': tests,
+        'stats': {
+            'total': total,
+            'passed': stats.get('passed', 0),
+            'failed': stats.get('failed', 0),
+            'timeout': stats.get('timeout', 0),
+            'notrun': stats.get('notrun', 0),
+            'skipped': stats.get('skipped', 0),
+            'unknown': stats.get('unknown', 0),
+            'duration_seconds': round(total_duration, 4),
+        },
+        'failures': failures,
+    }
+
+
+def _fallback_parse_ctest_output(output: str) -> Dict[str, Any]:
+    failed_tests: List[Dict[str, Any]] = []
+    total = passed = failed = 0
+    summary_re = re.compile(r"(\d+)% tests passed, (\d+) tests failed out of (\d+)")
+    listing_re = re.compile(r"\s*(\d+)\s*-\s*(.+?)\s+\(")
+
+    in_failed_section = False
+    for line in output.splitlines():
+        stripped = line.strip()
+        match = summary_re.search(stripped)
+        if match:
+            _, failed_str, total_str = match.groups()
+            total = int(total_str)
+            failed = int(failed_str)
+            passed = total - failed
+        if 'The following tests FAILED:' in stripped:
+            in_failed_section = True
+            continue
+        if in_failed_section:
+            if not stripped:
+                in_failed_section = False
+                continue
+            match = listing_re.match(line)
+            if match:
+                idx, name = match.groups()
+                failed_tests.append({'name': name.strip(), 'index': int(idx)})
+
+    tests = [{
+        'name': item.get('name'),
+        'full_name': item.get('name'),
+        'status': 'failed',
+        'path': None,
+        'command': None,
+        'labels': [],
+        'duration': None,
+        'measurements': {},
+        'output_snippets': [],
+        'fail_reason': 'CTest reported failure (XML unavailable)',
+        'pass_reason': None,
+    } for item in failed_tests]
+
+    return {
+        'tests': tests,
+        'stats': {
+            'total': total,
+            'passed': passed,
+            'failed': failed,
+            'timeout': 0,
+            'notrun': 0,
+            'skipped': 0,
+            'unknown': max(total - (passed + failed), 0),
+            'duration_seconds': 0.0,
+        },
+        'failures': tests,
+        'warning': 'Structured XML not found; derived summary from stdout only.'
+    }
+
+
+def _ctest_status_to_level(status: str) -> str:
+    status = status.lower()
+    if status in {'failed', 'timeout', 'exception'}:
+        return 'error'
+    if status in {'notrun', 'skipped', 'disabled'}:
+        return 'warning'
+    return 'note'
+
+
+def _write_ctest_sarif(
+    sarif_path: pathlib.Path,
+    tests: Iterable[Dict[str, Any]],
+    command: List[str],
+    build_dir: pathlib.Path,
+    ctest_version: Optional[str],
+    returncode: int,
+    duration: float,
+) -> None:
+    failing = [test for test in tests if test.get('status') not in {'passed'}]
+    run = {
+        'tool': {
+            'driver': {
+                'name': 'ctest',
+                'version': ctest_version,
+            }
+        },
+        'results': [],
+        'invocations': [{
+            'executionSuccessful': returncode == 0,
+            'commandLine': ' '.join(command),
+            'workingDirectory': {'uri': str(build_dir.resolve())},
+            'endTimeUtc': datetime.datetime.now(datetime.UTC).isoformat(),
+            'durationInSeconds': duration,
+        }]
+    }
+
+    for test in failing:
+        message = test.get('fail_reason') or test.get('pass_reason') or f"Test {test.get('name')} reported status {test.get('status')}"
+        level = _ctest_status_to_level(test.get('status', 'unknown'))
+        artifact_path = test.get('path')
+        if artifact_path:
+            uri = pathname2url(str(artifact_path))
+        else:
+            fallback = test.get('full_name') or test.get('name') or 'unknown'
+            uri = f"test://{pathname2url(fallback)}"
+        run['results'].append({
+            'ruleId': f"ctest::{test.get('full_name')}",
+            'level': level,
+            'message': {'text': message},
+            'locations': [{
+                'physicalLocation': {
+                    'artifactLocation': {
+                        'uri': uri,
+                        'uriBaseId': '%SRCROOT%'
+                    }
+                }
+            }],
+            'properties': {
+                'duration': test.get('duration'),
+                'command': test.get('command'),
+            }
+        })
+
+    sarif_doc = {
+        '$schema': 'https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0.json',
+        'version': '2.1.0',
+        'runs': [run]
+    }
+    write_json(sarif_path, sarif_doc)
 
 _TEMPLATE_CHAIN_PATTERNS = [
     re.compile(r"\b(in|note: in) instantiation of", re.IGNORECASE),
@@ -1376,6 +1698,24 @@ def cmd_context_export(args):
         print(f"✅ CMake compliance verified ({cmake_validation['overall_score']:.0f}%)")
 
     build = pathlib.Path(args.build)
+
+    if getattr(args, "preview", False):
+        steps = [
+            f"Configure: cmake -S . -B {build} -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+            f"Copy compile_commands.json into exports/",
+        ]
+        if args.deep:
+            steps.append(f"Query CMake File API (codemodel, cache, toolchains) in {build}")
+        else:
+            steps.append(f"Query CMake File API (codemodel) in {build}")
+        steps.append(f"cmake --build {build} (best-effort to refresh targets)")
+        steps.append("Summarize artifacts to exports/context.json")
+
+        print("📋 Context export preview:")
+        for step in steps:
+            print(f"   • {step}")
+        return 0
+
     build.mkdir(exist_ok=True)
 
     # Compile DB
@@ -1768,6 +2108,141 @@ def cmd_analyze(args):
 
     print(str(reports))
 
+
+def cmd_test(args):
+    ctest_bin = shutil.which("ctest")
+    if not ctest_bin:
+        print("Error: ctest not found on PATH. Install CMake or ensure ctest is available.")
+        return 1
+
+    build_dir = pathlib.Path(args.build_dir).resolve()
+    if not build_dir.exists():
+        print(f"Error: build directory not found: {build_dir}")
+        return 1
+
+    tests_dir = EXPORTS / "tests"
+    tests_dir.mkdir(parents=True, exist_ok=True)
+
+    json_path = _resolve_optional_path(tests_dir / "ctest_results.json", getattr(args, "json", None))
+    sarif_path = _resolve_optional_path(tests_dir / "ctest_results.sarif", getattr(args, "sarif", None))
+    preview_path = tests_dir / "ctest_preview.json"
+
+    ctest_version = None
+    try:
+        version_result = run([ctest_bin, "--version"], check=False)
+        if version_result.stdout:
+            ctest_version = version_result.stdout.splitlines()[0].strip()
+    except Exception:
+        pass
+
+    filter_args = _ctest_filter_args(args)
+
+    if getattr(args, "preview", False):
+        preview_cmd = [ctest_bin, "--test-dir", str(build_dir), "--show-only=json-v1"] + filter_args
+        if args.config:
+            preview_cmd.extend(["--build-config", args.config])
+        result = subprocess.run(preview_cmd, text=True, capture_output=True, cwd=build_dir)
+        if result.returncode != 0 or not result.stdout.strip():
+            # Fallback to plain text listing
+            preview_cmd = [ctest_bin, "--test-dir", str(build_dir), "--show-only"] + filter_args
+            if args.config:
+                preview_cmd.extend(["--build-config", args.config])
+            result = subprocess.run(preview_cmd, text=True, capture_output=True, cwd=build_dir)
+
+        preview_summary = _describe_ctest_preview(result.stdout)
+        write_json(preview_path, preview_summary)
+
+        total = preview_summary.get("total")
+        if isinstance(total, int):
+            print(f"📋 Preview: {total} tests would run. Summary: {preview_path}")
+        else:
+            print(f"📋 Preview saved to {preview_path}")
+        tests_list = preview_summary.get("tests") or []
+        if isinstance(tests_list, list) and tests_list:
+            print("   Sample tests:")
+            for sample in tests_list[:5]:
+                name = sample.get("name") or "(unknown)"
+                cmd = sample.get("command") or ""
+                print(f"   • {name}{' — ' + cmd if cmd else ''}")
+        return 0
+
+    command = [ctest_bin, "--test-dir", str(build_dir), "--output-on-failure", "--no-tests=error"] + filter_args
+    if args.parallel is not None:
+        command.extend(["-j", str(args.parallel)])
+    if args.config:
+        command.extend(["--build-config", args.config])
+    if args.timeout:
+        command.extend(["--timeout", str(args.timeout)])
+    if args.rerun_failed:
+        command.append("--rerun-failed")
+    if args.stop_on_failure:
+        command.append("--stop-on-failure")
+
+    start = time.time()
+    result = subprocess.run(command, text=True, capture_output=True, cwd=build_dir)
+    duration = time.time() - start
+
+    stdout_path = tests_dir / "ctest_stdout.txt"
+    stderr_path = tests_dir / "ctest_stderr.txt"
+    stdout_path.write_text(result.stdout)
+    stderr_path.write_text(result.stderr)
+
+    xml_path = _find_latest_ctest_xml(build_dir)
+    parsed = None
+    copied_xml = None
+    if xml_path and xml_path.exists():
+        parsed = _parse_ctest_xml(xml_path)
+        copied_xml = tests_dir / "Test.xml"
+        shutil.copyfile(xml_path, copied_xml)
+    else:
+        parsed = _fallback_parse_ctest_output(result.stdout)
+
+    summary = {
+        "_meta": {
+            "generated_at": datetime.datetime.now(datetime.UTC).isoformat(),
+            "ctest_command": " ".join(command),
+            "build_dir": str(build_dir),
+            "ctest_version": ctest_version,
+            "return_code": result.returncode,
+            "duration_seconds": round(duration, 3),
+            "stdout": str(stdout_path),
+            "stderr": str(stderr_path),
+            "xml": str(copied_xml) if copied_xml else None,
+        },
+        "stats": parsed.get("stats", {}),
+        "tests": parsed.get("tests", []),
+        "failures": parsed.get("failures", []),
+        "stdout_preview": result.stdout.splitlines()[:10],
+        "stderr_preview": result.stderr.splitlines()[:10],
+    }
+    if parsed.get("warning"):
+        summary["warning"] = parsed["warning"]
+
+    write_json(json_path, summary)
+
+    try:
+        _write_ctest_sarif(sarif_path, summary["tests"], command, build_dir, ctest_version, result.returncode, duration)
+    except Exception as exc:
+        print(f"Warning: failed to write SARIF report: {exc}")
+
+    stats = summary["stats"]
+    total = stats.get("total", 0)
+    passed = stats.get("passed", 0)
+    failing_count = stats.get("failed", 0) + stats.get("timeout", 0) + stats.get("notrun", 0)
+
+    print(f"🧪 CTest: {passed}/{total} passed ({failing_count} flagged). JSON: {json_path}")
+    if summary.get("failures"):
+        print("❌ Failed tests:")
+        for failure in summary["failures"][:10]:
+            name = failure.get("full_name") or failure.get("name")
+            reason = failure.get("fail_reason") or failure.get("Completion Status") or "(no reason captured)"
+            print(f"   • {name}: {reason}")
+    if copied_xml:
+        print(f"📄 Raw CTest XML: {copied_xml}")
+    if sarif_path:
+        print(f"🧾 SARIF: {sarif_path}")
+
+    return result.returncode
 
 def cmd_stderr_thin(args):
     diagnostics_dir = EXPORTS / "diagnostics"
@@ -2606,6 +3081,7 @@ def main():
     cx_exp.add_argument("--build", default="build", help="Build directory path")
     cx_exp.add_argument("--require-cmake", action="store_true", help="Require CMAKE_GUIDANCE.md compliance")
     cx_exp.add_argument("--deep", action="store_true", help="Perform a deep context export, gathering more detailed information.")
+    cx_exp.add_argument("--preview", action="store_true", help="Show planned context export operations without running them")
     cx_exp.set_defaults(fn=cmd_context_export)
     cx_pack = cx.add_parser("pack", help="Pack context export into a tarball")
     cx_pack.add_argument("--redact", action="store_true", help="Redact sensitive information from the export")
@@ -2617,6 +3093,23 @@ def main():
     an.add_argument("--incremental", action="store_true", help="Analyze only changed files")
     an.add_argument("--cache-key", help="Manual cache key for analysis results")
     an.set_defaults(fn=cmd_analyze)
+
+    test_parser = sub.add_parser("test", help="Run tests via CTest with structured exports")
+    test_parser.add_argument("--build-dir", "-B", default="build", help="CMake build directory containing CTest files")
+    test_parser.add_argument("--config", help="CTest build configuration (Debug, Release, etc.)")
+    test_parser.add_argument("--regex", "-R", help="Run tests matching this regular expression")
+    test_parser.add_argument("--exclude", "-E", help="Exclude tests matching this regular expression")
+    test_parser.add_argument("--label", "-L", help="Run tests with a matching label regex")
+    test_parser.add_argument("--parallel", "-j", type=int, help="Number of parallel test jobs")
+    test_parser.add_argument("--timeout", type=int, help="Timeout in seconds for each test")
+    test_parser.add_argument("--rerun-failed", action="store_true", help="Re-run tests that failed in the previous run")
+    test_parser.add_argument("--stop-on-failure", action="store_true", help="Stop execution after the first failing test")
+    test_parser.add_argument("--json", nargs="?", const="", help="Write JSON summary to this path (defaults to exports/tests/ctest_results.json)")
+    test_parser.add_argument("--sarif", nargs="?", const="", help="Write SARIF report to this path (defaults to exports/tests/ctest_results.sarif)")
+    test_parser.add_argument("--preview", action="store_true", help="List tests that would run without executing them")
+    test_parser.add_argument("--dry-run", dest="preview", action="store_true", help=argparse.SUPPRESS)
+    test_parser.add_argument("--list", dest="preview", action="store_true", help=argparse.SUPPRESS)
+    test_parser.set_defaults(fn=cmd_test)
 
     stderr_parser = sub.add_parser("stderr-thin", help="Collapse compiler stderr into budget-aware highlights")
     stderr_parser.add_argument("--log", help="Path to an existing stderr log to thin")

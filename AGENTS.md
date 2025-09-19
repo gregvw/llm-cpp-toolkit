@@ -57,6 +57,45 @@ tools:
   # ... add clang-tidy, clang-format, iwyu, cppcheck, cmake, ninja, ccache, ripgrep, fd, bloaty ...
 ```
 
+#### `llmtk test --json`
+
+Structured testing exports give agents clean failure diagnostics without parsing console text.
+
+**Command**:
+```bash
+llmtk test --json
+```
+
+**Outputs**:
+- `exports/tests/ctest_results.json`
+- `exports/tests/ctest_results.sarif`
+- `exports/tests/Test.xml`
+
+**JSON summary excerpt**:
+```json
+{
+  "_meta": {
+    "ctest_command": "ctest --test-dir build --output-on-failure --no-tests=error",
+    "return_code": 8,
+    "duration_seconds": 12.41
+  },
+  "stats": {
+    "total": 24,
+    "passed": 23,
+    "failed": 1
+  },
+  "failures": [
+    {
+      "name": "unit.widget_timeout",
+      "status": "failed",
+      "fail_reason": "Completed (Failed)"
+    }
+  ]
+}
+```
+
+Use `llmtk test --preview` to see which tests would run, or pass `ctest_results.sarif` to `llmtk gate` to enforce severity budgets in CI.
+
 ```yaml
 schema: 1
 commands:
