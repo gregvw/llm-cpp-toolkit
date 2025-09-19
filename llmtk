@@ -1,8 +1,7 @@
 #!/bin/bash
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-MODULES_DIR="$PROJECT_ROOT/modules"
+MODULES_DIR="$SCRIPT_DIR/modules"
 EXPORTS_DIR="$PWD/exports"
 
 case "$1" in
@@ -20,8 +19,12 @@ case "$1" in
         shift
         "$MODULES_DIR/analyze.sh" "$@"
         ;;
+    "deps")
+        shift
+        "$MODULES_DIR/deps.sh" "$@"
+        ;;
     *)
-        echo "Usage: llmtk {doctor|context export|analyze} [options]"
+        echo "Usage: llmtk {doctor|context export|analyze|deps} [options]"
         exit 1
         ;;
 esac

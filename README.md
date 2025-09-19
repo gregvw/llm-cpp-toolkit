@@ -71,6 +71,9 @@ llmtk context export --preview   # Show planned steps without executing
 # Analyze code with multiple tools
 llmtk analyze src/ include/
 
+# Extract dependency graphs
+llmtk deps --json --graphviz
+
 # Run tests with structured outputs
 llmtk test --json
 
@@ -113,6 +116,7 @@ entire `exports/` directory is ignored by default via `.gitignore`.
 - **🧱 Project Bootstrap/Adoption** - Generate starter scaffolding or adopt existing CMake projects with guidance
 - **📦 Context Export** - Generate compilation databases and CMake introspection data
 - **🔬 Code Analysis** - Run clang-tidy, include-what-you-use, and cppcheck with JSON output
+- **📊 Dependency Graphs** - Extract target dependency graphs from CMake codemodel with JSON and Graphviz export
 - **🧾 Structured Testing** - Parse CTest results into JSON and SARIF for gating workflows
 - **🧠 Deterministic Diagnostics** - Collapse compiler stderr with `llmtk stderr-thin` into budget-aware highlights
 - **🔏 Supply-Chain Ready** - pipx bootstrap with checksum enforcement and signed release artifacts

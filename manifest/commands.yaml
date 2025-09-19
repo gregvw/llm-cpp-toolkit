@@ -286,3 +286,63 @@ commands:
       - "llmtk gate exports/reports/analysis.sarif"
       - "llmtk gate --max-warnings=5 analysis.sarif"
       - "llmtk gate --config=.llmtk-gate.yaml analysis.sarif"
+
+  deps:
+    description: Extract and export CMake target dependency graphs for agent consumption.
+    args:
+      - name: build-dir
+        description: "CMake build directory (default: build)"
+      - name: output-dir
+        description: "Output directory (default: exports/dependency_graphs)"
+      - name: json
+        flag: true
+        description: "Export JSON format (default)"
+      - name: graphviz
+        flag: true
+        description: "Export Graphviz DOT format"
+      - name: symbols
+        flag: true
+        description: "Include symbol-level analysis"
+    outputs:
+      - path: "exports/dependency_graphs/dependencies.json"
+        schema:
+          _meta:
+            generated_at: number
+            build_dir: string
+            codemodel_available: bool
+            targets_count: int
+            symbol_analysis_available: bool
+          targets:
+            target_name:
+              name: string
+              type: string
+              sources: [string]
+              link_libraries: [string]
+              dependencies:
+                - name: string
+                  type: string
+                  path: string|null
+              compile_definitions: [string]
+              include_directories: [string]
+              install_destination: string|null
+          symbol_dependencies:
+            target_name:
+              defined_symbols: [string]
+              undefined_symbols: [string]
+              exported_symbols: [string]
+              symbol_dependencies: [string]
+          package_managers:
+            vcpkg: object|null
+            conan: object|null
+            find_package_calls:
+              - package: string
+                file: string
+          dependency_matrix: [[string]]
+          build_order: [string]
+      - path: "exports/dependency_graphs/dependencies.dot"
+        condition: "when --graphviz flag is used"
+    examples:
+      - "llmtk deps"
+      - "llmtk deps --graphviz"
+      - "llmtk deps --json --graphviz --symbols"
+      - "llmtk deps --build-dir=custom_build --output-dir=custom_exports"
