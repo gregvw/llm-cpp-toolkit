@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import argparse, json, os, shutil, subprocess, sys, pathlib, datetime, re, tempfile, textwrap, tarfile, time, shlex, hashlib, io, contextlib, traceback, statistics
+import argparse, json, os, shutil, subprocess, sys, pathlib, datetime, re, tempfile, textwrap, tarfile, time, shlex, hashlib, io, contextlib, traceback, statistics, uuid
 import xml.etree.ElementTree as ET
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 from urllib.request import pathname2url
@@ -43,6 +43,157 @@ except ImportError:
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 PROJECT_ROOT = pathlib.Path.cwd().resolve()
+MODULES = ROOT / "modules"
+EXPORTS = pathlib.Path.cwd() / "exports"
+
+_ORIGINAL_SUBPROCESS_RUN = subprocess.run
+_DRY_RUN = False
+
+def format_cmd_for_display(cmd: Sequence[Any] | Any) -> str:
+    if isinstance(cmd, (list, tuple)):
+        return " ".join(shlex.quote(str(part)) for part in cmd)
+    return str(cmd)
+
+def dry_run_notice(message: str) -> None:
+    print(f"[dry-run] {message}")
+
+def _dry_run_subprocess(cmd, *args, **kwargs):  # type: ignore[override]
+    dry_run_notice(f"subprocess.run {format_cmd_for_display(cmd)}")
+    capture_output = kwargs.get("capture_output", False)
+    text_mode = kwargs.get("text", False)
+    stdout = "" if capture_output or text_mode else None
+    stderr = "" if capture_output or text_mode else None
+    return subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr=stderr)
+
+def activate_dry_run() -> None:
+    global _DRY_RUN
+    if _DRY_RUN:
+        return
+    _DRY_RUN = True
+    subprocess.run = _dry_run_subprocess  # type: ignore[assignment]
+
+def deactivate_dry_run() -> None:
+    global _DRY_RUN
+    if not _DRY_RUN:
+        return
+    subprocess.run = _ORIGINAL_SUBPROCESS_RUN  # type: ignore[assignment]
+    _DRY_RUN = False
+
+def is_dry_run() -> bool:
+    return _DRY_RUN
+
+def safe_mkdir(path: pathlib.Path, *, parents: bool = False, exist_ok: bool = True) -> None:
+    if is_dry_run():
+        dry_run_notice(f"mkdir {path}")
+        return
+    path.mkdir(parents=parents, exist_ok=exist_ok)
+
+def safe_write_text(path: pathlib.Path, content: str) -> None:
+    if is_dry_run():
+        dry_run_notice(f"write {path} ({len(content.encode('utf-8'))} bytes)")
+        return
+    safe_mkdir(path.parent, parents=True, exist_ok=True)
+    path.write_text(content)
+
+def safe_write_bytes(path: pathlib.Path, content: bytes) -> None:
+    if is_dry_run():
+        dry_run_notice(f"write {path} ({len(content)} bytes)")
+        return
+    safe_mkdir(path.parent, parents=True, exist_ok=True)
+    path.write_bytes(content)
+
+def safe_copy_file(src: pathlib.Path, dest: pathlib.Path) -> None:
+    if is_dry_run():
+        dry_run_notice(f"copy {src} -> {dest}")
+        return
+    safe_mkdir(dest.parent, parents=True, exist_ok=True)
+    shutil.copy2(src, dest)
+
+def safe_remove(path: pathlib.Path) -> None:
+    if not path.exists():
+        return
+    if is_dry_run():
+        dry_run_notice(f"remove {path}")
+        return
+    if path.is_dir():
+        shutil.rmtree(path)
+    else:
+        path.unlink()
+
+def _resolve_dir(env_var: str, xdg_var: str, subdir: str) -> pathlib.Path:
+    if env := os.environ.get(env_var):
+        return pathlib.Path(env).expanduser()
+    if xdg := os.environ.get(xdg_var):
+        return pathlib.Path(xdg).expanduser() / subdir
+    return pathlib.Path.home() / (".config" if xdg_var == "XDG_CONFIG_HOME" else ".local/share") / subdir
+
+CONFIG_DIR = _resolve_dir("LLMTK_CONFIG_HOME", "XDG_CONFIG_HOME", "llmtk")
+DATA_DIR = _resolve_dir("LLMTK_DATA_HOME", "XDG_DATA_HOME", "llmtk")
+CONFIG_FILE = CONFIG_DIR / "config.json"
+TELEMETRY_FILE = DATA_DIR / "telemetry.jsonl"
+
+def load_user_config() -> Dict[str, Any]:
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as fh:
+            return json.load(fh)
+    except FileNotFoundError:
+        return {}
+    except json.JSONDecodeError as exc:
+        print(f"Warning: Failed to parse {CONFIG_FILE}: {exc}", file=sys.stderr)
+        return {}
+    except Exception as exc:
+        print(f"Warning: Could not load config {CONFIG_FILE}: {exc}", file=sys.stderr)
+        return {}
+
+def save_user_config(config: Dict[str, Any]) -> None:
+    if is_dry_run():
+        dry_run_notice(f"update config {CONFIG_FILE}")
+        return
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    CONFIG_FILE.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+
+def get_config_value(key: str, default: Any = None) -> Any:
+    return USER_CONFIG.get(key, default)
+
+def update_config_value(key: str, value: Any) -> None:
+    USER_CONFIG[key] = value
+    save_user_config(USER_CONFIG)
+
+USER_CONFIG: Dict[str, Any] = load_user_config()
+
+def telemetry_state() -> Dict[str, Any]:
+    return USER_CONFIG.setdefault("telemetry", {})
+
+def telemetry_enabled() -> bool:
+    return bool(telemetry_state().get("enabled", False))
+
+def ensure_telemetry_id() -> str:
+    state = telemetry_state()
+    if "id" not in state:
+        state["id"] = uuid.uuid4().hex
+        state["enabled"] = state.get("enabled", False)
+        state["created"] = datetime.datetime.now(datetime.UTC).isoformat()
+        save_user_config(USER_CONFIG)
+    return state["id"]
+
+def record_telemetry(event: Dict[str, Any]) -> None:
+    if not telemetry_enabled():
+        return
+    event = dict(event)
+    event["telemetry_id"] = ensure_telemetry_id()
+    if is_dry_run():
+        dry_run_notice("telemetry event (suppressed write)")
+        return
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    line = json.dumps(event, separators=(",", ":"))
+    with open(TELEMETRY_FILE, "a", encoding="utf-8") as fh:
+        fh.write(line + "\n")
+
+def hashed_workspace() -> str:
+    try:
+        return hashlib.sha256(str(PROJECT_ROOT).encode("utf-8")).hexdigest()[:12]
+    except Exception:
+        return "unknown"
 
 def get_available_presets():
     """Get list of available presets from template engine or fallback to legacy"""
@@ -67,23 +218,26 @@ def get_version() -> str:
     except Exception:
         pass
     try:
-        res = subprocess.run(["git", "-C", str(ROOT), "describe", "--tags", "--always"], text=True, capture_output=True)
+        res = _ORIGINAL_SUBPROCESS_RUN(["git", "-C", str(ROOT), "describe", "--tags", "--always"], text=True, capture_output=True)
         if res.returncode == 0 and res.stdout.strip():
             return res.stdout.strip()
     except Exception:
         pass
     return "0.0.0+unknown"
-# Always write artifacts under the current working directory
-EXPORTS = pathlib.Path.cwd() / "exports"
-MODULES = ROOT / "modules"
-EXPORTS.mkdir(exist_ok=True)
-
 def run(cmd, cwd=None, check=True, env=None):
-    return subprocess.run(cmd, cwd=cwd, text=True, capture_output=True, check=check, env=env)
+    result = subprocess.run(cmd, cwd=cwd, text=True, capture_output=True, check=check, env=env)
+    return result
 
 def write_json(path: pathlib.Path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2))
+    content = json.dumps(data, indent=2)
+    safe_write_text(path, content)
+
+def resolve_subcommand(args: argparse.Namespace) -> Optional[str]:
+    for attr in ("sub", "telemetry_action", "cache_cmd", "kb_cmd", "agent_cmd"):
+        value = getattr(args, attr, None)
+        if value:
+            return value
+    return None
 
 def validate_cmake_guidance(project_dir=None):
     """Validate CMakeLists.txt compliance with CMAKE_GUIDANCE.md patterns"""
@@ -255,8 +409,7 @@ def generate_reference_md(out_path: pathlib.Path):
         except Exception:
             lines.append("(commands manifest not found)")
 
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text("\n".join(lines) + "\n")
+    safe_write_text(out_path, "\n".join(lines) + "\n")
 
 
 
@@ -1109,11 +1262,11 @@ def adopt_existing_project(project_dir: pathlib.Path, project_name: str) -> int:
     else:
         dest = EXPORTS / "compile_commands.json"
         try:
-            dest.parent.mkdir(parents=True, exist_ok=True)
+            safe_mkdir(dest.parent, parents=True, exist_ok=True)
             if dest.exists() and dest.resolve() == compile_db.resolve():
                 exported_compile_db = str(dest.resolve())
             else:
-                shutil.copy2(compile_db, dest)
+                safe_copy_file(compile_db, dest)
                 exported_compile_db = str(dest.resolve())
         except Exception as exc:  # best effort copy
             compile_db_copy_error = str(exc)
@@ -1177,7 +1330,7 @@ def cmd_init(args):
         if project_dir.exists():
             print(f"📂 Using existing project directory: {project_dir}")
         else:
-            project_dir.mkdir(parents=True, exist_ok=True)
+            safe_mkdir(project_dir, parents=True, exist_ok=True)
             print(f"📁 Created project directory: {project_dir}")
 
     # Check if CMakeLists.txt already exists
@@ -1239,23 +1392,23 @@ def init_with_template_engine(args, project_name, project_dir):
 
         # Write CMakeLists.txt
         cmake_file = project_dir / "CMakeLists.txt"
-        cmake_file.write_text(cmake_content)
+        safe_write_text(cmake_file, cmake_content)
 
         # Create additional files from template
         for file_spec in template.files:
             file_path = project_dir / file_spec['path']
-            file_path.parent.mkdir(parents=True, exist_ok=True)
+            safe_mkdir(file_path.parent, parents=True, exist_ok=True)
             try:
                 content = file_spec['content'].format(project_name=project_name)
             except (KeyError, ValueError) as e:
                 # Fallback: use simple replacement for problematic templates
                 content = file_spec['content'].replace('{project_name}', project_name)
-            file_path.write_text(content)
+            safe_write_text(file_path, content)
             print(f"📄 Created {file_spec['path']}")
 
         # Generate capabilities.json
         capabilities_path = project_dir / "exports" / "capabilities.json"
-        capabilities_path.parent.mkdir(parents=True, exist_ok=True)
+        safe_mkdir(capabilities_path.parent, parents=True, exist_ok=True)
         generate_capabilities_json(capabilities_path)
 
         print(f"✅ Project '{project_name}' initialized successfully with preset '{preset}'")
@@ -1666,7 +1819,7 @@ endforeach()
 '''
 
     # Write CMakeLists.txt
-    cmake_file.write_text(cmake_template)
+    safe_write_text(cmake_file, cmake_template)
     print(f"✅ Created CMAKE_GUIDANCE.md compliant CMakeLists.txt")
 
     # Create main.cpp if it doesn't exist
@@ -1679,7 +1832,7 @@ int main() {{
     return 0;
 }}
 '''
-        main_file.write_text(main_template)
+        safe_write_text(main_file, main_template)
         print(f"✅ Created sample main.cpp")
 
     # Validate the created setup
@@ -1905,39 +2058,41 @@ def cmd_context_export(args):
             print(f"   • {step}")
         return 0
 
-    build.mkdir(exist_ok=True)
+    safe_mkdir(build, exist_ok=True)
 
     # Compile DB
     try:
         run(["cmake","-S",".","-B",str(build),"-G","Ninja","-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"], check=True)
-        if (build/"compile_commands.json").exists():
-            (EXPORTS/"compile_commands.json").write_bytes((build/"compile_commands.json").read_bytes())
+        compile_db_path = build/"compile_commands.json"
+        if compile_db_path.exists():
+            safe_copy_file(compile_db_path, EXPORTS/"compile_commands.json")
     except Exception as e:
         # If compile_commands missing, try bear as a fallback
         bear = shutil.which("bear")
         if bear:
             try:
                 run([bear, "--", "cmake", "--build", str(build)], check=False)
-                if (build/"compile_commands.json").exists():
-                    (EXPORTS/"compile_commands.json").write_bytes((build/"compile_commands.json").read_bytes())
+                if compile_db_path.exists():
+                    safe_copy_file(compile_db_path, EXPORTS/"compile_commands.json")
             except Exception:
                 pass
     # If still missing but project root has a compile_commands.json, copy it
-    if not (EXPORTS/"compile_commands.json").exists() and (pathlib.Path.cwd()/"compile_commands.json").exists():
-        (EXPORTS/"compile_commands.json").write_bytes((pathlib.Path.cwd()/"compile_commands.json").read_bytes())
+    repo_compile_db = pathlib.Path.cwd()/"compile_commands.json"
+    if not (EXPORTS/"compile_commands.json").exists() and repo_compile_db.exists():
+        safe_copy_file(repo_compile_db, EXPORTS/"compile_commands.json")
 
     # CMake File API codemodel
-    q = build/".cmake"/"api"/"v1"/"query"; q.mkdir(parents=True, exist_ok=True)
-    (q/"codemodel-v2").write_text("")
+    q = build/".cmake"/"api"/"v1"/"query"; safe_mkdir(q, parents=True, exist_ok=True)
+    safe_write_text(q/"codemodel-v2", "")
     if args.deep:
-        (q/"cache-v2").write_text("")
-        (q/"toolchains-v1").write_text("")
+        safe_write_text(q/"cache-v2", "")
+        safe_write_text(q/"toolchains-v1", "")
     run(["cmake","--build",str(build)], check=False)
     reply = build/".cmake"/"api"/"v1"/"reply"
     if reply.exists():
-        (EXPORTS/"cmake-file-api").mkdir(exist_ok=True)
+        safe_mkdir(EXPORTS/"cmake-file-api", exist_ok=True)
         for p in reply.iterdir():
-            (EXPORTS/"cmake-file-api"/p.name).write_bytes(p.read_bytes())
+            safe_copy_file(p, EXPORTS/"cmake-file-api"/p.name)
 
     summary = {
         "deep_export": args.deep,
@@ -2018,14 +2173,17 @@ def cmd_context_pack(args):
         print("Note: Redaction is not yet implemented.")
 
     output_filename = EXPORTS.parent / "context-export.tar.gz"
+    if is_dry_run():
+        dry_run_notice(f"tar {EXPORTS} -> {output_filename}")
+        return 0
     with tarfile.open(output_filename, "w:gz") as tar:
         tar.add(EXPORTS, arcname=EXPORTS.name)
 
     print(f"Context export packed to: {output_filename}")
 
 def cmd_analyze(args):
-    reports = EXPORTS/"reports"; reports.mkdir(exist_ok=True)
-    cache_dir = ROOT / ".llmtk" / "cache" / "analyze"; cache_dir.mkdir(parents=True, exist_ok=True)
+    reports = EXPORTS/"reports"; safe_mkdir(reports, exist_ok=True)
+    cache_dir = ROOT / ".llmtk" / "cache" / "analyze"; safe_mkdir(cache_dir, parents=True, exist_ok=True)
     compile_db = EXPORTS/"compile_commands.json"
     paths = args.paths or []
 
@@ -2146,8 +2304,7 @@ def cmd_analyze(args):
         for f in target_files[:200]:  # prevent runaway
             fixes_yaml = pathlib.Path(tempfile.gettempdir())/f"llmtk_tidy_{abs(hash(f))}.yaml"
             if fixes_yaml.exists():
-                try: fixes_yaml.unlink()
-                except Exception: pass
+                safe_remove(fixes_yaml)
             cmd = [clang_tidy_path, f, "-quiet", f"-export-fixes={fixes_yaml}"]
             if compile_db.exists():
                 # clang-tidy accepts directory or file to -p; pass dir containing the DB
@@ -2181,8 +2338,7 @@ def cmd_analyze(args):
                                 } for r in repl if isinstance(r, dict)
                             ],
                         })
-                try: fixes_yaml.unlink()
-                except Exception: pass
+                safe_remove(fixes_yaml)
         clang_tidy_report["diagnostics"] = tidy_diags
         clang_tidy_report["fixes"] = tidy_fixes
     write_json(reports/"clang-tidy.json", clang_tidy_report)
@@ -2334,7 +2490,7 @@ def cmd_test(args):
         return 1
 
     tests_dir = EXPORTS / "tests"
-    tests_dir.mkdir(parents=True, exist_ok=True)
+    safe_mkdir(tests_dir, parents=True, exist_ok=True)
 
     json_path = _resolve_optional_path(tests_dir / "ctest_results.json", getattr(args, "json", None))
     sarif_path = _resolve_optional_path(tests_dir / "ctest_results.sarif", getattr(args, "sarif", None))
@@ -2397,8 +2553,8 @@ def cmd_test(args):
 
     stdout_path = tests_dir / "ctest_stdout.txt"
     stderr_path = tests_dir / "ctest_stderr.txt"
-    stdout_path.write_text(result.stdout)
-    stderr_path.write_text(result.stderr)
+    safe_write_text(stdout_path, result.stdout)
+    safe_write_text(stderr_path, result.stderr)
 
     xml_path = _find_latest_ctest_xml(build_dir)
     parsed = None
@@ -2406,7 +2562,7 @@ def cmd_test(args):
     if xml_path and xml_path.exists():
         parsed = _parse_ctest_xml(xml_path)
         copied_xml = tests_dir / "Test.xml"
-        shutil.copyfile(xml_path, copied_xml)
+        safe_copy_file(xml_path, copied_xml)
     else:
         parsed = _fallback_parse_ctest_output(result.stdout)
 
@@ -2468,21 +2624,21 @@ def cmd_bench(args):
         print("⚠️ hyperfine not found; falling back to single-run measurements without statistical summaries.")
 
     perf_dir = EXPORTS / "perf"
-    perf_dir.mkdir(parents=True, exist_ok=True)
+    safe_mkdir(perf_dir, parents=True, exist_ok=True)
     run_id = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d_%H%M%S")
     run_dir = perf_dir / run_id
     logs_dir = run_dir / "logs"
     metrics_dir = run_dir / "metrics"
     hf_dir = run_dir / "hyperfine"
     for directory in (run_dir, logs_dir, metrics_dir, hf_dir):
-        directory.mkdir(parents=True, exist_ok=True)
+        safe_mkdir(directory, parents=True, exist_ok=True)
 
     build_dir = pathlib.Path(args.build_dir).resolve()
     source_dir = pathlib.Path.cwd()
 
     if args.fresh and not args.skip_configure and build_dir.exists():
         print(f"🧹 Removing existing build directory for fresh configure: {build_dir}")
-        shutil.rmtree(build_dir)
+        safe_remove(build_dir)
 
     def _rel(path: pathlib.Path) -> str:
         try:
@@ -2526,7 +2682,7 @@ def cmd_bench(args):
     def run_stage(stage: str, command: List[str]) -> Tuple[Dict[str, Any], int]:
         metrics_file = metrics_dir / f"{stage}.jsonl"
         if metrics_file.exists():
-            metrics_file.unlink()
+            safe_remove(metrics_file)
         log_path = logs_dir / f"{stage}.log"
 
         wrapper_cmd: List[str] = [
@@ -2543,7 +2699,7 @@ def cmd_bench(args):
 
         hf_json = hf_dir / f"{stage}.json"
         if hf_json.exists():
-            hf_json.unlink()
+            safe_remove(hf_json)
 
         start_wall = time.perf_counter()
         if hyperfine_path:
@@ -2729,7 +2885,7 @@ def cmd_bench(args):
 
 def cmd_stderr_thin(args):
     diagnostics_dir = EXPORTS / "diagnostics"
-    diagnostics_dir.mkdir(parents=True, exist_ok=True)
+    safe_mkdir(diagnostics_dir, parents=True, exist_ok=True)
 
     budget = _DEFAULT_CONTEXT_BUDGETS.get(args.level, 6000)
     if args.context_budget and args.context_budget > 0:
@@ -2883,10 +3039,8 @@ def cmd_stderr_thin(args):
 
     counts = _collect_counts(diagnostics) if diagnostics else {"error": 0, "warning": 0, "note": 0, "remark": 0, "other": 0}
 
-    text_out.parent.mkdir(parents=True, exist_ok=True)
-    raw_out.parent.mkdir(parents=True, exist_ok=True)
-    text_out.write_text((context_text + "\n") if context_text else "")
-    raw_out.write_text(raw_stderr)
+    safe_write_text(text_out, (context_text + "\n") if context_text else "")
+    safe_write_text(raw_out, raw_stderr)
 
     report = {
         "_meta": {
@@ -2918,7 +3072,6 @@ def cmd_stderr_thin(args):
         },
     }
 
-    json_out.parent.mkdir(parents=True, exist_ok=True)
     write_json(json_out, report)
 
     print(f"Thinned diagnostics written to {text_out}")
@@ -2934,7 +3087,7 @@ def cmd_lsp_bridge(args):
         return 1
 
     diagnostics_dir = EXPORTS / "diagnostics"
-    diagnostics_dir.mkdir(parents=True, exist_ok=True)
+    safe_mkdir(diagnostics_dir, parents=True, exist_ok=True)
 
     # Set up defaults similar to stderr-thin
     level = getattr(args, 'level', 'focused')
@@ -3053,11 +3206,7 @@ def cmd_lsp_bridge(args):
             }
         }
 
-        # Write outputs
-        text_out.parent.mkdir(parents=True, exist_ok=True)
-        json_out.parent.mkdir(parents=True, exist_ok=True)
-
-        text_out.write_text((context_text + "\n") if context_text else "")
+        safe_write_text(text_out, (context_text + "\n") if context_text else "")
         write_json(json_out, report)
 
         print(f"LSP diagnostics written to {text_out}")
@@ -3323,7 +3472,7 @@ def cmd_gate(args):
         return 0
 
 def cmd_reduce(args):
-    repros = EXPORTS/"repros"; repros.mkdir(exist_ok=True)
+    repros = EXPORTS/"repros"; safe_mkdir(repros, exist_ok=True)
     cvise = shutil.which("cvise")
     creduce = shutil.which("creduce")
     reducer = None
@@ -3570,7 +3719,7 @@ def cmd_install(args):
 
     # Prepare local bin directory
     local_bin = ROOT / ".llmtk" / "bin"
-    local_bin.mkdir(parents=True, exist_ok=True)
+    safe_mkdir(local_bin, parents=True, exist_ok=True)
 
     # Install missing tools
     tools_to_install = []
@@ -3680,12 +3829,76 @@ def cmd_install(args):
 
     return 0 if installed else 1
 
+def cmd_telemetry(args):
+    action = getattr(args, "telemetry_action", "status")
+    state = telemetry_state()
+    timestamp = datetime.datetime.now(datetime.UTC).isoformat()
+
+    if action == "status":
+        status = "enabled" if telemetry_enabled() else "disabled"
+        print(f"Telemetry is {status}.")
+        if telemetry_enabled():
+            print("Anonymous identifier:", state.get("id", "(pending)"))
+            print(f"Events stored at: {TELEMETRY_FILE}")
+        else:
+            print("Enable telemetry with 'llmtk telemetry enable'.")
+        if TELEMETRY_FILE.exists():
+            print(f"Recorded events: {TELEMETRY_FILE}")
+        else:
+            print("No telemetry events recorded yet.")
+        return 0
+
+    if action == "enable":
+        if telemetry_enabled():
+            print("Telemetry already enabled.")
+            return 0
+        if is_dry_run():
+            dry_run_notice("enable telemetry")
+            print("Dry-run: telemetry remains disabled.")
+            return 0
+        state["enabled"] = True
+        state["enabled_at"] = timestamp
+        ensure_telemetry_id()
+        save_user_config(USER_CONFIG)
+        print("Telemetry enabled. Events will be written locally in anonymized form.")
+        print(f"Log file: {TELEMETRY_FILE}")
+        return 0
+
+    if action == "disable":
+        if not telemetry_enabled():
+            print("Telemetry already disabled.")
+            return 0
+        if is_dry_run():
+            dry_run_notice("disable telemetry")
+            print("Dry-run: telemetry remains enabled.")
+            return 0
+        state["enabled"] = False
+        state["disabled_at"] = timestamp
+        save_user_config(USER_CONFIG)
+        print("Telemetry disabled. Existing logs remain on disk until purged.")
+        return 0
+
+    if action == "purge":
+        if is_dry_run():
+            dry_run_notice(f"purge telemetry logs at {TELEMETRY_FILE}")
+            print("Dry-run: telemetry logs not removed.")
+            return 0
+        if TELEMETRY_FILE.exists():
+            TELEMETRY_FILE.unlink()
+        USER_CONFIG["telemetry"] = {}
+        save_user_config(USER_CONFIG)
+        print("Telemetry preferences reset and logs purged.")
+        return 0
+
+    print(f"Unknown telemetry action: {action}")
+    return 1
+
 def cmd_cache(args):
     """Manage the analysis cache."""
     cache_dir = ROOT / ".llmtk" / "cache" / "analyze"
     if args.cache_cmd == "clear":
         if cache_dir.exists():
-            shutil.rmtree(cache_dir)
+            safe_remove(cache_dir)
             print(f"Cache cleared at {cache_dir}")
         else:
             print("Cache is already empty.")
@@ -3791,8 +4004,8 @@ def _agent_write_file(params: Dict[str, Any]) -> Dict[str, Any]:
         raise AgentOperationError("Missing content parameter")
     content = params.get("content")
     try:
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        file_path.write_text(content)
+        safe_mkdir(file_path.parent, parents=True, exist_ok=True)
+        safe_write_text(file_path, content)
     except Exception as exc:
         raise AgentOperationError(str(exc)) from exc
     return {"path": str(file_path)}
@@ -3803,7 +4016,10 @@ def _agent_delete_file(params: Dict[str, Any]) -> Dict[str, Any]:
     if not file_path.exists():
         raise AgentOperationError(f"File not found: {file_path}")
     try:
-        file_path.unlink()
+        if is_dry_run():
+            dry_run_notice(f"unlink {file_path}")
+        else:
+            file_path.unlink()
     except Exception as exc:
         raise AgentOperationError(str(exc)) from exc
     return {"path": str(file_path)}
@@ -4226,6 +4442,7 @@ def cmd_agent_mcp(_args):
                 })
 def main():
     ap = argparse.ArgumentParser(prog="llmtk", description="LLM-friendly C++/CMake toolkit")
+    ap.add_argument("--dry-run", action="store_true", help="Preview actions without executing external commands or writing files")
     ap.add_argument("--version", action="version", version=f"llmtk {get_version()}")
     sub = ap.add_subparsers(dest="cmd", required=True)
     doctor_parser = sub.add_parser("doctor", help="Check tool availability and CMake compliance")
@@ -4263,7 +4480,6 @@ def main():
     test_parser.add_argument("--json", nargs="?", const="", help="Write JSON summary to this path (defaults to exports/tests/ctest_results.json)")
     test_parser.add_argument("--sarif", nargs="?", const="", help="Write SARIF report to this path (defaults to exports/tests/ctest_results.sarif)")
     test_parser.add_argument("--preview", action="store_true", help="List tests that would run without executing them")
-    test_parser.add_argument("--dry-run", dest="preview", action="store_true", help=argparse.SUPPRESS)
     test_parser.add_argument("--list", dest="preview", action="store_true", help=argparse.SUPPRESS)
     test_parser.set_defaults(fn=cmd_test)
 
@@ -4388,6 +4604,13 @@ def main():
     cache_subparsers.add_parser("clear", help="Clear the analysis cache").set_defaults(fn=cmd_cache)
     cache_subparsers.add_parser("show", help="Show cache contents").set_defaults(fn=cmd_cache)
 
+    telemetry_parser = sub.add_parser("telemetry", help="Manage telemetry preferences")
+    telemetry_sub = telemetry_parser.add_subparsers(dest="telemetry_cmd", required=True)
+    telemetry_sub.add_parser("status", help="Show telemetry status").set_defaults(fn=cmd_telemetry, telemetry_action="status")
+    telemetry_sub.add_parser("enable", help="Enable anonymized telemetry").set_defaults(fn=cmd_telemetry, telemetry_action="enable")
+    telemetry_sub.add_parser("disable", help="Disable telemetry").set_defaults(fn=cmd_telemetry, telemetry_action="disable")
+    telemetry_sub.add_parser("purge", help="Delete telemetry logs and reset preferences").set_defaults(fn=cmd_telemetry, telemetry_action="purge")
+
     kb_parser = sub.add_parser("knowledge-base", help="Query the error knowledge base")
     kb_subparsers = kb_parser.add_subparsers(dest="kb_cmd", required=True)
     kb_subparsers.add_parser("show", help="Show knowledge base contents").set_defaults(fn=cmd_kb)
@@ -4408,10 +4631,46 @@ def main():
     agent_mcp_parser.set_defaults(fn=cmd_agent_mcp)
 
     args = ap.parse_args()
-    # map nested subcommand
-    if getattr(args, "sub", None):
-        return args.fn(args)
-    return args.fn(args)
+
+    if getattr(args, "dry_run", False):
+        activate_dry_run()
+
+    start_time = time.perf_counter()
+    exit_code = 0
+    error_type: Optional[str] = None
+
+    try:
+        result = args.fn(args)
+        if isinstance(result, int):
+            exit_code = result
+        elif result is None:
+            exit_code = 0
+        else:
+            exit_code = int(result) if isinstance(result, bool) else 0
+    except SystemExit as exc:
+        exit_code = exc.code if isinstance(exc.code, int) else 0
+        error_type = "SystemExit"
+    except Exception as exc:
+        exit_code = getattr(exc, "code", 1) if isinstance(getattr(exc, "code", None), int) else 1
+        error_type = exc.__class__.__name__
+        raise
+    finally:
+        if getattr(args, "cmd", None):
+            event = {
+                "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
+                "command": getattr(args, "cmd", None),
+                "subcommand": resolve_subcommand(args),
+                "exit_code": exit_code,
+                "dry_run": is_dry_run(),
+                "duration_ms": int((time.perf_counter() - start_time) * 1000),
+                "workspace": hashed_workspace(),
+                "version": get_version(),
+            }
+            if error_type and error_type != "SystemExit":
+                event["error_type"] = error_type
+            record_telemetry(event)
+
+    return exit_code
 
 if __name__ == "__main__":
     sys.exit(main())

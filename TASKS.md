@@ -21,7 +21,7 @@
 - [X] Build and performance insights: ship `llmtk bench` around hyperfine for configure, build, and test, report ccache stats, parallelism utilization, slowest translation units, and peak memory, and record these metrics in context exports.
 - [X] Incremental diff-oriented context: allow diff-based context packs, minimal dependency graphs per error, and an automated bisect helper that guides agents through regression hunts.
 - [X] LSP and structured diagnostics bridges: add `llmtk lsp-bridge` for clangd with diagnostic filtering, favor LLVM structured diagnostics over text parsing, and surface filtered results consistently with stderr thinning.
-- [ ] Optional telemetry and dry-run controls: introduce opt-in, anonymized feature usage metrics, a global `--dry-run` preview mode for commands, and clear privacy documentation.
+- [X] Optional telemetry and dry-run controls: introduce opt-in, anonymized feature usage metrics, a global `--dry-run` preview mode for commands, and clear privacy documentation.
 
 ## P3 - Forward-Looking Exploration
 - [ ] Fuzzer integration that exports minimized crashes and sanitizer traces in JSON or SARIF for agent consumption.

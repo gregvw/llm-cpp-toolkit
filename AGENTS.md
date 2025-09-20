@@ -319,6 +319,8 @@ Short answer: **yes—build this as a CLI-first toolkit** and let Codex/CLI agen
 * `llmtk capabilities` – regenerate the manifest-driven `exports/capabilities.json` summary.
 * `llmtk stderr-thin` – collapse compiler stderr into structured, budget-aware highlights for agents.
 * `pipx install llm-cpp-toolkit` – installs the verified bootstrap and executes tagged releases with SHA256 checks.
+* `llmtk --dry-run …` – preview any command without executing external tools or writing files.
+* `llmtk telemetry status` – expose opt-in telemetry controls; do not enable automatically.
 
 `llmtk stderr-thin` always emits three artifacts under `exports/diagnostics/`:
 

@@ -96,6 +96,13 @@ llmtk agent mcp
 
 # Reduce a failing test case
 llmtk reduce test.cpp "gcc test.cpp && ./a.out"
+
+# Preview any command without side effects
+llmtk --dry-run analyze src/
+
+# Opt-in telemetry management (stored locally)
+llmtk telemetry status
+llmtk telemetry enable
 ```
 
 ### Strict Build Helper
@@ -144,6 +151,7 @@ entire `exports/` directory is ignored by default via `.gitignore`.
 - **🤖 LLM-Optimized** - JSON outputs designed for AI agent consumption
 - **📋 Manifest-Driven** - Tool versions and commands defined in YAML manifests
 - **🗂️ Capabilities Summary** - `exports/capabilities.json` captures the toolkit's API surface for agents
+- **🛡️ Preview & Privacy Controls** - Global `--dry-run` mode plus opt-in telemetry stored locally
 
 ## 🧪 Sanitizer Variants
 
@@ -223,6 +231,7 @@ The `capabilities.json` file is automatically generated during `llmtk init` and 
 - **[Full Documentation](docs/README.md)** - Complete toolkit overview
 - **[Tool Reference](docs/REFERENCE.md)** - Auto-generated from manifests
 - **[Distribution Guide](DISTRIBUTION.md)** - Building and packaging
+- **[Privacy & Telemetry](docs/PRIVACY.md)** - Data collection policy and opt-in controls
 
 ## 🔐 Release Integrity
 
