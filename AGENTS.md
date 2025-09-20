@@ -467,8 +467,17 @@ The CLI automatically rejects paths that escape the current working directory, s
 
 * Ask user to run `llmtk context export`.
 * Read `exports/context.json` to discover where everything lives.
+* Run `llmtk preflight --diff HEAD` for fast syntax validation before making changes.
 * Run `llmtk analyze src/ include/` and parse `exports/reports/*.json`.
 * Propose patches, then optionally `llmtk reduce repro.cpp -- test.sh` to shrink a failing case.
+
+### Agent Workflow for Code Changes
+
+1. **Pre-Change Validation**: `llmtk preflight --diff HEAD` to catch existing issues
+2. **Apply Changes**: Make code modifications
+3. **Fast Validation**: `llmtk preflight --paths <changed_files>` before expensive builds
+4. **Full Analysis**: `llmtk analyze` if preflight passes
+5. **Build/Test**: Proceed with compilation only if validation passes
 
 ### Example Contracts
 
@@ -605,4 +614,69 @@ llmtk bench --runs 3 --warmup 1
     }
   ]
 }
+```
+
+#### `llmtk preflight`
+
+Agents can use preflight for fast syntax validation before expensive operations.
+
+**Command**:
+```bash
+llmtk preflight --diff HEAD --json exports/reports/preflight.json
+```
+
+**Output (`exports/reports/preflight.json`)**:
+```json
+{
+  "tool": "llmtk-preflight",
+  "version": "1.0.0",
+  "generated_at": "2025-09-19T22:05:50.141880",
+  "findings": [
+    {
+      "file": "src/parser.cpp",
+      "line": 42,
+      "col": 15,
+      "rule": "unclosed_delimiter",
+      "symbol": "{",
+      "message": "Unclosed '{' delimiter",
+      "severity": "error",
+      "source": "preflight"
+    },
+    {
+      "file": "config.json",
+      "line": 8,
+      "col": 3,
+      "rule": "json_syntax",
+      "symbol": "",
+      "message": "JSON parse error: Expecting ',' delimiter",
+      "severity": "error",
+      "source": "preflight"
+    }
+  ],
+  "summary": {
+    "total": 2,
+    "errors": 2,
+    "warnings": 0,
+    "info": 0,
+    "by_rule": {
+      "unclosed_delimiter": 1,
+      "json_syntax": 1
+    },
+    "by_source": {
+      "preflight": 2
+    },
+    "files_checked": 2
+  }
+}
+```
+
+**Exit Codes**:
+- `0`: No issues found
+- `2`: Warnings only (non-strict mode)
+- `3`: Errors found (build should be aborted)
+- `10`: Internal error
+
+**SARIF Output** (for CI integration):
+```bash
+llmtk preflight --diff HEAD --sarif exports/reports/preflight.sarif
 ```

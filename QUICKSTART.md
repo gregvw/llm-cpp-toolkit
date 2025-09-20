@@ -81,13 +81,19 @@ llmtk context export
 ```
 Creates `exports/compile_commands.json` and CMake file API data that LLMs need.
 
-### 4. Run Static Analysis
+### 4. Fast Syntax Validation (Preflight)
+```bash
+llmtk preflight --diff HEAD~1
+```
+Quickly validates syntax and delimiters in changed files before expensive build operations.
+
+### 5. Run Static Analysis
 ```bash
 llmtk analyze
 ```
 Runs clang-tidy, include-what-you-use, and cppcheck, outputting JSON reports in `exports/reports/`.
 
-### 5. Refresh Capabilities Summary (optional)
+### 6. Refresh Capabilities Summary (optional)
 ```bash
 llmtk capabilities
 ```
@@ -113,9 +119,15 @@ For non-CMake projects, create a minimal `compile_commands.json` manually or use
 ```bash
 # Set up project analysis
 llmtk context export
+
+# Fast validation before building
+llmtk preflight --diff HEAD
+
+# Comprehensive analysis
 llmtk analyze
 
 # Check reports
+cat exports/reports/preflight.json | jq '.summary'
 cat exports/reports/clang-tidy.json | jq '.diagnostic_counts'
 cat exports/reports/cppcheck.json | jq '.summary'
 ```
@@ -124,6 +136,9 @@ cat exports/reports/cppcheck.json | jq '.summary'
 ```bash
 # Generate all context an LLM needs
 llmtk context export
+
+# Fast syntax validation (prevents build failures)
+llmtk preflight --diff HEAD --json exports/reports/preflight.json
 
 # Get machine-readable tool status
 llmtk doctor
@@ -140,7 +155,10 @@ ls exports/
 # Install tools without interaction
 llmtk install --local
 
-# Run analysis and check for issues
+# Fast syntax check (fail fast if syntax errors)
+llmtk preflight --diff origin/main --strict || exit 1
+
+# Run comprehensive analysis
 llmtk analyze
 if jq -e '.diagnostic_counts.error > 0' exports/reports/clang-tidy.json; then
   echo "Errors found in static analysis"

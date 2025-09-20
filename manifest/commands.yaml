@@ -29,6 +29,100 @@ commands:
           generated_at: string
     json_summary: "exports/context.json"
 
+  preflight:
+    description: Fast syntax and delimiter validation before expensive build operations.
+    args:
+      - name: diff
+        description: "Check files changed from this git reference"
+      - name: since
+        description: "Check files changed since this git reference"
+      - name: paths
+        variadic: true
+        description: "Explicit paths to check"
+      - name: extensions
+        variadic: true
+        description: "Only check files with these extensions"
+      - name: json
+        description: "Output findings as JSON to this file"
+      - name: sarif
+        description: "Output findings as SARIF to this file"
+      - name: verbose
+        flag: true
+        description: "Enable verbose output"
+      - name: strict
+        flag: true
+        description: "Treat warnings as errors"
+      - name: max-lines
+        description: "Skip files with more than N lines"
+      - name: max-files
+        description: "Check at most N files"
+      - name: no-tree-sitter
+        flag: true
+        description: "Disable tree-sitter parsing (use fallback)"
+      - name: no-syntax
+        flag: true
+        description: "Disable external syntax checking"
+    outputs:
+      - path: "exports/reports/preflight.json"
+        schema:
+          tool: string
+          version: string
+          generated_at: string
+          findings:
+            - file: string
+              line: int
+              col: int
+              rule: string
+              symbol: string|null
+              message: string
+              severity: string
+              source: string
+          summary:
+            total: int
+            errors: int
+            warnings: int
+            info: int
+            by_rule: object
+            by_source: object
+            files_checked: int
+      - path: "exports/reports/preflight.sarif"
+        condition: "when --sarif is specified"
+        schema:
+          "$schema": string
+          version: string
+          runs:
+            - tool:
+                driver:
+                  name: string
+                  version: string
+                  rules:
+                    - id: string
+                      name: string
+                      shortDescription:
+                        text: string
+                      fullDescription:
+                        text: string
+                      properties:
+                        category: string
+                        tags: [string]
+              results:
+                - ruleId: string
+                  message:
+                    text: string
+                  level: string
+                  locations:
+                    - physicalLocation:
+                        artifactLocation:
+                          uri: string
+                        region:
+                          startLine: int
+                          startColumn: int
+    examples:
+      - "llmtk preflight --diff HEAD~1"
+      - "llmtk preflight --paths src/ include/ CMakeLists.txt"
+      - "llmtk preflight --diff HEAD --json exports/preflight.json --sarif exports/preflight.sarif"
+      - "llmtk preflight --strict --extensions .cpp .h .json"
+
   analyze:
     description: Run clang-tidy + IWYU + cppcheck with JSON reports.
     args:

@@ -68,6 +68,10 @@ llmtk doctor
 llmtk context export
 llmtk context export --preview   # Show planned steps without executing
 
+# Fast syntax checking before expensive operations
+llmtk preflight --diff HEAD~1
+llmtk preflight --paths src/ include/ --json exports/preflight.json
+
 # Analyze code with multiple tools
 llmtk analyze src/ include/
 
@@ -139,6 +143,7 @@ entire `exports/` directory is ignored by default via `.gitignore`.
 - **🔍 System Health Check** - Verify development tool installation and versions
 - **🧱 Project Bootstrap/Adoption** - Generate starter scaffolding or adopt existing CMake projects with guidance
 - **📦 Context Export** - Generate compilation databases and CMake introspection data
+- **⚡ Preflight Checks** - Fast syntax and delimiter validation before expensive build operations
 - **🔬 Code Analysis** - Run clang-tidy, include-what-you-use, and cppcheck with JSON output
 - **📊 Dependency Graphs** - Extract target dependency graphs from CMake codemodel with JSON and Graphviz export
 - **🔄 Incremental Context** - Diff-oriented context packs, minimal dependency graphs per error, and automated bisect helpers for regression hunting
@@ -181,6 +186,49 @@ cmake --build build --target mylib_example_asan_ubsan
 - **`--preset=minimal`**: No sanitizer complexity (basic executable only)
 - **`--no-sanitizers`**: Completely disables all sanitizer setup
 
+## ⚡ Preflight Checks
+
+llmtk includes fast preflight validation to catch common syntax and delimiter errors before expensive compilation. This is especially valuable for catching LLM-induced errors quickly.
+
+### Supported File Types:
+- **C/C++**: Full clang syntax checking with compile_commands.json integration
+- **JSON**: Python json module + optional jq validation
+- **YAML**: PyYAML parser + optional yamllint style checks
+- **TOML**: Python tomllib/tomli + optional taplo validation
+- **Shell**: bash -n syntax + optional shellcheck static analysis
+- **CMake**: cmake parser + optional cmake-format validation
+
+### Usage Examples:
+```bash
+# Check files changed since last commit
+llmtk preflight --diff HEAD~1
+
+# Check specific paths
+llmtk preflight --paths src/ include/ CMakeLists.txt
+
+# Check with structured output
+llmtk preflight --diff HEAD --json exports/preflight.json --sarif exports/preflight.sarif
+
+# Strict mode (treat warnings as errors)
+llmtk preflight --paths . --strict
+
+# Filter by file types
+llmtk preflight --diff HEAD --extensions .cpp .h .json
+```
+
+### Output Formats:
+- **Human-readable**: Clean table format with file paths, locations, and messages
+- **JSON**: Structured findings with comprehensive statistics and rule breakdowns
+- **SARIF 2.1.0**: CI-ready format with rich rule descriptions and metadata
+
+### Integration with Build Workflows:
+```bash
+# Pre-build validation
+llmtk preflight --diff HEAD || exit 1
+llmtk analyze src/
+cmake --build build
+```
+
 ## 📁 Output Structure
 
 All artifacts are written to the `exports/` directory:
@@ -196,7 +244,9 @@ exports/
 ├── reports/                # Analysis reports
 │   ├── clang-tidy.json
 │   ├── iwyu.json
-│   └── cppcheck.json
+│   ├── cppcheck.json
+│   ├── preflight.json      # Fast syntax check results
+│   └── preflight.sarif     # SARIF format for CI integration
 ├── tests/                  # Structured CTest exports
 │   ├── ctest_results.json
 │   ├── ctest_results.sarif
