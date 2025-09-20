@@ -6,15 +6,18 @@ delimiters and quotes.
 """
 
 import pathlib
-from typing import List, Set, Optional, Tuple, Iterator
+from typing import Dict, List, Optional, Set, Tuple
+
 from .reporters import Finding
 
 
 # Try to import tree-sitter, fall back to manual parsing if not available
-try:
-    import tree_sitter
+try:  # pragma: no cover - import availability depends on environment
+    from tree_sitter import Parser  # type: ignore
+
     TREE_SITTER_AVAILABLE = True
-except ImportError:
+except ImportError:  # pragma: no cover
+    Parser = None  # type: ignore
     TREE_SITTER_AVAILABLE = False
 
 
@@ -209,17 +212,221 @@ class FallbackDelimiterChecker(DelimiterChecker):
 class TreeSitterDelimiterChecker(DelimiterChecker):
     """Tree-sitter based delimiter checker (when available)."""
 
+    # Map file suffixes to tree-sitter language names
+    LANGUAGE_BY_EXTENSION: Dict[str, str] = {
+        # C / C++ family
+        ".c": "c",
+        ".h": "c",
+        ".cc": "cpp",
+        ".cpp": "cpp",
+        ".cxx": "cpp",
+        ".c++": "cpp",
+        ".hpp": "cpp",
+        ".hxx": "cpp",
+        ".hh": "cpp",
+        ".h++": "cpp",
+
+        # Build / configuration
+        ".cmake": "cmake",
+        ".json": "json",
+        ".toml": "toml",
+        ".yaml": "yaml",
+        ".yml": "yaml",
+
+        # Documentation & scripts
+        ".md": "markdown",
+        ".markdown": "markdown",
+        ".py": "python",
+        ".sh": "bash",
+        ".bash": "bash",
+    }
+
+    LANGUAGE_BY_FILENAME: Dict[str, str] = {
+        "cmakelists.txt": "cmake",
+    }
+
+    _CLOSING_DELIMS: Set[str] = {"}", ")", "]"}
+    _OPENING_DELIMS: Set[str] = {"{", "(", "["}
+
     def __init__(self):
         if not TREE_SITTER_AVAILABLE:
             raise RuntimeError("Tree-sitter not available")
-        # TODO: Initialize tree-sitter parsers for supported languages
+
+        try:  # pragma: no cover - depends on optional package
+            from tree_sitter_languages import get_language, get_parser  # type: ignore
+        except ImportError as exc:  # pragma: no cover
+            raise RuntimeError("tree_sitter_languages package not available") from exc
+
+        self._get_language = get_language
+        self._get_parser = get_parser
+        self._parser_cache: Dict[str, Parser] = {}
+        self._fallback = FallbackDelimiterChecker()
+
+    def _language_for_path(self, file_path: pathlib.Path) -> Optional[str]:
+        """Return tree-sitter language key for a path, if supported."""
+        name = file_path.name.lower()
+        if name in self.LANGUAGE_BY_FILENAME:
+            return self.LANGUAGE_BY_FILENAME[name]
+
+        suffix = file_path.suffix.lower()
+        return self.LANGUAGE_BY_EXTENSION.get(suffix)
+
+    def _get_parser_for_language(self, language: str) -> Optional[Parser]:
+        """Return cached parser for the language, if available."""
+        if language in self._parser_cache:
+            return self._parser_cache[language]
+
+        parser: Optional[Parser] = None
+
+        # Attempt to get a fully configured parser from helper first
+        try:
+            parser = self._get_parser(language)
+        except Exception:
+            parser = None
+
+        if parser is None:
+            try:
+                language_obj = self._get_language(language)
+            except Exception:
+                return None
+
+            parser = Parser()
+            parser.set_language(language_obj)
+
+        self._parser_cache[language] = parser
+        return parser
+
+    @staticmethod
+    def _decode_bytes(data: bytes) -> str:
+        return data.decode("utf-8", errors="replace")
+
+    def _node_snippet(self, raw_bytes: bytes, lines: List[str], start_byte: int, end_byte: int, line_index: int) -> str:
+        """Return a short snippet of source code around a node."""
+        if end_byte > start_byte:
+            snippet = self._decode_bytes(raw_bytes[start_byte:end_byte])
+            snippet = snippet.replace("\n", " ")
+        elif 0 <= line_index < len(lines):
+            snippet = lines[line_index].strip()
+        else:
+            snippet = ""
+
+        snippet = snippet.strip()
+        if len(snippet) > 120:
+            snippet = snippet[:117] + "..."
+        return snippet
+
+    def _finding_from_missing(self, file_path: pathlib.Path, node, raw_bytes: bytes, lines: List[str]) -> Finding:
+        line, col = node.start_point
+        symbol = node.type
+        line_text = self._node_snippet(raw_bytes, lines, node.start_byte, node.end_byte, line)
+
+        if symbol in self._CLOSING_DELIMS:
+            message = f"Missing closing '{symbol}' (detected by tree-sitter)"
+            rule = "missing_delimiter"
+        elif symbol in self._OPENING_DELIMS:
+            message = f"Missing opening '{symbol}' (detected by tree-sitter)"
+            rule = "missing_delimiter"
+        else:
+            message = f"Missing syntax element '{symbol}' (tree-sitter)"
+            rule = "missing_syntax"
+
+        return Finding(
+            file=str(file_path),
+            line=line + 1,
+            col=col + 1,
+            rule=rule,
+            symbol=symbol,
+            message=message,
+            severity="error",
+            near=line_text
+        )
+
+    def _finding_from_error(self, file_path: pathlib.Path, node, raw_bytes: bytes, lines: List[str]) -> Finding:
+        line, col = node.start_point
+        snippet = self._node_snippet(raw_bytes, lines, node.start_byte, node.end_byte, line)
+
+        message = "Tree-sitter parse error"
+        if snippet:
+            message += f" near '{snippet}'"
+
+        return Finding(
+            file=str(file_path),
+            line=line + 1,
+            col=col + 1,
+            rule="tree_sitter_error",
+            symbol="ERROR",
+            message=message,
+            severity="error",
+            near=snippet
+        )
+
+    def _collect_findings(self, file_path: pathlib.Path, tree, raw_bytes: bytes, lines: List[str]) -> List[Finding]:
+        findings: List[Finding] = []
+        seen: Set[Tuple[int, int, str]] = set()
+        stack = [tree.root_node]
+
+        while stack:
+            node = stack.pop()
+
+            if node.is_missing:
+                key = (node.start_point[0], node.start_point[1], node.type)
+                if key not in seen:
+                    findings.append(self._finding_from_missing(file_path, node, raw_bytes, lines))
+                    seen.add(key)
+
+            elif node.type == "ERROR":
+                key = (node.start_point[0], node.start_point[1], node.type)
+                if key not in seen:
+                    findings.append(self._finding_from_error(file_path, node, raw_bytes, lines))
+                    seen.add(key)
+
+            # Traverse children regardless so we collect nested errors/missing nodes
+            stack.extend(list(getattr(node, "children", [])))
+
+        return findings
 
     def check_file(self, file_path: pathlib.Path) -> List[Finding]:
         """Check file using tree-sitter parser."""
-        # TODO: Implement tree-sitter based checking
-        # For now, fallback to manual parsing
-        fallback = FallbackDelimiterChecker()
-        return fallback.check_file(file_path)
+        language_key = self._language_for_path(file_path)
+        if not language_key:
+            return self._fallback.check_file(file_path)
+
+        parser = self._get_parser_for_language(language_key)
+        if parser is None:
+            return self._fallback.check_file(file_path)
+
+        try:
+            raw_bytes = file_path.read_bytes()
+        except Exception:
+            return [Finding(
+                file=str(file_path),
+                line=1,
+                col=1,
+                rule="file_read_error",
+                symbol="",
+                message=f"Could not read file: {file_path}",
+                severity="error"
+            )]
+
+        text = self._decode_bytes(raw_bytes)
+        lines = text.splitlines()
+
+        try:
+            tree = parser.parse(raw_bytes)
+        except Exception:
+            # If parsing fails unexpectedly, fall back to manual checks
+            return self._fallback.check_file(file_path)
+
+        if not tree.root_node.has_error:
+            return []
+
+        findings = self._collect_findings(file_path, tree, raw_bytes, lines)
+
+        # Tree-sitter occasionally marks has_error without explicit ERROR nodes; ensure fallback covers
+        if not findings:
+            return self._fallback.check_file(file_path)
+
+        return findings
 
 
 def get_delimiter_checker() -> DelimiterChecker:
@@ -227,7 +434,7 @@ def get_delimiter_checker() -> DelimiterChecker:
     if TREE_SITTER_AVAILABLE:
         try:
             return TreeSitterDelimiterChecker()
-        except RuntimeError:
+        except Exception:
             pass
 
     return FallbackDelimiterChecker()
