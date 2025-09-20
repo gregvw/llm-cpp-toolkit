@@ -156,7 +156,8 @@ class ClangSyntaxProbe(SyntaxProbe):
                 rule="syntax_check_failed",
                 symbol="",
                 message=error_msg,
-                severity="warning"
+                severity="warning",
+                source="clang"
             ))
 
         return findings
@@ -191,7 +192,8 @@ class ClangSyntaxProbe(SyntaxProbe):
                             rule="clang_syntax",
                             symbol="",
                             message=message,
-                            severity=severity
+                            severity=severity,
+                            source="clang"
                         ))
                 except (ValueError, IndexError):
                     # Skip malformed lines
