@@ -97,4 +97,6 @@ Streamline dependency management for project created with the toolkit. It's a li
 would integrate seamlessly with the existing CMake infrastructure, making it easier for AI agents to suggest and manage
 external dependencies, 
 
+### Polished UI 
 
+Consider using the Python packages rich and textual to make a clean and polished-looking, user friendly interface.
