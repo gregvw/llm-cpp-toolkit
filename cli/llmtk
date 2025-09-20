@@ -4,13 +4,20 @@ import xml.etree.ElementTree as ET
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 from urllib.request import pathname2url
 
-# Import template engine
+# Import template engine and tools
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent / "modules"))
+sys.path.insert(0, str(pathlib.Path(__file__).parent.parent / "tools"))
 try:
     from template_engine import TemplateEngine
     TEMPLATE_ENGINE_AVAILABLE = True
 except ImportError:
     TEMPLATE_ENGINE_AVAILABLE = False
+
+try:
+    from preflight import main as preflight_main
+    PREFLIGHT_AVAILABLE = True
+except ImportError:
+    PREFLIGHT_AVAILABLE = False
 
 try:
     from strict_build import (
@@ -2478,6 +2485,55 @@ def cmd_analyze(args):
     print(str(reports))
 
 
+def cmd_preflight(args):
+    """Run preflight checks for syntax and delimiter issues."""
+    if not PREFLIGHT_AVAILABLE:
+        print("Error: Preflight module not available", file=sys.stderr)
+        return 1
+
+    # Convert argparse Namespace to list of strings for preflight
+    argv = []
+
+    # File discovery options (mutually exclusive)
+    if getattr(args, 'diff', None):
+        argv.extend(['--diff', args.diff])
+    elif getattr(args, 'since', None):
+        argv.extend(['--since', args.since])
+    elif getattr(args, 'paths', None):
+        argv.extend(['--paths'] + args.paths)
+
+    # Output options
+    if getattr(args, 'json_output', None):
+        argv.extend(['--json', str(args.json_output)])
+    if getattr(args, 'sarif_output', None):
+        argv.extend(['--sarif', str(args.sarif_output)])
+
+    # Behavior options
+    if getattr(args, 'strict', False):
+        argv.append('--strict')
+    if getattr(args, 'max_lines', None):
+        argv.extend(['--max-lines', str(args.max_lines)])
+    if getattr(args, 'max_files', None):
+        argv.extend(['--max-files', str(args.max_files)])
+
+    # Feature toggles
+    if getattr(args, 'no_tree_sitter', False):
+        argv.append('--no-tree-sitter')
+    if getattr(args, 'no_syntax', False):
+        argv.append('--no-syntax')
+
+    # Extensions filter
+    if getattr(args, 'extensions', None):
+        argv.extend(['--extensions'] + args.extensions)
+
+    # Verbosity
+    if getattr(args, 'verbose', False):
+        argv.append('--verbose')
+
+    # Run preflight
+    return preflight_main(argv)
+
+
 def cmd_test(args):
     ctest_bin = shutil.which("ctest")
     if not ctest_bin:
@@ -4466,6 +4522,36 @@ def main():
     an.add_argument("--incremental", action="store_true", help="Analyze only changed files")
     an.add_argument("--cache-key", help="Manual cache key for analysis results")
     an.set_defaults(fn=cmd_analyze)
+
+    # Add preflight command
+    preflight_parser = sub.add_parser("preflight", help="Fast syntax and delimiter checking before build operations")
+
+    # File discovery options (mutually exclusive group)
+    discovery_group = preflight_parser.add_mutually_exclusive_group()
+    discovery_group.add_argument("--diff", metavar="BASE_REF", help="Check files changed from BASE_REF (e.g., --diff HEAD~1)")
+    discovery_group.add_argument("--since", metavar="REF", help="Check files changed since REF")
+    discovery_group.add_argument("--paths", nargs="+", metavar="PATH", help="Explicit paths to check")
+
+    # Output options
+    preflight_parser.add_argument("--json", dest="json_output", metavar="FILE", type=pathlib.Path, help="Output findings as JSON to FILE")
+    preflight_parser.add_argument("--sarif", dest="sarif_output", metavar="FILE", type=pathlib.Path, help="Output findings as SARIF to FILE")
+
+    # Behavior options
+    preflight_parser.add_argument("--strict", action="store_true", help="Treat warnings as errors")
+    preflight_parser.add_argument("--max-lines", type=int, metavar="N", help="Skip files with more than N lines")
+    preflight_parser.add_argument("--max-files", type=int, metavar="N", help="Check at most N files")
+
+    # Feature toggles
+    preflight_parser.add_argument("--no-tree-sitter", action="store_true", help="Disable tree-sitter parsing (use fallback)")
+    preflight_parser.add_argument("--no-syntax", action="store_true", help="Disable external syntax checking")
+
+    # Extensions filter
+    preflight_parser.add_argument("--extensions", metavar="EXT", nargs="+", help="Only check files with these extensions (e.g., .cpp .h)")
+
+    # Verbosity
+    preflight_parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
+
+    preflight_parser.set_defaults(fn=cmd_preflight)
 
     test_parser = sub.add_parser("test", help="Run tests via CTest with structured exports")
     test_parser.add_argument("--build-dir", "-B", default="build", help="CMake build directory containing CTest files")
