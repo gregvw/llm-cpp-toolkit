@@ -482,3 +482,88 @@ commands:
       - "llmtk diff-context incremental --cache=.llmtk-cache"
       - "llmtk diff-context bisect --good=v1.0 --bad=HEAD --test-cmd='make test'"
       - "llmtk diff-context diff --include-errors --error-log=build.log"
+
+  lsp-bridge:
+    description: Bridge to clangd LSP for structured diagnostics with filtering compatible with stderr-thin.
+    args:
+      - name: files
+        variadic: true
+        description: "Source files to analyze via LSP (defaults to compile_commands.json entries)"
+      - name: compile-db
+        description: "Path to compile_commands.json (default: auto-discover)"
+      - name: server-path
+        description: "Path to clangd executable (default: auto-discover)"
+      - name: level
+        description: "Detail level (summary|focused|detailed)"
+      - name: context-budget
+        description: "Maximum characters in the filtered output"
+      - name: filter-severity
+        description: "Minimum severity to include (error|warning|note|remark)"
+      - name: filter-category
+        description: "Filter by diagnostic category/check"
+      - name: timeout
+        description: "LSP server timeout in seconds"
+      - name: json
+        description: "Output JSON file path"
+      - name: text
+        description: "Output text file path"
+    outputs:
+      - path: "exports/diagnostics/lsp-bridge.json"
+        schema:
+          _meta:
+            generated_at: string
+            server_version: string|null
+            level: string
+            context_budget: int
+            filter_severity: string|null
+            filter_category: string|null
+            files_analyzed: int
+            timeout_seconds: number
+          server_info:
+            path: string
+            version: string|null
+            capabilities: object|null
+          files:
+            - file: string
+              uri: string
+              diagnostics_count: int
+              processing_time_ms: number
+              status: string
+          counts:
+            error: int
+            warning: int
+            information: int
+            hint: int
+            total: int
+          diagnostics:
+            - uri: string
+              file: string
+              range:
+                start:
+                  line: int
+                  character: int
+                end:
+                  line: int
+                  character: int
+              severity: int
+              severity_name: string
+              code: string|null
+              code_description: object|null
+              source: string|null
+              message: string
+              tags: [int]
+              related_information: [object]
+              data: object|null
+          highlights: [string]
+          view:
+            path: string
+            level: string
+            context_budget: int
+            context_used: int
+            context_full: int
+            context_truncated: int
+      - path: "exports/diagnostics/lsp-bridge.txt"
+    examples:
+      - "llmtk lsp-bridge src/main.cpp"
+      - "llmtk lsp-bridge --level=focused --filter-severity=warning"
+      - "llmtk lsp-bridge --context-budget=4000 src/"

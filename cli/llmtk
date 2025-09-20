@@ -2924,6 +2924,152 @@ def cmd_stderr_thin(args):
     print(f"Thinned diagnostics written to {text_out}")
     print(str(json_out))
 
+
+def cmd_lsp_bridge(args):
+    """Bridge to clangd LSP for structured diagnostics with filtering."""
+    try:
+        from lsp_bridge import collect_diagnostics
+    except ImportError:
+        print("Error: LSP bridge module not available")
+        return 1
+
+    diagnostics_dir = EXPORTS / "diagnostics"
+    diagnostics_dir.mkdir(parents=True, exist_ok=True)
+
+    # Set up defaults similar to stderr-thin
+    level = getattr(args, 'level', 'focused')
+    budget = getattr(args, 'context_budget', None)
+    if budget is None:
+        budget = _DEFAULT_CONTEXT_BUDGETS.get(level, 6000)
+
+    # Output file paths
+    json_out = pathlib.Path(args.json) if getattr(args, 'json', None) else diagnostics_dir / "lsp-bridge.json"
+    text_out = pathlib.Path(args.text) if getattr(args, 'text', None) else diagnostics_dir / "lsp-bridge.txt"
+
+    # Determine files to analyze
+    files = getattr(args, 'files', []) or []
+    if not files:
+        # Auto-discover from compile_commands.json
+        compile_db_path = _find_compile_database(getattr(args, 'compile_db', None))
+        if compile_db_path and compile_db_path.exists():
+            try:
+                compile_entries = json.loads(compile_db_path.read_text())
+                files = [entry.get("file") for entry in compile_entries if entry.get("file")]
+                files = [f for f in files if f and pathlib.Path(f).suffix in ['.cpp', '.cc', '.cxx', '.c', '.hpp', '.hh', '.hxx', '.h']]
+                files = files[:20]  # Limit to first 20 files to avoid overwhelming LSP
+            except Exception as e:
+                print(f"Warning: Failed to read compile database: {e}")
+
+        if not files:
+            print("Error: No files specified and no compile_commands.json found")
+            return 1
+
+    # Collect diagnostics via LSP
+    try:
+        timeout = float(getattr(args, 'timeout', 30))
+        server_path = getattr(args, 'server_path', None)
+
+        print(f"Analyzing {len(files)} files via clangd LSP...")
+        lsp_results = collect_diagnostics(
+            files=files,
+            compile_db_path=getattr(args, 'compile_db', None),
+            server_path=server_path,
+            timeout=timeout
+        )
+
+        # Apply filtering similar to stderr-thin
+        all_diagnostics = lsp_results["diagnostics"]
+
+        # Filter by severity if specified
+        filter_severity = getattr(args, 'filter_severity', None)
+        if filter_severity:
+            severity_order = {"error": 1, "warning": 2, "information": 3, "hint": 4}
+            min_level = severity_order.get(filter_severity.lower(), 4)
+            all_diagnostics = [
+                d for d in all_diagnostics
+                if severity_order.get(d.get("level", "hint"), 4) <= min_level
+            ]
+
+        # Filter by category if specified
+        filter_category = getattr(args, 'filter_category', None)
+        if filter_category:
+            all_diagnostics = [
+                d for d in all_diagnostics
+                if filter_category.lower() in (d.get("category") or "").lower() or
+                   filter_category.lower() in (d.get("option") or "").lower()
+            ]
+
+        # Generate highlights using existing stderr-thin logic
+        highlights = _format_highlights(all_diagnostics)
+
+        # Apply view level filtering
+        view_lines = []
+        if level == "summary":
+            view_lines = highlights[:20]
+        elif level == "focused":
+            # For LSP, focused view includes errors and warnings with context
+            priority_diags = [d for d in all_diagnostics if d.get("level") in ["error", "warning"]]
+            view_lines = _format_highlights(priority_diags)
+        else:  # detailed
+            view_lines = highlights
+
+        # Apply context budget
+        context_text, used_len, full_len, truncated = _apply_context_budget(view_lines, budget)
+
+        # Recompute counts after filtering
+        filtered_counts = _collect_counts(all_diagnostics)
+
+        # Build final report
+        report = {
+            "_meta": {
+                "generated_at": datetime.datetime.now(datetime.UTC).isoformat(),
+                "server_version": lsp_results["server_info"].get("version"),
+                "level": level,
+                "context_budget": budget,
+                "filter_severity": filter_severity,
+                "filter_category": filter_category,
+                "files_analyzed": len(lsp_results["files"]),
+                "timeout_seconds": timeout
+            },
+            "server_info": lsp_results["server_info"],
+            "files": lsp_results["files"],
+            "counts": {
+                # Map stderr-thin format to LSP format
+                "error": filtered_counts.get("error", 0),
+                "warning": filtered_counts.get("warning", 0),
+                "information": filtered_counts.get("information", 0),
+                "hint": filtered_counts.get("hint", 0),
+                "total": sum(filtered_counts.values())
+            },
+            "diagnostics": all_diagnostics,
+            "highlights": highlights,
+            "view": {
+                "path": str(text_out.resolve()),
+                "level": level,
+                "context_budget": budget,
+                "context_used": used_len,
+                "context_full": full_len,
+                "context_truncated": truncated
+            }
+        }
+
+        # Write outputs
+        text_out.parent.mkdir(parents=True, exist_ok=True)
+        json_out.parent.mkdir(parents=True, exist_ok=True)
+
+        text_out.write_text((context_text + "\n") if context_text else "")
+        write_json(json_out, report)
+
+        print(f"LSP diagnostics written to {text_out}")
+        print(str(json_out))
+
+        return 0
+
+    except Exception as e:
+        print(f"Error during LSP analysis: {e}")
+        return 1
+
+
 def cmd_tidy(args):
     """Run clang-tidy with optional fix application."""
     compile_db = EXPORTS / "compile_commands.json"
@@ -4161,6 +4307,20 @@ def main():
     stderr_parser.add_argument("--cwd", help="Working directory when executing a command")
     stderr_parser.add_argument("cmd", nargs=argparse.REMAINDER, help="Command to execute (use -- to separate)")
     stderr_parser.set_defaults(fn=cmd_stderr_thin)
+
+    # Add lsp-bridge command
+    lsp_parser = sub.add_parser("lsp-bridge", help="Bridge to clangd LSP for structured diagnostics")
+    lsp_parser.add_argument("files", nargs="*", help="Source files to analyze (defaults to compile_commands.json entries)")
+    lsp_parser.add_argument("--compile-db", help="Path to compile_commands.json")
+    lsp_parser.add_argument("--server-path", help="Path to clangd executable")
+    lsp_parser.add_argument("--level", choices=["summary", "focused", "detailed"], default="focused", help="Detail level")
+    lsp_parser.add_argument("--context-budget", type=int, help="Maximum characters in filtered output")
+    lsp_parser.add_argument("--filter-severity", choices=["error", "warning", "information", "hint"], help="Minimum severity to include")
+    lsp_parser.add_argument("--filter-category", help="Filter by diagnostic category/check")
+    lsp_parser.add_argument("--timeout", type=float, default=30.0, help="LSP server timeout in seconds")
+    lsp_parser.add_argument("--json", help="Custom path for JSON output")
+    lsp_parser.add_argument("--text", help="Custom path for text output")
+    lsp_parser.set_defaults(fn=cmd_lsp_bridge)
 
     # Add tidy command
     tidy_parser = sub.add_parser("tidy", help="Run clang-tidy with fix options")

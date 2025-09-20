@@ -4,6 +4,7 @@
 # Build outputs
 build/
 exports/
+.cache/
 
 # Python cache
 __pycache__/
