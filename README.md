@@ -327,7 +327,3 @@ The toolkit follows a manifest-driven architecture:
 ## 📄 License
 
 BSD-3-Clause License - see [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-This toolkit is designed to work seamlessly with Large Language Models and AI coding assistants, providing the structured data they need to effectively analyze and work with C++ codebases.

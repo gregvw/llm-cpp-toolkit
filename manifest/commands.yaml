@@ -661,3 +661,66 @@ commands:
       - "llmtk lsp-bridge src/main.cpp"
       - "llmtk lsp-bridge --level=focused --filter-severity=warning"
       - "llmtk lsp-bridge --context-budget=4000 src/"
+
+  agent:
+    description: Agent operations for LLM integration - JSON request handler and MCP server.
+    args:
+      - name: command
+        required: true
+        description: "Subcommand: request or mcp"
+        choices: ["request", "mcp"]
+    subcommands:
+      request:
+        description: "Process structured JSON requests"
+        args:
+          - name: request_json
+            required: true
+            description: "JSON request string or '-' for stdin"
+        outputs:
+          - exit_code: "0 for success, 1 for error"
+        examples:
+          - 'llmtk agent request \'{"requests":[{"id":"caps","kind":"get_capabilities"}]}\''
+          - 'echo \'{"requests":[{"id":"ls","kind":"list_directory","params":{"path":"."}}]}\' | llmtk agent request -'
+          - 'llmtk agent request \'{"requests":[{"id":"read","kind":"read_file","params":{"path":"VERSION"}}]}\''
+      mcp:
+        description: "Start MCP (Model Context Protocol) server over stdio"
+        args:
+          - name: timeout
+            description: "Timeout in seconds for individual operations (default: 30)"
+        outputs:
+          - exit_code: "0 for success, 1 for error"
+        examples:
+          - "llmtk agent mcp"
+          - "llmtk agent mcp --timeout 60"
+    supported_requests:
+      read_file:
+        description: "Read a file from the workspace"
+        params:
+          path: "File path relative to workspace root"
+      write_file:
+        description: "Write content to a file in the workspace"
+        params:
+          path: "File path relative to workspace root"
+          content: "File content to write"
+      delete_file:
+        description: "Delete a file from the workspace"
+        params:
+          path: "File path relative to workspace root"
+      list_directory:
+        description: "List contents of a directory"
+        params:
+          path: "Directory path relative to workspace root"
+      list_exports:
+        description: "List files in the exports directory"
+        params:
+          glob: "Optional glob pattern to filter files"
+      get_capabilities:
+        description: "Get toolkit capabilities summary"
+        params: {}
+      expand_context:
+        description: "Export project context for LLM consumption"
+        params:
+          deep: "Optional boolean for deep context with target metadata"
+          build: "Optional build directory to use"
+          preset: "Optional CMake preset to use"
+          preview: "Optional boolean to preview actions without executing"
