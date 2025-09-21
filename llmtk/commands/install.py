@@ -216,9 +216,12 @@ def cmd_install(args: argparse.Namespace) -> int:
     if hasattr(args, 'tools') and args.tools:
         tools_to_install = args.tools
     else:
-        # Install all core and recommended tools that are missing
+        # Determine which tools to install based on flags
+        install_all = getattr(args, 'all', False)
+        target_roles = ["core", "recommended", "optional"] if install_all else ["core", "recommended"]
+
         for tool_name, tool_config in tools_config["tools"].items():
-            if tool_config.get("role") in ["core", "recommended"]:
+            if tool_config.get("role") in target_roles:
                 # Get the actual command to check from the manifest
                 actual_cmd = tool_name
                 check_config = tool_config.get("check", {})
@@ -229,14 +232,37 @@ def cmd_install(args: argparse.Namespace) -> int:
                     tools_to_install.append(tool_name)
 
     if not tools_to_install:
-        print("All tools are already installed")
+        install_scope = "all tools" if getattr(args, 'all', False) else "core and recommended tools"
+        print(f"All {install_scope} are already installed")
         # Create a namespace object that mimics args but marks it as from install
         doctor_args = argparse.Namespace()
         doctor_args._from_install = True
         cmd_doctor(doctor_args)
         return 0
 
-    print(f"🚀 Installing {len(tools_to_install)} missing tools...")
+    # Show what's being installed and what scope
+    if hasattr(args, 'tools') and args.tools:
+        print(f"🚀 Installing {len(tools_to_install)} specified tools...")
+    else:
+        install_all = getattr(args, 'all', False)
+        scope = "all tools (core + recommended + optional)" if install_all else "core and recommended tools"
+        print(f"🚀 Installing {len(tools_to_install)} missing {scope}...")
+
+        # Show optional tools that would be installed with --all if not using --all
+        if not install_all:
+            optional_missing = []
+            for tool_name, tool_config in tools_config["tools"].items():
+                if tool_config.get("role") == "optional":
+                    actual_cmd = tool_name
+                    check_config = tool_config.get("check", {})
+                    if isinstance(check_config, dict) and "cmd" in check_config:
+                        actual_cmd = check_config["cmd"][0]
+                    if not shutil.which(actual_cmd):
+                        optional_missing.append(tool_name)
+
+            if optional_missing:
+                print(f"   💡 Use 'llmtk install --all' to also install {len(optional_missing)} optional tools: {', '.join(optional_missing)}")
+
     print(f"   Method: {'local' if use_local else f'package manager ({pm})'}")
     print()
 
@@ -322,7 +348,8 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     """Register the install command."""
     parser = subparsers.add_parser(
         "install",
-        help="Install missing tools using manifest configuration"
+        help="Install missing tools using manifest configuration",
+        description="Install missing development tools. By default installs core and recommended tools only. Use --all to include optional tools."
     )
     parser.add_argument(
         "--local",
@@ -330,8 +357,13 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         help="Force local installation (no sudo)"
     )
     parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Install all missing tools including optional ones (default: core + recommended only)"
+    )
+    parser.add_argument(
         "tools",
         nargs="*",
-        help="Specific tools to install (default: all missing core/recommended tools)"
+        help="Specific tools to install (overrides --all flag)"
     )
     parser.set_defaults(func=cmd_install)
