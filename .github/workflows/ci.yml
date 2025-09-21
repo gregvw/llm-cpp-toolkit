@@ -32,7 +32,7 @@ jobs:
           set -euo pipefail
           HELP_OUTPUT="$(python cli/llmtk --help)"
           echo "$HELP_OUTPUT"
-          for cmd in doctor init capabilities telemetry analyze; do
+          for cmd in doctor init capabilities telemetry analyze stderr-thin; do
             echo "$HELP_OUTPUT" | grep -F " $cmd" >/dev/null || {
               echo "Expected command '$cmd' missing from help output" >&2
               exit 1
