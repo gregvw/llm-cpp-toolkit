@@ -517,9 +517,17 @@ install_generic_from_manifest() {
     fi
 
     if [[ -n "$binary_file" ]]; then
-        cp "$binary_file" "$LOCAL_BIN/$tool_name"
-        chmod +x "$LOCAL_BIN/$tool_name"
-        log "✓ $tool_name installed successfully to $LOCAL_BIN/$tool_name"
+        # Use the actual binary name (basename of binary_path) as the installed name
+        local installed_name
+        if [[ -n "$binary_path" && "$binary_path" != "$tool_name" ]]; then
+            installed_name=$(basename "$binary_path")
+        else
+            installed_name="$tool_name"
+        fi
+
+        cp "$binary_file" "$LOCAL_BIN/$installed_name"
+        chmod +x "$LOCAL_BIN/$installed_name"
+        log "✓ $tool_name installed successfully to $LOCAL_BIN/$installed_name"
         return 0
     else
         log "Binary not found in archive"
