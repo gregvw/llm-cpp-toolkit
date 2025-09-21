@@ -17,9 +17,10 @@ def get_commands() -> Dict[str, Callable[[argparse.ArgumentParser], None]]:
 def setup_commands(subparsers: argparse._SubParsersAction) -> None:
     """Set up all registered commands."""
     # Import and register commands
-    from . import doctor, capabilities, telemetry
+    from . import doctor, capabilities, telemetry, init
     doctor.register(subparsers)
     capabilities.register(subparsers)
     telemetry.register(subparsers)
+    init.register(subparsers)
 
     # Additional commands will be added incrementally
