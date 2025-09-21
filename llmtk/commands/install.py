@@ -153,6 +153,8 @@ def install_from_github(tool_name: str, config: Dict[str, Any], local_bin: Path)
             env["LLMTK_VERSION_TAG"] = local_config["version_tag"]
 
         try:
+            print(f"    🔧 Running enhanced installer: {enhanced_installer} {tool_name}")
+            print(f"    🔧 Environment: LLMTK_LOCAL_BIN={env.get('LLMTK_LOCAL_BIN')}")
             result = subprocess.run(
                 [str(enhanced_installer), tool_name],
                 env=env,
@@ -160,6 +162,11 @@ def install_from_github(tool_name: str, config: Dict[str, Any], local_bin: Path)
                 capture_output=True,
                 check=False
             )
+            print(f"    🔧 Return code: {result.returncode}")
+            if result.stdout:
+                print(f"    🔧 Stdout: {result.stdout}")
+            if result.stderr:
+                print(f"    🔧 Stderr: {result.stderr}")
             if result.returncode != 0:
                 print(f"    ❌ Enhanced installer failed: {result.stderr}")
             return result.returncode == 0
@@ -307,11 +314,6 @@ def cmd_install(args: argparse.Namespace) -> int:
                 else:
                     failed.append(tool_name)
 
-    # Update PATH for doctor check
-    if local_bin.exists():
-        old_path = os.environ.get("PATH", "")
-        os.environ["PATH"] = f"{local_bin}:{old_path}"
-
     # Print comprehensive summary
     print()
     print("=" * 60)
@@ -336,10 +338,19 @@ def cmd_install(args: argparse.Namespace) -> int:
     print()
     print("🏥 Updated system health check:")
 
-    # Create a namespace object that mimics args but marks it as from install
-    doctor_args = argparse.Namespace()
-    doctor_args._from_install = True
-    cmd_doctor(doctor_args)
+    # Update PATH for doctor check to include locally installed tools
+    old_path = os.environ.get("PATH", "")
+    if local_bin.exists():
+        os.environ["PATH"] = f"{local_bin}:{old_path}"
+
+    try:
+        # Create a namespace object that mimics args but marks it as from install
+        doctor_args = argparse.Namespace()
+        doctor_args._from_install = True
+        cmd_doctor(doctor_args)
+    finally:
+        # Restore original PATH
+        os.environ["PATH"] = old_path
 
     return 0 if not failed else 1
 

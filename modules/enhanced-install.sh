@@ -5,7 +5,8 @@ set -euo pipefail
 # Downloads verified releases from GitHub and other sources
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-LOCAL_BIN="$ROOT_DIR/.llmtk/bin"
+# Use LLMTK_LOCAL_BIN if provided, otherwise fall back to default
+LOCAL_BIN="${LLMTK_LOCAL_BIN:-$ROOT_DIR/.llmtk/bin}"
 LOCAL_TMP="$ROOT_DIR/.llmtk/tmp"
 LOCAL_CACHE="$ROOT_DIR/.llmtk/cache"
 
@@ -517,12 +518,13 @@ install_generic_from_manifest() {
     fi
 
     if [[ -n "$binary_file" ]]; then
-        # Use the actual binary name (basename of binary_path) as the installed name
-        local installed_name
-        if [[ -n "$binary_path" && "$binary_path" != "$tool_name" ]]; then
-            installed_name=$(basename "$binary_path")
-        else
-            installed_name="$tool_name"
+        # For most tools, install as the tool name, but handle special cases
+        local installed_name="$tool_name"
+
+        # Special case: if binary_path looks like an actual command name (not a file in archive),
+        # and it's different from tool_name, use the binary_path name (e.g., bottom -> btm)
+        if [[ -n "$binary_path" && "$binary_path" != "$tool_name" && ! "$binary_path" =~ ^.*[.-].* ]]; then
+            installed_name="$binary_path"
         fi
 
         cp "$binary_file" "$LOCAL_BIN/$installed_name"
