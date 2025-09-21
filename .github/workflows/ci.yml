@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  toolkit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          pip install pyyaml
+
+      - name: Configure git author
+        run: |
+          git config --global user.email "ci@llmtk.dev"
+          git config --global user.name "llmtk CI"
+
+      - name: Verify llmtk --help lists expected commands
+        run: |
+          set -euo pipefail
+          HELP_OUTPUT="$(python cli/llmtk --help)"
+          echo "$HELP_OUTPUT"
+          for cmd in doctor init capabilities telemetry; do
+            echo "$HELP_OUTPUT" | grep -F " $cmd" >/dev/null || {
+              echo "Expected command '$cmd' missing from help output" >&2
+              exit 1
+            }
+          done
+        shell: bash
+
+      - name: Run llmtk doctor
+        run: python cli/llmtk doctor
+        shell: bash
+
+      - name: Initialize new project with llmtk init
+        run: python cli/llmtk init test_proj
+        shell: bash
+
+      - name: Upgrade project with llmtk init --existing
+        run: python cli/llmtk init --existing --path test_proj
+        shell: bash
+
+      - name: Build generated project with CMake and Make
+        run: |
+          set -euo pipefail
+          cmake -S test_proj -B test_proj/build
+          cmake --build test_proj/build
+          ./test_proj/build/test_proj
+        shell: bash
