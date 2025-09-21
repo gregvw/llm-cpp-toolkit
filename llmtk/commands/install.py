@@ -65,8 +65,14 @@ def install_tool_with_package_manager(tool_name: str, tool_config: Dict[str, Any
                                          stdout=subprocess.DEVNULL,
                                          stderr=subprocess.PIPE)
             if update_result.returncode != 0:
-                print(f"    ⚠️ apt update failed: {update_result.stderr.decode() if update_result.stderr else 'Unknown error'}")
-                return False
+                stderr_msg = update_result.stderr.decode() if update_result.stderr else 'Unknown error'
+                # Only fail if it's a critical error, not just GPG warnings
+                if "NO_PUBKEY" in stderr_msg or "not signed" in stderr_msg:
+                    print(f"    ⚠️ apt update had warnings (ignoring): Repository signature issues")
+                    print(f"    🔄 Proceeding with installation anyway...")
+                else:
+                    print(f"    ❌ apt update failed: {stderr_msg}")
+                    return False
 
             print(f"    🔄 Installing packages: {' '.join(packages)}")
             install_result = subprocess.run(["sudo", "apt-get", "install", "-y"] + packages)
