@@ -10,7 +10,7 @@ When working with Large Language Models, managing the size of your input (the "c
 |---|---|---|
 | `llmtk doctor` | 1-5 KB | Initial environment check |
 | `llmtk context export` | 5-50 KB | Basic build information |
-| `llmtk context export --deep` | 50-500 KB | Detailed build analysis |
+| `llmtk context export --deep` | 50-500 KB | Detailed build analysis with targets/toolchains/presets |
 | `llmtk analyze` | 10-1000 KB | Static analysis results |
 
 ### Strategies for Reducing Context

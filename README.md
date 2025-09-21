@@ -67,6 +67,7 @@ llmtk doctor
 # Export project context for LLMs
 llmtk context export
 llmtk context export --preview   # Show planned steps without executing
+llmtk context export --deep      # Capture targets, toolchains, and preset metadata
 
 # Fast syntax checking before expensive operations
 llmtk preflight --diff HEAD~1
