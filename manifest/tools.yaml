@@ -333,6 +333,17 @@ tools:
     role: optional
     min_version: ">=0.12"
     provides: ["ps"]
+    install:
+      apt: []  # Not available in Ubuntu repos
+      dnf: ["procs"]
+      pacman: ["procs"]
+      brew: ["procs"]
+      nix: ["procs"]
+    local_install:
+      github_repo: "dalance/procs"
+      release_pattern: "procs-v0.14.10-x86_64-linux.zip"
+      binary_path: "procs"
+      version_tag: "v0.14.10"
     check:
       cmd: ["procs", "--version"]
   bottom:
