@@ -358,6 +358,17 @@ tools:
     role: optional
     min_version: ">=4.4"
     provides: ["cheatsheets"]
+    install:
+      apt: []  # Not available in Ubuntu repos
+      dnf: []
+      pacman: ["cheat"]  # Available in AUR
+      brew: ["cheat"]
+      nix: ["cheat"]
+    local_install:
+      github_repo: "cheat/cheat"
+      release_pattern: "cheat-linux-amd64.gz"
+      binary_path: "cheat-linux-amd64"
+      version_tag: "4.4.2"
     check:
       cmd: ["cheat", "--version"]
   difftastic:

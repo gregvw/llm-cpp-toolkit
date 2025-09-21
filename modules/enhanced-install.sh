@@ -495,6 +495,13 @@ install_generic_from_manifest() {
             log "Failed to extract $archive"
             return 1
         fi
+    elif [[ "$pattern" == *.gz ]]; then
+        # Handle single gzip-compressed files (like cheat)
+        if ! gunzip -c "$archive" > "$extract_dir/$binary_path"; then
+            log "Failed to extract $archive"
+            return 1
+        fi
+        chmod +x "$extract_dir/$binary_path"
     else
         log "Unsupported archive format: $pattern"
         return 1
@@ -510,9 +517,9 @@ install_generic_from_manifest() {
     fi
 
     if [[ -n "$binary_file" ]]; then
-        cp "$binary_file" "$LOCAL_BIN/"
-        chmod +x "$LOCAL_BIN/$(basename "$binary_file")"
-        log "✓ $tool_name installed successfully to $LOCAL_BIN/$(basename "$binary_file")"
+        cp "$binary_file" "$LOCAL_BIN/$tool_name"
+        chmod +x "$LOCAL_BIN/$tool_name"
+        log "✓ $tool_name installed successfully to $LOCAL_BIN/$tool_name"
         return 0
     else
         log "Binary not found in archive"
