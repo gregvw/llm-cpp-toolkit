@@ -74,6 +74,7 @@ llmtk preflight --paths src/ include/ --json exports/preflight.json
 
 # Analyze code with multiple tools
 llmtk analyze src/ include/
+llmtk analyze --sarif src/  # Generate SARIF output for CI/IDE integration
 
 # Extract dependency graphs
 llmtk deps --json --graphviz
@@ -245,6 +246,7 @@ exports/
 │   ├── clang-tidy.json
 │   ├── iwyu.json
 │   ├── cppcheck.json
+│   ├── analysis.sarif      # Merged SARIF from all analyzers (--sarif flag)
 │   ├── preflight.json      # Fast syntax check results
 │   └── preflight.sarif     # SARIF format for CI integration
 ├── tests/                  # Structured CTest exports

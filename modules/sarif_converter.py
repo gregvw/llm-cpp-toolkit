@@ -336,9 +336,9 @@ if __name__ == "__main__":
         sys.exit(1)
 
     output_path = Path(sys.argv[1])
-    clang_tidy_path = Path(sys.argv[2]) if len(sys.argv) > 2 else None
-    cppcheck_path = Path(sys.argv[3]) if len(sys.argv) > 3 else None
-    iwyu_path = Path(sys.argv[4]) if len(sys.argv) > 4 else None
+    clang_tidy_path = Path(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2] else None
+    cppcheck_path = Path(sys.argv[3]) if len(sys.argv) > 3 and sys.argv[3] else None
+    iwyu_path = Path(sys.argv[4]) if len(sys.argv) > 4 and sys.argv[4] else None
 
     success = convert_reports_to_sarif(
         clang_tidy_path=clang_tidy_path,

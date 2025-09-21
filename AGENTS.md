@@ -469,6 +469,7 @@ The CLI automatically rejects paths that escape the current working directory, s
 * Read `exports/context.json` to discover where everything lives.
 * Run `llmtk preflight --diff HEAD` for fast syntax validation before making changes.
 * Run `llmtk analyze src/ include/` and parse `exports/reports/*.json`.
+* Run `llmtk analyze --sarif src/` for standardized SARIF output suitable for CI/IDE integration.
 * Propose patches, then optionally `llmtk reduce repro.cpp -- test.sh` to shrink a failing case.
 
 ### Agent Workflow for Code Changes
@@ -476,7 +477,7 @@ The CLI automatically rejects paths that escape the current working directory, s
 1. **Pre-Change Validation**: `llmtk preflight --diff HEAD` to catch existing issues
 2. **Apply Changes**: Make code modifications
 3. **Fast Validation**: `llmtk preflight --paths <changed_files>` before expensive builds
-4. **Full Analysis**: `llmtk analyze` if preflight passes
+4. **Full Analysis**: `llmtk analyze --sarif` if preflight passes (use SARIF for standardized CI integration)
 5. **Build/Test**: Proceed with compilation only if validation passes
 
 ### Example Contracts
