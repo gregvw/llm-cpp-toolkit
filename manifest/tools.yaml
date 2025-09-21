@@ -364,6 +364,17 @@ tools:
     role: optional
     min_version: ">=0.55"
     provides: ["diff"]
+    install:
+      apt: []  # Not available in Ubuntu repos
+      dnf: ["difftastic"]
+      pacman: ["difftastic"]
+      brew: ["difftastic"]
+      nix: ["difftastic"]
+    local_install:
+      github_repo: "Wilfred/difftastic"
+      release_pattern: "difft-x86_64-unknown-linux-gnu.tar.gz"
+      binary_path: "difft"
+      version_tag: "0.64.0"
     check:
       cmd: ["difft", "--version"]
   delta:

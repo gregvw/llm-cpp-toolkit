@@ -154,14 +154,17 @@ def install_from_github(tool_name: str, config: Dict[str, Any], local_bin: Path)
 
         try:
             result = subprocess.run(
-                [str(enhanced_installer)],
+                [str(enhanced_installer), tool_name],
                 env=env,
                 text=True,
                 capture_output=True,
                 check=False
             )
+            if result.returncode != 0:
+                print(f"    ❌ Enhanced installer failed: {result.stderr}")
             return result.returncode == 0
-        except subprocess.SubprocessError:
+        except subprocess.SubprocessError as e:
+            print(f"    ❌ Subprocess error: {e}")
             return False
 
     # Fallback to simple installer for specific tools
