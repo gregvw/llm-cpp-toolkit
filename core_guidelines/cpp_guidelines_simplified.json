@@ -1,0 +1,3986 @@
+{
+  "guidelines": [
+    {
+      "id": "P.1",
+      "title": "Express ideas directly in code",
+      "section": "P: Philosophy",
+      "summary": "class Date { public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "P.2",
+      "title": "Write in ISO Standard C++",
+      "section": "P: Philosophy",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "P.3",
+      "title": "Express intent",
+      "section": "P: Philosophy",
+      "summary": "gsl::index i = 0; while (i < v.size()) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "P.4",
+      "title": "Ideally, a program should be statically type safe",
+      "section": "P: Philosophy",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "P.5",
+      "title": "Prefer compile-time checking to run-time checking",
+      "section": "P: Philosophy",
+      "summary": "// Int is an alias used for integers int bits = 0;         // don't: avoidable code",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "P.6",
+      "title": "What cannot be checked at compile time should be checkable at run time",
+      "section": "P: Philosophy",
+      "summary": "// separately compiled, possibly dynamically loaded extern void f(int* p);",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "P.7",
+      "title": "Catch run-time errors early",
+      "section": "P: Philosophy",
+      "summary": "void increment1(int* p, int n)    // bad: error-prone {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "P.8",
+      "title": "Don't leak any resources",
+      "section": "P: Philosophy",
+      "summary": "void f(char* name) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "P.9",
+      "title": "Don't waste time or space",
+      "section": "P: Philosophy",
+      "summary": "struct X { char ch;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "P.10",
+      "title": "Prefer immutable data to mutable data",
+      "section": "P: Philosophy",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "P.11",
+      "title": "Encapsulate messy constructs, rather than spreading through the code",
+      "section": "P: Philosophy",
+      "summary": "int sz = 100; int* p = (int*) malloc(sizeof(int) * sz);",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "P.12",
+      "title": "Use supporting tools as appropriate",
+      "section": "P: Philosophy",
+      "summary": "Run a static analyzer to verify that your code follows the guidelines you want it to follow.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "P.13",
+      "title": "Use support libraries as appropriate",
+      "section": "P: Philosophy",
+      "summary": "std::sort(begin(v), end(v), std::greater<>()); Unless you are an expert in sorting algorithms and have plenty of time,",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "I.1",
+      "title": "Make interfaces explicit",
+      "section": "I: Interfaces",
+      "summary": "Controlling the behavior of a function through a global (namespace scope) variable (a call mode) is implicit and potentially confusing. For example: int round(double d)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "I.2",
+      "title": "Avoid non-`const` global variables",
+      "section": "I: Interfaces",
+      "summary": "struct Data { // ... lots of stuff ...",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "I.3",
+      "title": "Avoid singletons",
+      "section": "I: Interfaces",
+      "summary": "class Singleton { // ... lots of stuff to ensure that only one Singleton object is created,",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "I.4",
+      "title": "Make interfaces precisely and strongly typed",
+      "section": "I: Interfaces",
+      "summary": "Consider: void pass(void* data);    // weak and under-qualified type void* is suspicious",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "I.5",
+      "title": "State preconditions (if any)",
+      "section": "I: Interfaces",
+      "summary": "Consider: double sqrt(double x);",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "I.6",
+      "title": "Prefer `Expects()` for expressing preconditions",
+      "section": "I: Interfaces",
+      "summary": "int area(int height, int width) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "I.7",
+      "title": "State postconditions",
+      "section": "I: Interfaces",
+      "summary": "Consider: int area(int height, int width) { return height * width; }  // bad",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "I.8",
+      "title": "Prefer `Ensures()` for expressing postconditions",
+      "section": "I: Interfaces",
+      "summary": "void f() {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "I.9",
+      "title": "If an interface is a template, document its parameters using concepts",
+      "section": "I: Interfaces",
+      "summary": "Use the C++20 style of requirements specification. For example: template<typename Iter, typename Val>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "I.10",
+      "title": "Use exceptions to signal a failure to perform a required task",
+      "section": "I: Interfaces",
+      "summary": "int printf(const char* ...);    // bad: return negative number if output fails template<class F, class ...Args>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "I.11",
+      "title": "Never transfer ownership by a raw pointer (`T*`) or reference (`T&`)",
+      "section": "I: Interfaces",
+      "summary": "Consider: X* compute(args)    // don't",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "I.12",
+      "title": "Declare a pointer that must not be null as `not_null`",
+      "section": "I: Interfaces",
+      "summary": "int length(const char* p);            // it is not clear whether length(nullptr) is valid length(nullptr);                      // OK?",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "I.13",
+      "title": "Do not pass an array as a single pointer",
+      "section": "I: Interfaces",
+      "summary": "Consider: void copy_n(const T* p, T* q, int n); // copy from [p:p+n) to [q:q+n)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "I.22",
+      "title": "Avoid complex initialization of global objects",
+      "section": "I: Interfaces",
+      "summary": "// file1.c extern const X x;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "I.23",
+      "title": "Keep the number of function arguments low",
+      "section": "I: Interfaces",
+      "summary": "The standard-library `merge()` is at the limit of what we can comfortably handle: template<class InputIterator1, class InputIterator2, class OutputIterator, class Compare>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "I.24",
+      "title": "Avoid adjacent parameters that can be invoked by the same arguments in either order with different meaning",
+      "section": "I: Interfaces",
+      "summary": "Consider: void copy_n(T* p, T* q, int n);  // copy from [p:p + n) to [q:q + n)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "I.25",
+      "title": "Prefer empty abstract classes as interfaces to class hierarchies",
+      "section": "I: Interfaces",
+      "summary": "You just knew that `Shape` would turn up somewhere :-) class Shape {  // bad: interface class loaded with data",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "I.26",
+      "title": "If you want a cross-compiler ABI, use a C-style subset",
+      "section": "I: Interfaces",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "I.27",
+      "title": "For stable library ABI, consider the Pimpl idiom",
+      "section": "I: Interfaces",
+      "summary": "interface (widget.h) class widget {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "I.30",
+      "title": "Encapsulate rule violations",
+      "section": "I: Interfaces",
+      "summary": "Consider a program that, depending on some form of input (e.g., arguments to `main`), should consume input from a file, from the command line, or from standard input.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.def",
+      "title": "Function definitions",
+      "section": "F: Functions",
+      "summary": "A function definition is a function declaration that also specifies the function's implementation, the function body.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.1",
+      "title": "\"Package\" meaningful operations as carefully named functions",
+      "section": "F: Functions",
+      "summary": "void read_and_print(istream& is)    // read and print an int {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.2",
+      "title": "A function should perform a single logical operation",
+      "section": "F: Functions",
+      "summary": "Consider: void read_and_print()    // bad",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.3",
+      "title": "Keep functions short and simple",
+      "section": "F: Functions",
+      "summary": "Consider: double simple_func(double val, int flag1, int flag2)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.4",
+      "title": "If a function might have to be evaluated at compile time, declare it `constexpr`",
+      "section": "F: Functions",
+      "summary": "The (in)famous factorial: constexpr int fac(int n)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.5",
+      "title": "If a function is very small and time-critical, declare it `inline`",
+      "section": "F: Functions",
+      "summary": "inline string cat(const string& s, const string& s2) { return s + s2; }",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.6",
+      "title": "If your function must not throw, declare it `noexcept`",
+      "section": "F: Functions",
+      "summary": "Put `noexcept` on every function written completely in C or in any other language without exceptions. The C++ Standard Library does that implicitly for all functions in the C Standard Library.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.7",
+      "title": "For general use, take `T*` or `T&` arguments rather than smart pointers",
+      "section": "F: Functions",
+      "summary": "// accepts any int* void f(int*);",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.8",
+      "title": "Prefer pure functions",
+      "section": "F: Functions",
+      "summary": "template<class T> auto square(T t) { return t * t; }",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.9",
+      "title": "Unused parameters should be unnamed",
+      "section": "F: Functions",
+      "summary": "widget* find(const set<widget>& s, const widget& w, Hint);   // once upon a time, a hint was used",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.10",
+      "title": "If an operation can be reused, give it a name",
+      "section": "F: Functions",
+      "summary": "struct Rec { string name;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.11",
+      "title": "Use an unnamed lambda if you need a simple function object in one place only",
+      "section": "F: Functions",
+      "summary": "auto earlyUsersEnd = std::remove_if(users.begin(), users.end(), [](const User &a) { return a.id > 100; });",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.call",
+      "title": "Parameter passing",
+      "section": "F: Functions",
+      "summary": "There are a variety of ways to pass parameters to a function and to return values.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.15",
+      "title": "Prefer simple and conventional ways of passing information",
+      "section": "F: Functions",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.16",
+      "title": "For \"in\" parameters, pass cheaply-copied types by value and others by reference to `const`",
+      "section": "F: Functions",
+      "summary": "void f1(const string& s);  // OK: pass by reference to const; always cheap void f2(string s);         // bad: potentially expensive",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.17",
+      "title": "For \"in-out\" parameters, pass by reference to non-`const`",
+      "section": "F: Functions",
+      "summary": "void update(Record& r);  // assume that update writes to r",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.18",
+      "title": "For \"will-move-from\" parameters, pass by `X&&` and `std::move` the parameter",
+      "section": "F: Functions",
+      "summary": "void sink(vector<int>&& v)  // sink takes ownership of whatever the argument owned {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.19",
+      "title": "For \"forward\" parameters, pass by `TP&&` and only `std::forward` the parameter",
+      "section": "F: Functions",
+      "summary": "Usually you forward the entire parameter (or parameter pack, using `...`) exactly once on every static control flow path: template<class F, class... Args>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.20",
+      "title": "For \"out\" output values, prefer return values to output parameters",
+      "section": "F: Functions",
+      "summary": "// OK: return pointers to elements with the value x vector<const int*> find_all(const vector<int>&, int x);",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.21",
+      "title": "To return multiple \"out\" values, prefer returning a struct",
+      "section": "F: Functions",
+      "summary": "// BAD: output-only parameter documented in a comment int f(const string& input, /*output only*/ string& output_data)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.60",
+      "title": "Prefer `T*` over `T&` when \"no argument\" is a valid option",
+      "section": "F: Functions",
+      "summary": "string zstring_to_string(zstring p) // zstring is a char*; that is a C-style string {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.22",
+      "title": "Use `T*` or `owner` to designate a single object",
+      "section": "F: Functions",
+      "summary": "void use(int* p, int n, char* s, int* q) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.23",
+      "title": "Use a `not_null` to indicate that \"null\" is not a valid value",
+      "section": "F: Functions",
+      "summary": "`not_null<T*>` makes it obvious to a reader (human or machine) that a test for `nullptr` is not necessary before dereference. Additionally, when debugging, `owner<T*>` and `not_null<T>` can be instrumented to check for correctness.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.24",
+      "title": "Use a `span` or a `span_p` to designate a half-open sequence",
+      "section": "F: Functions",
+      "summary": "X* find(span<X> r, const X& v);    // find v in r vector<X> vec;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.25",
+      "title": "Use a `zstring` or a `not_null` to designate a C-style string",
+      "section": "F: Functions",
+      "summary": "Consider: int length(const char* p);",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.26",
+      "title": "Use a `unique_ptr` to transfer ownership where a pointer is needed",
+      "section": "F: Functions",
+      "summary": "unique_ptr<Shape> get_shape(istream& is)  // assemble shape from input stream {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.27",
+      "title": "Use a `shared_ptr` to share ownership",
+      "section": "F: Functions",
+      "summary": "{ shared_ptr<const Image> im { read_image(somewhere) };",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.42",
+      "title": "Return a `T*` to indicate a position (only)",
+      "section": "F: Functions",
+      "summary": "Node* find(Node* t, const string& s)  // find s in a binary tree of Nodes {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.43",
+      "title": "Never (directly or indirectly) return a pointer or a reference to a local object",
+      "section": "F: Functions",
+      "summary": "After the return from a function its local objects no longer exist: int* f()",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.44",
+      "title": "Return a `T&` when copy is undesirable and \"returning no object\" isn't needed",
+      "section": "F: Functions",
+      "summary": "class Car {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.45",
+      "title": "Don't return a `T&&`",
+      "section": "F: Functions",
+      "summary": "A returned rvalue reference goes out of scope at the end of the full expression to which it is returned: auto&& x = max(0, 1);   // OK, so far",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.46",
+      "title": "`int` is the return type for `main()`",
+      "section": "F: Functions",
+      "summary": "void main() { /* ... */ };  // bad, not C++ int main()",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.47",
+      "title": "Return `T&` from assignment operators",
+      "section": "F: Functions",
+      "summary": "class Foo {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.48",
+      "title": "Don't `return std::move(local)`",
+      "section": "F: Functions",
+      "summary": "S bad() {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.49",
+      "title": "Don't return `const T`",
+      "section": "F: Functions",
+      "summary": "const vector<int> fct();    // bad: that \"const\" is more trouble than it is worth void g(vector<int>& vx)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.50",
+      "title": "Use a lambda when a function won't do (to capture local variables, or to write a local function)",
+      "section": "F: Functions",
+      "summary": "// writing a function that should only take an int or a string // -- overloading is natural",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.51",
+      "title": "Where there is a choice, prefer default arguments over overloading",
+      "section": "F: Functions",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.52",
+      "title": "Prefer capturing by reference in lambdas that will be used locally, including passed to algorithms",
+      "section": "F: Functions",
+      "summary": "Here, a large object (a network message) is passed to an iterative algorithm, and it is not efficient or correct to copy the message (which might not be copyable): std::for_each(begin(sockets), end(sockets), [&message](auto& socket)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.53",
+      "title": "Avoid capturing by reference in lambdas that will be used non-locally, including returned, stored on the heap, or passed to another thread",
+      "section": "F: Functions",
+      "summary": "int local = 42; // Want a reference to local.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.54",
+      "title": "When writing a lambda that captures `this` or any class data member, don't use `[=]` default capture",
+      "section": "F: Functions",
+      "summary": "class My_class { int x = 0;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.55",
+      "title": "Don't use `va_arg` arguments",
+      "section": "F: Functions",
+      "summary": "int sum(...) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "F.56",
+      "title": "Avoid unnecessary condition nesting",
+      "section": "F: Functions",
+      "summary": "Use a guard-clause to take care of exceptional cases and return early. // Bad: Deep nesting",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.1",
+      "title": "Organize related data into structures (`struct`s or `class`es)",
+      "section": "C: Classes and class hierarchies",
+      "summary": "void draw(int x, int y, int x2, int y2);  // BAD: unnecessary implicit relationships void draw(Point from, Point to);          // better",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.2",
+      "title": "Use `class` if the class has an invariant; use `struct` if the data members can vary independently",
+      "section": "C: Classes and class hierarchies",
+      "summary": "struct Pair {  // the members can vary independently string name;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.3",
+      "title": "Represent the distinction between an interface and an implementation using a class",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class Date { public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.4",
+      "title": "Make a function a member only if it needs direct access to the representation of a class",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class Date { // ... relatively small interface ...",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.5",
+      "title": "Place helper functions in the same namespace as the class they support",
+      "section": "C: Classes and class hierarchies",
+      "summary": "namespace Chrono { // here we keep time-related services class Time { /* ... */ };",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.7",
+      "title": "Don't define a class or enum and declare a variable of its type in the same statement",
+      "section": "C: Classes and class hierarchies",
+      "summary": "struct Data { /*...*/ } data{ /*...*/ }; struct Data { /*...*/ };",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.8",
+      "title": "Use `class` rather than `struct` if any member is non-public",
+      "section": "C: Classes and class hierarchies",
+      "summary": "struct Date { int d, m;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.9",
+      "title": "Minimize exposure of members",
+      "section": "C: Classes and class hierarchies",
+      "summary": "template<typename T, typename U> struct pair {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.concrete",
+      "title": "Concrete types",
+      "section": "C: Classes and class hierarchies",
+      "summary": "Concrete type rule summary: * [C.10: Prefer concrete types over class hierarchies](#Rc-concrete)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.10",
+      "title": "Prefer concrete types over class hierarchies",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class Point1 { int x, y;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.11",
+      "title": "Make concrete types regular",
+      "section": "C: Classes and class hierarchies",
+      "summary": "struct Bundle { string name;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.12",
+      "title": "Don't make data members `const` or references in a copyable or movable type",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class bad { const int i;    // bad",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.ctor",
+      "title": "Constructors, assignments, and destructors",
+      "section": "C: Classes and class hierarchies",
+      "summary": "These functions control the lifecycle of objects: creation, copy, move, and destruction. Define constructors to guarantee and simplify initialization of classes.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.defop",
+      "title": "Default Operations",
+      "section": "C: Classes and class hierarchies",
+      "summary": "By default, the language supplies the default operations with their default semantics. However, a programmer can disable or replace these defaults.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.20",
+      "title": "If you can avoid defining default operations, do",
+      "section": "C: Classes and class hierarchies",
+      "summary": "struct Named_map { public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.21",
+      "title": "If you define or `=delete` any copy, move, or destructor function, define or `=delete` them all",
+      "section": "C: Classes and class hierarchies",
+      "summary": "struct M2 {   // bad: incomplete set of copy/move/destructor operations public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.22",
+      "title": "Make default operations consistent",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class Silly {   // BAD: Inconsistent copy operations class Impl {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.dtor",
+      "title": "Destructors",
+      "section": "C: Classes and class hierarchies",
+      "summary": "\"Does this class need a destructor?\" is a surprisingly insightful design question. For most classes the answer is \"no\" either because the class holds no resources or because destruction is handled by [the rule of zero](#Rc-zero);",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.30",
+      "title": "Define a destructor if a class needs an explicit action at object destruction",
+      "section": "C: Classes and class hierarchies",
+      "summary": "template<typename A> struct final_action {   // slightly simplified",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.31",
+      "title": "All resources acquired by a class must be released by the class's destructor",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class X { ifstream f;   // might own a file",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.32",
+      "title": "If a class has a raw pointer (`T*`) or reference (`T&`), consider whether it might be owning",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class legacy_class {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.33",
+      "title": "If a class has an owning pointer member, define a destructor",
+      "section": "C: Classes and class hierarchies",
+      "summary": "A pointer member could represent a resource. [A `T*` should not do so](#Rr-ptr), but in older code, that's common.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.35",
+      "title": "A base class destructor should be either public and virtual, or protected and non-virtual",
+      "section": "C: Classes and class hierarchies",
+      "summary": "struct Base {  // BAD: implicitly has a public non-virtual destructor virtual void f();",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.36",
+      "title": "A destructor must not fail",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class X { public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.37",
+      "title": "Make destructors `noexcept`",
+      "section": "C: Classes and class hierarchies",
+      "summary": "Not all destructors are noexcept by default; one throwing member poisons the whole class hierarchy struct X {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.ctor",
+      "title": "Constructors",
+      "section": "C: Classes and class hierarchies",
+      "summary": "A constructor defines how an object is initialized (constructed).",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.40",
+      "title": "Define a constructor if a class has an invariant",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class Date {  // a Date represents a valid date // in the January 1, 1900 to December 31, 2100 range",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.41",
+      "title": "A constructor should create a fully initialized object",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class X1 { FILE* f;   // call init() before any other function",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.42",
+      "title": "If a constructor cannot construct a valid object, throw an exception",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class X2 { FILE* f;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.43",
+      "title": "Ensure that a copyable class has a default constructor",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class Date { // BAD: no default constructor public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.44",
+      "title": "Prefer default constructors to be simple and non-throwing",
+      "section": "C: Classes and class hierarchies",
+      "summary": "template<typename T> // elem points to space-elem element allocated using new",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.45",
+      "title": "Don't define a default constructor that only initializes data members; use default member initializers instead",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class X1 { // BAD: doesn't use member initializers string s;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.46",
+      "title": "By default, declare single-argument constructors explicit",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class String { public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.47",
+      "title": "Define and initialize data members in the order of member declaration",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class Foo { int m1;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.48",
+      "title": "Prefer default member initializers to member initializers in constructors for constant initializers",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class X {   // BAD int i;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.49",
+      "title": "Prefer initialization to assignment in constructors",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class A {   // Good string s1;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.50",
+      "title": "Use a factory function if you need \"virtual behavior\" during initialization",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class B { public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.51",
+      "title": "Use delegating constructors to represent common actions for all constructors of a class",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class Date {   // BAD: repetitive int d;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.52",
+      "title": "Use inheriting constructors to import constructors into a derived class that does not need further explicit initialization",
+      "section": "C: Classes and class hierarchies",
+      "summary": "`std::vector` has a lot of tricky constructors, so if I want my own `vector`, I don't want to reimplement them: class Rec {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.copy",
+      "title": "Copy and move",
+      "section": "C: Classes and class hierarchies",
+      "summary": "Concrete types should generally be copyable, but interfaces in a class hierarchy should not. Resource handles might or might not be copyable.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.60",
+      "title": "Make copy assignment non-`virtual`, take the parameter by `const&`, and return by non-`const&`",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class Foo { public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.61",
+      "title": "A copy operation should copy",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class X {   // OK: value semantics public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.62",
+      "title": "Make copy assignment safe for self-assignment",
+      "section": "C: Classes and class hierarchies",
+      "summary": "The standard-library containers handle self-assignment elegantly and efficiently: std::vector<int> v = {3, 1, 4, 1, 5, 9};",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.63",
+      "title": "Make move assignment non-`virtual`, take the parameter by `&&`, and return by non-`const&`",
+      "section": "C: Classes and class hierarchies",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.64",
+      "title": "A move operation should move and leave its source in a valid state",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class X {   // OK: value semantics public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.65",
+      "title": "Make move assignment safe for self-assignment",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class Foo { string s;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.66",
+      "title": "Make move operations `noexcept`",
+      "section": "C: Classes and class hierarchies",
+      "summary": "template<typename T> class Vector {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.67",
+      "title": "A polymorphic class should suppress public copy/move",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class B { // BAD: polymorphic base class doesn't suppress copying public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.other",
+      "title": "Other default operation rules",
+      "section": "C: Classes and class hierarchies",
+      "summary": "In addition to the operations for which the language offers default implementations, there are a few operations that are so foundational that specific rules for their definition are needed:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.80",
+      "title": "Use `=default` if you have to be explicit about using the default semantics",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class Tracer { string message;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.81",
+      "title": "Use `=delete` when you want to disable default behavior (without wanting an alternative)",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class Immortal { public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.82",
+      "title": "Don't call virtual functions in constructors and destructors",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class Base { public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.83",
+      "title": "For value-like types, consider providing a `noexcept` swap function",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class Foo { public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.84",
+      "title": "A `swap` function must not fail",
+      "section": "C: Classes and class hierarchies",
+      "summary": "void swap(My_vector& x, My_vector& y) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.85",
+      "title": "Make `swap` `noexcept`",
+      "section": "C: Classes and class hierarchies",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.86",
+      "title": "Make `==` symmetric with respect to operand types and `noexcept`",
+      "section": "C: Classes and class hierarchies",
+      "summary": "struct X { string name;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.87",
+      "title": "Beware of `==` on base classes",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class B { string name;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.89",
+      "title": "Make a `hash` `noexcept`",
+      "section": "C: Classes and class hierarchies",
+      "summary": "template<> struct hash<My_type> {  // thoroughly bad hash specialization",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.90",
+      "title": "Rely on constructors and assignment operators, not `memset` and `memcpy`",
+      "section": "C: Classes and class hierarchies",
+      "summary": "struct base { virtual void update() = 0;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.con",
+      "title": "Containers and other resource handles",
+      "section": "C: Classes and class hierarchies",
+      "summary": "A container is an object holding a sequence of objects of some type; `std::vector` is the archetypical container. A resource handle is a class that owns a resource; `std::vector` is the typical resource handle; its resource is its sequence of elements.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.100",
+      "title": "Follow the STL when defining a container",
+      "section": "C: Classes and class hierarchies",
+      "summary": "// simplified (e.g., no allocators): template<typename T>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.101",
+      "title": "Give a container value semantics",
+      "section": "C: Classes and class hierarchies",
+      "summary": "void f(const Sorted_vector<string>& v) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.102",
+      "title": "Give a container move operations",
+      "section": "C: Classes and class hierarchies",
+      "summary": "Sorted_vector<int> read_sorted(istream& is) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.103",
+      "title": "Give a container an initializer list constructor",
+      "section": "C: Classes and class hierarchies",
+      "summary": "Sorted_vector<int> sv {1, 3, -1, 7, 0, 0}; // Sorted_vector sorts elements as needed",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.104",
+      "title": "Give a container a default constructor that sets it to empty",
+      "section": "C: Classes and class hierarchies",
+      "summary": "vector<Sorted_sequence<string>> vs(100);    // 100 Sorted_sequences each with the value \"\"",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.109",
+      "title": "If a resource handle has pointer semantics, provide `*` and `->`",
+      "section": "C: Classes and class hierarchies",
+      "summary": "???",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.lambdas",
+      "title": "Function objects and lambdas",
+      "section": "C: Classes and class hierarchies",
+      "summary": "A function object is an object supplying an overloaded `()` so that you can call it. A lambda expression (colloquially often shortened to \"a lambda\") is a notation for generating a function object.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.hier",
+      "title": "Class hierarchies (OOP)",
+      "section": "C: Classes and class hierarchies",
+      "summary": "A class hierarchy is constructed to represent a set of hierarchically organized concepts (only). Typically base classes act as interfaces.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.120",
+      "title": "Use class hierarchies to represent concepts with inherent hierarchical structure (only)",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class DrawableUIElement { public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.121",
+      "title": "If a base class is used as an interface, make it a pure abstract class",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class My_interface { public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.122",
+      "title": "Use abstract classes as interfaces when complete separation of interface and implementation is needed",
+      "section": "C: Classes and class hierarchies",
+      "summary": "struct Device { virtual ~Device() = default;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.hierclass",
+      "title": "Designing classes in a hierarchy:",
+      "section": "C: Classes and class hierarchies",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.126",
+      "title": "An abstract class typically doesn't need a user-written constructor",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class Shape { public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.127",
+      "title": "A class with a virtual function should have a virtual or protected destructor",
+      "section": "C: Classes and class hierarchies",
+      "summary": "struct B { virtual int f() = 0;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.128",
+      "title": "Virtual functions should specify exactly one of `virtual`, `override`, or `final`",
+      "section": "C: Classes and class hierarchies",
+      "summary": "struct B { void f1(int);",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.129",
+      "title": "When designing a class hierarchy, distinguish between implementation inheritance and interface inheritance",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class Shape {   // BAD, mixed interface and implementation public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.130",
+      "title": "For making deep copies of polymorphic classes prefer a virtual `clone` function instead of public copy construction/assignment",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class B { public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.131",
+      "title": "Avoid trivial getters and setters",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class Point {   // Bad: verbose int x;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.132",
+      "title": "Don't make a function `virtual` without reason",
+      "section": "C: Classes and class hierarchies",
+      "summary": "template<class T> class Vector {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.133",
+      "title": "Avoid `protected` data",
+      "section": "C: Classes and class hierarchies",
+      "summary": "**Alternative formulation**: Make member data `public` or (preferably) `private`. class Shape {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.134",
+      "title": "Ensure all non-`const` data members have the same access level",
+      "section": "C: Classes and class hierarchies",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.135",
+      "title": "Use multiple inheritance to represent multiple distinct interfaces",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class iostream : public istream, public ostream {   // very simplified // ...",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.136",
+      "title": "Use multiple inheritance to represent the union of implementation attributes",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class iostream : public istream, public ostream {   // very simplified // ...",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.137",
+      "title": "Use `virtual` bases to avoid overly general base classes",
+      "section": "C: Classes and class hierarchies",
+      "summary": "struct Interface { virtual void f();",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.138",
+      "title": "Create an overload set for a derived class and its bases with `using`",
+      "section": "C: Classes and class hierarchies",
+      "summary": "#include <iostream> class B {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.139",
+      "title": "Use `final` on classes sparingly",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class Widget { /* ... */ }; // nobody will ever want to improve My_widget (or so you thought)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.140",
+      "title": "Do not provide different default arguments for a virtual function and an overrider",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class Base { public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.hier-access",
+      "title": "Accessing objects in a hierarchy",
+      "section": "C: Classes and class hierarchies",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.145",
+      "title": "Access polymorphic objects through pointers and references",
+      "section": "C: Classes and class hierarchies",
+      "summary": "struct B { int a; virtual int f(); virtual ~B() = default }; struct D : B { int b; int f() override; };",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.146",
+      "title": "Use `dynamic_cast` where class hierarchy navigation is unavoidable",
+      "section": "C: Classes and class hierarchies",
+      "summary": "struct B {   // an interface virtual void f();",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.147",
+      "title": "Use `dynamic_cast` to a reference type when failure to find the required class is considered an error",
+      "section": "C: Classes and class hierarchies",
+      "summary": "std::string f(Base& b) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.148",
+      "title": "Use `dynamic_cast` to a pointer type when failure to find the required class is considered a valid alternative",
+      "section": "C: Classes and class hierarchies",
+      "summary": "The example below describes the `add` function of a `Shape_owner` that takes ownership of constructed `Shape` objects. The objects are also sorted into views, according to their geometric attributes. In this example, `Shape` does not inherit from `Geometric_attributes`. Only its subclasses do.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.149",
+      "title": "Use `unique_ptr` or `shared_ptr` to avoid forgetting to `delete` objects created using `new`",
+      "section": "C: Classes and class hierarchies",
+      "summary": "void use(int i) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.150",
+      "title": "Use `make_unique()` to construct objects owned by `unique_ptr`s",
+      "section": "C: Classes and class hierarchies",
+      "summary": "See [R.23](#Rr-make_unique)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.151",
+      "title": "Use `make_shared()` to construct objects owned by `shared_ptr`s",
+      "section": "C: Classes and class hierarchies",
+      "summary": "See [R.22](#Rr-make_shared)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.152",
+      "title": "Never assign a pointer to an array of derived class objects to a pointer to its base",
+      "section": "C: Classes and class hierarchies",
+      "summary": "struct B { int x; }; struct D : B { int y; };",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.153",
+      "title": "Prefer virtual function to casting",
+      "section": "C: Classes and class hierarchies",
+      "summary": "???",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.over",
+      "title": "Overloading and overloaded operators",
+      "section": "C: Classes and class hierarchies",
+      "summary": "You can overload ordinary functions, function templates, and operators. You cannot overload function objects.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.160",
+      "title": "Define operators primarily to mimic conventional usage",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class X { public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.161",
+      "title": "Use non-member functions for symmetric operators",
+      "section": "C: Classes and class hierarchies",
+      "summary": "bool operator==(Point a, Point b) { return a.x == b.x && a.y == b.y; }",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.162",
+      "title": "Overload operations that are roughly equivalent",
+      "section": "C: Classes and class hierarchies",
+      "summary": "Consider: void print(int a);",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.163",
+      "title": "Overload only for operations that are roughly equivalent",
+      "section": "C: Classes and class hierarchies",
+      "summary": "Consider: void open_gate(Gate& g);   // remove obstacle from garage exit lane",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.164",
+      "title": "Avoid implicit conversion operators",
+      "section": "C: Classes and class hierarchies",
+      "summary": "struct S1 { string s;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.165",
+      "title": "Use `using` for customization points",
+      "section": "C: Classes and class hierarchies",
+      "summary": "Consider `swap`. It is a general (standard-library) function with a definition that will work for just about any type. However, it is desirable to define specific `swap()`s for specific types.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.166",
+      "title": "Overload unary `&` only as part of a system of smart pointers and references",
+      "section": "C: Classes and class hierarchies",
+      "summary": "class Ptr { // a somewhat smart pointer Ptr(X* pp) : p(pp) { /* check */ }",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.167",
+      "title": "Use an operator for an operation with its conventional meaning",
+      "section": "C: Classes and class hierarchies",
+      "summary": "void cout_my_class(const My_class& c) // confusing, not conventional, not generic {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.168",
+      "title": "Define overloaded operators in the namespace of their operands",
+      "section": "C: Classes and class hierarchies",
+      "summary": "struct S { }; S operator+(S, S);   // OK: in the same namespace as S, and even next to S",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.170",
+      "title": "If you feel like overloading a lambda, use a generic lambda",
+      "section": "C: Classes and class hierarchies",
+      "summary": "void f(int); void f(double);",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.union",
+      "title": "Unions",
+      "section": "C: Classes and class hierarchies",
+      "summary": "A `union` is a `struct` where all members start at the same address so that it can hold only one member at a time. A `union` does not keep track of which member is stored so the programmer has to get it right;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.180",
+      "title": "Use `union`s to save memory",
+      "section": "C: Classes and class hierarchies",
+      "summary": "union Value { int x;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.181",
+      "title": "Avoid \"naked\" `union`s",
+      "section": "C: Classes and class hierarchies",
+      "summary": "union Value { int x;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.182",
+      "title": "Use anonymous `union`s to implement tagged unions",
+      "section": "C: Classes and class hierarchies",
+      "summary": "This example is mostly borrowed from TC++PL4, pp. 216--218. You can look there for an explanation.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "C.183",
+      "title": "Don't use a `union` for type punning",
+      "section": "C: Classes and class hierarchies",
+      "summary": "union Pun { int x;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.1",
+      "title": "Manage resources automatically using resource handles and RAII (Resource Acquisition Is Initialization)",
+      "section": "R: Resource management",
+      "summary": "Consider: void send(X* x, string_view destination)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.2",
+      "title": "In interfaces, use raw pointers to denote individual objects (only)",
+      "section": "R: Resource management",
+      "summary": "void f(int* p, int n)   // n is the number of elements in p[] {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.3",
+      "title": "A raw pointer (a `T*`) is non-owning",
+      "section": "R: Resource management",
+      "summary": "void f() {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.4",
+      "title": "A raw reference (a `T&`) is non-owning",
+      "section": "R: Resource management",
+      "summary": "void f() {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.5",
+      "title": "Prefer scoped objects, don't heap-allocate unnecessarily",
+      "section": "R: Resource management",
+      "summary": "The following example is inefficient (because it has unnecessary allocation and deallocation), vulnerable to exception throws and returns in the `...` part (leading to leaks), and verbose: void f(int n)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.6",
+      "title": "Avoid non-`const` global variables",
+      "section": "R: Resource management",
+      "summary": "See [I.2](#Ri-global)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.alloc",
+      "title": "Allocation and deallocation",
+      "section": "R: Resource management",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.10",
+      "title": "Avoid `malloc()` and `free()`",
+      "section": "R: Resource management",
+      "summary": "class Record { int id;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.11",
+      "title": "Avoid calling `new` and `delete` explicitly",
+      "section": "R: Resource management",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.12",
+      "title": "Immediately give the result of an explicit resource allocation to a manager object",
+      "section": "R: Resource management",
+      "summary": "void func(const string& name) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.13",
+      "title": "Perform at most one explicit resource allocation in a single expression statement",
+      "section": "R: Resource management",
+      "summary": "void fun(shared_ptr<Widget> sp1, shared_ptr<Widget> sp2); This `fun` can be called like this:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.14",
+      "title": "Avoid `[]` parameters, prefer `span`",
+      "section": "R: Resource management",
+      "summary": "void f(int[]);          // not recommended void f(int*);           // not recommended for multiple objects",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.15",
+      "title": "Always overload matched allocation/deallocation pairs",
+      "section": "R: Resource management",
+      "summary": "class X { // ...",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.smart",
+      "title": "Smart pointers",
+      "section": "R: Resource management",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.20",
+      "title": "Use `unique_ptr` or `shared_ptr` to represent ownership",
+      "section": "R: Resource management",
+      "summary": "Consider: void f()",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.21",
+      "title": "Prefer `unique_ptr` over `shared_ptr` unless you need to share ownership",
+      "section": "R: Resource management",
+      "summary": "This needlessly adds and maintains a reference count. void f()",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.22",
+      "title": "Use `make_shared()` to make `shared_ptr`s",
+      "section": "R: Resource management",
+      "summary": "Consider: shared_ptr<X> p1 { new X{2} }; // bad",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.23",
+      "title": "Use `make_unique()` to make `unique_ptr`s",
+      "section": "R: Resource management",
+      "summary": "unique_ptr<Foo> p {new Foo{7}};    // OK: but repetitive auto q = make_unique<Foo>(7);      // Better: no repetition of Foo",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.24",
+      "title": "Use `std::weak_ptr` to break cycles of `shared_ptr`s",
+      "section": "R: Resource management",
+      "summary": "#include <memory> class bar;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.30",
+      "title": "Take smart pointers as parameters only to explicitly express lifetime semantics",
+      "section": "R: Resource management",
+      "summary": "See [F.7](#Rf-smart).",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.31",
+      "title": "If you have non-`std` smart pointers, follow the basic pattern from `std`",
+      "section": "R: Resource management",
+      "summary": "// use Boost's intrusive_ptr #include <boost/intrusive_ptr.hpp>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.32",
+      "title": "Take a `unique_ptr` parameter to express that a function assumes ownership of a `widget`",
+      "section": "R: Resource management",
+      "summary": "void sink(unique_ptr<widget>); // takes ownership of the widget void uses(widget*);            // just uses the widget",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.33",
+      "title": "Take a `unique_ptr&` parameter to express that a function reseats the `widget`",
+      "section": "R: Resource management",
+      "summary": "void reseat(unique_ptr<widget>&); // \"will\" or \"might\" reseat pointer",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.34",
+      "title": "Take a `shared_ptr` parameter to express shared ownership",
+      "section": "R: Resource management",
+      "summary": "class WidgetUser {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.35",
+      "title": "Take a `shared_ptr&` parameter to express that a function might reseat the shared pointer",
+      "section": "R: Resource management",
+      "summary": "void ChangeWidget(std::shared_ptr<widget>& w) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.36",
+      "title": "Take a `const shared_ptr&` parameter to express that it might retain a reference count to the object ???",
+      "section": "R: Resource management",
+      "summary": "void share(shared_ptr<widget>);            // share -- \"will\" retain refcount void reseat(shared_ptr<widget>&);          // \"might\" reseat ptr",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "R.37",
+      "title": "Do not pass a pointer or reference obtained from an aliased smart pointer",
+      "section": "R: Resource management",
+      "summary": "Consider this code: // global (static or heap), or aliased local ...",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.1",
+      "title": "Prefer the standard library to other libraries and to \"handcrafted code\"",
+      "section": "ES: Expressions and statements",
+      "summary": "auto sum = accumulate(begin(a), end(a), 0.0);   // good a range version of `accumulate` would be even better:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.2",
+      "title": "Prefer suitable abstractions to direct use of language features",
+      "section": "ES: Expressions and statements",
+      "summary": "vector<string> read1(istream& is)   // good {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.3",
+      "title": "Don't repeat yourself, avoid redundant code",
+      "section": "ES: Expressions and statements",
+      "summary": "Duplicated or otherwise redundant code obscures intent, makes it harder to understand the logic, and makes maintenance harder, among other problems. It often arises from cut-and-paste programming. Use standard algorithms where appropriate, instead of writing some own implementation.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.dcl",
+      "title": "Declarations",
+      "section": "ES: Expressions and statements",
+      "summary": "A declaration is a statement. A declaration introduces a name into a scope and might cause the construction of a named object.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.5",
+      "title": "Keep scopes small",
+      "section": "ES: Expressions and statements",
+      "summary": "void use() {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.6",
+      "title": "Declare names in for-statement initializers and conditions to limit scope",
+      "section": "ES: Expressions and statements",
+      "summary": "void use() {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.7",
+      "title": "Keep common and local names short, and keep uncommon and non-local names longer",
+      "section": "ES: Expressions and statements",
+      "summary": "Conventional short, local names increase readability: template<typename T>    // good",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.8",
+      "title": "Avoid similar-looking names",
+      "section": "ES: Expressions and statements",
+      "summary": "if (readable(i1 + l1 + ol + o1 + o0 + ol + o1 + I0 + l0)) surprise(); Do not declare a non-type with the same name as a type in the same scope. This removes the need to disambiguate with a keyword such as `struct` or `enum`. It also removes a source of errors, as `struct X` can implicitly declare `X` if lookup fails.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.9",
+      "title": "Avoid `ALL_CAPS` names",
+      "section": "ES: Expressions and statements",
+      "summary": "// somewhere in some header: #define NE !=",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.10",
+      "title": "Declare one name (only) per declaration",
+      "section": "ES: Expressions and statements",
+      "summary": "char *p, c, a[7], *pp[7], **aa[10];   // yuck! template<class InputIterator, class Predicate>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.11",
+      "title": "Use `auto` to avoid redundant repetition of type names",
+      "section": "ES: Expressions and statements",
+      "summary": "Consider: auto p = v.begin();      // vector<DataRecord>::iterator",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.12",
+      "title": "Do not reuse names in nested scopes",
+      "section": "ES: Expressions and statements",
+      "summary": "int d = 0; // ...",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.20",
+      "title": "Always initialize an object",
+      "section": "ES: Expressions and statements",
+      "summary": "void use(int arg) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.21",
+      "title": "Don't introduce a variable (or constant) before you need to use it",
+      "section": "ES: Expressions and statements",
+      "summary": "int x = 7; // ... no use of x here ...",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.22",
+      "title": "Don't declare a variable until you have a value to initialize it with",
+      "section": "ES: Expressions and statements",
+      "summary": "string s; // ... no use of s here ...",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.23",
+      "title": "Prefer the `{}`-initializer syntax",
+      "section": "ES: Expressions and statements",
+      "summary": "int x {f(99)}; int y = x;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.24",
+      "title": "Use a `unique_ptr` to hold pointers",
+      "section": "ES: Expressions and statements",
+      "summary": "void use(bool leak) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.25",
+      "title": "Declare an object `const` or `constexpr` unless you want to modify its value later on",
+      "section": "ES: Expressions and statements",
+      "summary": "void f(int n) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.26",
+      "title": "Don't use a variable for two unrelated purposes",
+      "section": "ES: Expressions and statements",
+      "summary": "void use() {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.27",
+      "title": "Use `std::array` or `stack_array` for arrays on the stack",
+      "section": "ES: Expressions and statements",
+      "summary": "const int n = 7; int m = 9;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.28",
+      "title": "Use lambdas for complex initialization, especially of `const` variables",
+      "section": "ES: Expressions and statements",
+      "summary": "widget x;   // should be const, but: for (auto i = 2; i <= N; ++i) {          // this could be some",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.30",
+      "title": "Don't use macros for program text manipulation",
+      "section": "ES: Expressions and statements",
+      "summary": "#define Case break; case   /* BAD */ This innocuous-looking macro makes a single lower case `c` instead of a `C` into a bad flow-control bug.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.31",
+      "title": "Don't use macros for constants or \"functions\"",
+      "section": "ES: Expressions and statements",
+      "summary": "#define PI 3.14 #define SQUARE(a, b) (a * b)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.32",
+      "title": "Use `ALL_CAPS` for all macro names",
+      "section": "ES: Expressions and statements",
+      "summary": "#define forever for (;;)   /* very BAD */ #define FOREVER for (;;)   /* Still evil, but at least visible to humans */",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.33",
+      "title": "If you must use macros, give them unique names",
+      "section": "ES: Expressions and statements",
+      "summary": "#define MYCHAR        /* BAD, will eventually clash with someone else's MYCHAR*/ #define ZCORP_CHAR    /* Still evil, but less likely to clash */",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.34",
+      "title": "Don't define a (C-style) variadic function",
+      "section": "ES: Expressions and statements",
+      "summary": "#include <cstdarg> // \"severity\" followed by a zero-terminated list of char*s; write the C-style strings to cerr",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.expr",
+      "title": "Expressions",
+      "section": "ES: Expressions and statements",
+      "summary": "Expressions manipulate values.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.40",
+      "title": "Avoid complicated expressions",
+      "section": "ES: Expressions and statements",
+      "summary": "// bad: assignment hidden in subexpression while ((c = getc()) != -1)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.41",
+      "title": "If in doubt about operator precedence, parenthesize",
+      "section": "ES: Expressions and statements",
+      "summary": "const unsigned int flag = 2; unsigned int a = flag;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.42",
+      "title": "Keep use of pointers simple and straightforward",
+      "section": "ES: Expressions and statements",
+      "summary": "void f(int* p, int count) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.43",
+      "title": "Avoid expressions with undefined order of evaluation",
+      "section": "ES: Expressions and statements",
+      "summary": "v[i] = ++i;   //  the result is undefined A good rule of thumb is that you should not read a value twice in an expression where you write to it.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.44",
+      "title": "Don't depend on order of evaluation of function arguments",
+      "section": "ES: Expressions and statements",
+      "summary": "int i = 0; f(++i, ++i);",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.45",
+      "title": "Avoid \"magic constants\"; use symbolic constants",
+      "section": "ES: Expressions and statements",
+      "summary": "for (int m = 1; m <= 12; ++m)   // don't: magic constant 12 cout << month[m] << '\\n';",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.46",
+      "title": "Avoid lossy (narrowing, truncating) arithmetic conversions",
+      "section": "ES: Expressions and statements",
+      "summary": "A key example is basic narrowing: double d = 7.9;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.47",
+      "title": "Use `nullptr` rather than `0` or `NULL`",
+      "section": "ES: Expressions and statements",
+      "summary": "Consider: void f(int);",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.48",
+      "title": "Avoid casts",
+      "section": "ES: Expressions and statements",
+      "summary": "double d = 2; auto p = (long*)&d;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.49",
+      "title": "If you must use a cast, use a named cast",
+      "section": "ES: Expressions and statements",
+      "summary": "class B { /* ... */ }; class D { /* ... */ };",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.50",
+      "title": "Don't cast away `const`",
+      "section": "ES: Expressions and statements",
+      "summary": "void f(const int& x) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.55",
+      "title": "Avoid the need for range checking",
+      "section": "ES: Expressions and statements",
+      "summary": "for (auto& x : v)      // print all elements of v cout << x << '\\n';",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.56",
+      "title": "Write `std::move()` only when you need to explicitly move an object to another scope",
+      "section": "ES: Expressions and statements",
+      "summary": "void sink(X&& x);   // sink takes ownership of x void user()",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.60",
+      "title": "Avoid `new` and `delete` outside resource management functions",
+      "section": "ES: Expressions and statements",
+      "summary": "void f(int n) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.61",
+      "title": "Delete arrays using `delete[]` and non-arrays using `delete`",
+      "section": "ES: Expressions and statements",
+      "summary": "void f(int n) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.62",
+      "title": "Don't compare pointers into different arrays",
+      "section": "ES: Expressions and statements",
+      "summary": "void f() {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.63",
+      "title": "Don't slice",
+      "section": "ES: Expressions and statements",
+      "summary": "class Shape { /* ... */ }; class Circle : public Shape { /* ... */ Point c; int r; };",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.64",
+      "title": "Use the `T{e}`notation for construction",
+      "section": "ES: Expressions and statements",
+      "summary": "For built-in types, the construction notation protects against narrowing and reinterpretation void use(char ch, int i, double d, char* p, long long lng)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.65",
+      "title": "Don't dereference an invalid pointer",
+      "section": "ES: Expressions and statements",
+      "summary": "void f() {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.stmt",
+      "title": "Statements",
+      "section": "ES: Expressions and statements",
+      "summary": "Statements control the flow of control (except for function calls and exception throws, which are expressions).",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.70",
+      "title": "Prefer a `switch`-statement to an `if`-statement when there is a choice",
+      "section": "ES: Expressions and statements",
+      "summary": "void use(int n) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.71",
+      "title": "Prefer a range-`for`-statement to a `for`-statement when there is a choice",
+      "section": "ES: Expressions and statements",
+      "summary": "for (gsl::index i = 0; i < v.size(); ++i)   // bad cout << v[i] << '\\n';",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.72",
+      "title": "Prefer a `for`-statement to a `while`-statement when there is an obvious loop variable",
+      "section": "ES: Expressions and statements",
+      "summary": "for (gsl::index i = 0; i < vec.size(); i++) { // do work",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.73",
+      "title": "Prefer a `while`-statement to a `for`-statement when there is no obvious loop variable",
+      "section": "ES: Expressions and statements",
+      "summary": "int events = 0; for (; wait_for_event(); ++events) {  // bad, confusing",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.74",
+      "title": "Prefer to declare a loop variable in the initializer part of a `for`-statement",
+      "section": "ES: Expressions and statements",
+      "summary": "See [ES.6](#Res-cond)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.75",
+      "title": "Avoid `do`-statements",
+      "section": "ES: Expressions and statements",
+      "summary": "int x; do {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.76",
+      "title": "Avoid `goto`",
+      "section": "ES: Expressions and statements",
+      "summary": "There is a fair amount of use of the C goto-exit idiom: void f()",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.77",
+      "title": "Minimize the use of `break` and `continue` in loops",
+      "section": "ES: Expressions and statements",
+      "summary": "switch(x) { case 1 :",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.78",
+      "title": "Don't rely on implicit fallthrough in `switch` statements",
+      "section": "ES: Expressions and statements",
+      "summary": "switch (eventType) { case Information:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.79",
+      "title": "Use `default` to handle common cases (only)",
+      "section": "ES: Expressions and statements",
+      "summary": "enum E { a, b, c, d }; void f1(E x)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.84",
+      "title": "Don't try to declare a local variable with no name",
+      "section": "ES: Expressions and statements",
+      "summary": "void f() {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.85",
+      "title": "Make empty statements visible",
+      "section": "ES: Expressions and statements",
+      "summary": "for (i = 0; i < max; ++i);   // BAD: the empty statement is easily overlooked v[i] = f(v[i]);",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.86",
+      "title": "Avoid modifying loop control variables inside the body of raw for-loops",
+      "section": "ES: Expressions and statements",
+      "summary": "for (int i = 0; i < 10; ++i) { // no updates to i -- ok",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.87",
+      "title": "Don't add redundant `==` or `!=` to conditions",
+      "section": "ES: Expressions and statements",
+      "summary": "By definition, a condition in an `if`-statement, `while`-statement, or a `for`-statement selects between `true` and `false`. A numeric value is compared to `0` and a pointer value to `nullptr`.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.100",
+      "title": "Don't mix signed and unsigned arithmetic",
+      "section": "ES: Expressions and statements",
+      "summary": "int x = -3; unsigned int y = 7;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.101",
+      "title": "Use unsigned types for bit manipulation",
+      "section": "ES: Expressions and statements",
+      "summary": "unsigned char x = 0b1010'1010; unsigned char y = ~x;   // y == 0b0101'0101;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.102",
+      "title": "Use signed types for arithmetic",
+      "section": "ES: Expressions and statements",
+      "summary": "Unsigned arithmetic can yield surprising results if you are not expecting it. This is even more true for mixed signed and unsigned arithmetic.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.103",
+      "title": "Don't overflow",
+      "section": "ES: Expressions and statements",
+      "summary": "int a[10]; a[10] = 7;   // bad, array bounds overflow",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.104",
+      "title": "Don't underflow",
+      "section": "ES: Expressions and statements",
+      "summary": "int a[10]; a[-2] = 7;   // bad",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.105",
+      "title": "Don't divide by integer zero",
+      "section": "ES: Expressions and statements",
+      "summary": "int divide(int a, int b) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.106",
+      "title": "Don't try to avoid negative values by using `unsigned`",
+      "section": "ES: Expressions and statements",
+      "summary": "unsigned int u1 = -2;   // Valid: the value of u1 is 4294967294 int i1 = -2;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "ES.107",
+      "title": "Don't use `unsigned` for subscripts, prefer `gsl::index`",
+      "section": "ES: Expressions and statements",
+      "summary": "vector<int> vec = /*...*/; for (int i = 0; i < vec.size(); i += 2)                    // might not be big enough",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.1",
+      "title": "Assume that your code will run as part of a multi-threaded program",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "double cached_computation(int x) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.2",
+      "title": "Avoid data races",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "There are many examples of data races that exist, some of which are running in production software at this very moment. One very simple example:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.3",
+      "title": "Minimize explicit sharing of writable data",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "bool validate(const vector<Reading>&); Graph<Temp_node> temperature_gradients(const vector<Reading>&);",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.4",
+      "title": "Think in terms of tasks, rather than threads",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "void some_fun(const std::string& msg) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.8",
+      "title": "Don't try to use `volatile` for synchronization",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "int free_slots = max_slots; // current source of memory for objects Pool* use()",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.9",
+      "title": "Whenever feasible use tools to validate your concurrent code",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "Experience shows that concurrent code is exceptionally hard to get right and that compile-time checking, run-time checks, and testing are less effective at finding concurrency errors",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.con",
+      "title": "Concurrency",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "This section focuses on relatively ad-hoc uses of multiple threads communicating through shared data. * For parallel algorithms, see [parallelism](#SScp-par)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.20",
+      "title": "Use RAII, never plain `lock()`/`unlock()`",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "mutex mtx; void do_stuff()",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.21",
+      "title": "Use `std::lock()` or `std::scoped_lock` to acquire multiple `mutex`es",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "This is asking for deadlock: // thread 1",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.22",
+      "title": "Never call unknown code while holding a lock (e.g., a callback)",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "void do_this(Foo* p) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.23",
+      "title": "Think of a joining `thread` as a scoped container",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "void f(int* p) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.24",
+      "title": "Think of a `thread` as a global container",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "void f(int* p) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.25",
+      "title": "Prefer `gsl::joining_thread` over `std::thread`",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "void f() { std::cout << \"Hello \"; } struct F {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.26",
+      "title": "Don't `detach()` a thread",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "void heartbeat(); void use()",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.31",
+      "title": "Pass small amounts of data between threads by value, rather than by reference or pointer",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "string modify1(string); void modify2(string&);",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.32",
+      "title": "To share ownership between unrelated `thread`s use `shared_ptr`",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "???",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.40",
+      "title": "Minimize context switching",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "???",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.41",
+      "title": "Minimize thread creation and destruction",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "void worker(Message m) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.42",
+      "title": "Don't `wait` without a condition",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "std::condition_variable cv; std::mutex mx;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.43",
+      "title": "Minimize time spent in a critical section",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "void do_something() // bad {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.44",
+      "title": "Remember to name your `lock_guard`s and `unique_lock`s",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "// global mutexes mutex m1;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.50",
+      "title": "Define a `mutex` together with the data it guards. Use `synchronized_value` where possible",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "struct Record { std::mutex m;   // take this mutex before accessing other members",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.coro",
+      "title": "Coroutines",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "This section focuses on uses of coroutines. Coroutine rule summary:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.51",
+      "title": "Do not use capturing lambdas that are coroutines",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "int value = get_value(); std::shared_ptr<Foo> sharedFoo = get_foo();",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.52",
+      "title": "Do not hold locks or other synchronization primitives across suspension points",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "std::mutex g_lock; std::future<void> Class::do_something()",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.53",
+      "title": "Parameters to coroutines should not be passed by reference",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "std::future<int> Class::do_something(const std::shared_ptr<int>& input) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.par",
+      "title": "Parallelism",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "By \"parallelism\" we refer to performing a task (more or less) simultaneously (\"in parallel with\") on many data items. Parallelism rule summary:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.mess",
+      "title": "Message passing",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "The standard-library facilities are quite low-level, focused on the needs of close-to-the-hardware critical programming using `thread`s, `mutex`es, `atomic` types, etc. Most people shouldn't work at this level: it's error-prone and development is slow.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.60",
+      "title": "Use a `future` to return a value from a concurrent task",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "???",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.61",
+      "title": "Use `async()` to spawn concurrent tasks",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "int read_value(const std::string& filename) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.vec",
+      "title": "Vectorization",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "Vectorization is a technique for executing a number of tasks concurrently without introducing explicit synchronization. An operation is simply applied to elements of a data structure (a vector, an array, etc.) in parallel.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.free",
+      "title": "Lock-free programming",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "Synchronization using `mutex`es and `condition_variable`s can be relatively expensive. Furthermore, it can lead to deadlock.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.100",
+      "title": "Don't use lock-free programming unless you absolutely have to",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "extern atomic<Link*> head;        // the shared head of a linked list Link* nh = new Link(data, nullptr);    // make a link ready for insertion",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.101",
+      "title": "Distrust your hardware/compiler combination",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.102",
+      "title": "Carefully study the literature",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.110",
+      "title": "Do not write your own double-checked locking for initialization",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "Example with std::call_once. void f()",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.111",
+      "title": "Use a conventional pattern if you really need double-checked locking",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "The use of volatile does not make the first check thread-safe, see also [CP.200: Use `volatile` only to talk to non-C++ memory](#Rconc-volatile2) mutex action_mutex;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.etc",
+      "title": "Etc. concurrency rules",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "These rules defy simple categorization: * [CP.200: Use `volatile` only to talk to non-C++ memory](#Rconc-volatile2)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.200",
+      "title": "Use `volatile` only to talk to non-C++ memory",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "const volatile long clock; This describes a register constantly updated by a clock circuit.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CP.201",
+      "title": "??? Signals",
+      "section": "CP: Concurrency and parallelism",
+      "summary": "???UNIX signal handling???. Might be worth reminding how little is async-signal-safe, and how to communicate with a signal handler (best is probably \"not at all\")",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "E.1",
+      "title": "Develop an error-handling strategy early in a design",
+      "section": "E: Error handling",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "E.2",
+      "title": "Throw an exception to signal that a function can't perform its assigned task",
+      "section": "E: Error handling",
+      "summary": "struct Foo { vector<Thing> v;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "E.3",
+      "title": "Use exceptions for error handling only",
+      "section": "E: Error handling",
+      "summary": "// don't: exception not used for error handling int find_index(vector<string>& vec, const string& x)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "E.4",
+      "title": "Design your error-handling strategy around invariants",
+      "section": "E: Error handling",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "E.5",
+      "title": "Let a constructor establish an invariant, and throw if it cannot",
+      "section": "E: Error handling",
+      "summary": "class Vector {  // very simplified vector of doubles // if elem != nullptr then elem points to sz doubles",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "E.6",
+      "title": "Use RAII to prevent leaks",
+      "section": "E: Error handling",
+      "summary": "void f1(int i)   // Bad: possible leak {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "E.7",
+      "title": "State your preconditions",
+      "section": "E: Error handling",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "E.8",
+      "title": "State your postconditions",
+      "section": "E: Error handling",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "E.12",
+      "title": "Use `noexcept` when exiting a function because of a `throw` is impossible or unacceptable",
+      "section": "E: Error handling",
+      "summary": "double compute(double d) noexcept {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "E.13",
+      "title": "Never throw while being the direct owner of an object",
+      "section": "E: Error handling",
+      "summary": "void leak(int x)   // don't: might leak {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "E.14",
+      "title": "Use purpose-designed user-defined types as exceptions (not built-in types)",
+      "section": "E: Error handling",
+      "summary": "throw 7; // bad throw \"something bad\";  // bad",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "E.15",
+      "title": "Throw by value, catch exceptions from a hierarchy by reference",
+      "section": "E: Error handling",
+      "summary": "void f() {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "E.16",
+      "title": "Destructors, deallocation, `swap`, and exception type copy/move construction must never fail",
+      "section": "E: Error handling",
+      "summary": "class Connection { // ...",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "E.17",
+      "title": "Don't try to catch every exception in every function",
+      "section": "E: Error handling",
+      "summary": "void f()   // bad {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "E.18",
+      "title": "Minimize the use of explicit `try`/`catch`",
+      "section": "E: Error handling",
+      "summary": "void f(zstring s) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "E.19",
+      "title": "Use a `final_action` object to express cleanup if no suitable resource handle is available",
+      "section": "E: Error handling",
+      "summary": "void f(int n) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "E.25",
+      "title": "If you can't throw exceptions, simulate RAII for resource management",
+      "section": "E: Error handling",
+      "summary": "Assume you wanted to write void func(zstring arg)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "E.26",
+      "title": "If you can't throw exceptions, consider failing fast",
+      "section": "E: Error handling",
+      "summary": "void f(int n) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "E.27",
+      "title": "If you can't throw exceptions, use error codes systematically",
+      "section": "E: Error handling",
+      "summary": "Gadget make_gadget(int n) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "E.28",
+      "title": "Avoid error handling based on global state (e.g. `errno`)",
+      "section": "E: Error handling",
+      "summary": "int last_err; void f(int n)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "E.30",
+      "title": "Don't use exception specifications",
+      "section": "E: Error handling",
+      "summary": "int use(int arg) throw(X, Y)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "E.31",
+      "title": "Properly order your `catch`-clauses",
+      "section": "E: Error handling",
+      "summary": "void f() {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.gp",
+      "title": "Generic programming",
+      "section": "T: Templates and generic programming",
+      "summary": "Generic programming is programming using types and algorithms parameterized by types, values, and algorithms.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.1",
+      "title": "Use templates to raise the level of abstraction of code",
+      "section": "T: Templates and generic programming",
+      "summary": "Conceptually, the following requirements are wrong because what we want of `T` is more than just the very low-level concepts of \"can be incremented\" or \"can be added\": template<typename T>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.2",
+      "title": "Use templates to express algorithms that apply to many argument types",
+      "section": "T: Templates and generic programming",
+      "summary": "That's the foundation of the STL. A single `find` algorithm easily works with any kind of input range: template<typename Iter, typename Val>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.3",
+      "title": "Use templates to express containers and ranges",
+      "section": "T: Templates and generic programming",
+      "summary": "template<typename T> // requires Regular<T>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.4",
+      "title": "Use templates to express syntax tree manipulation",
+      "section": "T: Templates and generic programming",
+      "summary": "??? **Exceptions**: ???",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.5",
+      "title": "Combine generic and OO techniques to amplify their strengths, not their costs",
+      "section": "T: Templates and generic programming",
+      "summary": "Static helps dynamic: Use static polymorphism to implement dynamically polymorphic interfaces. class Command {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.concepts",
+      "title": "Concept rules",
+      "section": "T: Templates and generic programming",
+      "summary": "Concepts is a C++20 facility for specifying requirements for template arguments. They are crucial in the thinking about generic programming and the basis of much work on future C++ libraries",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.con-use",
+      "title": "Concept use",
+      "section": "T: Templates and generic programming",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.10",
+      "title": "Specify concepts for all template arguments",
+      "section": "T: Templates and generic programming",
+      "summary": "template<typename Iter, typename Val> requires input_iterator<Iter>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.11",
+      "title": "Whenever possible use standard concepts",
+      "section": "T: Templates and generic programming",
+      "summary": "template<typename T> // don't define this: sortable is in <iterator>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.12",
+      "title": "Prefer concept names over `auto` for local variables",
+      "section": "T: Templates and generic programming",
+      "summary": "vector<string> v{ \"abc\", \"xyz\" }; auto& x = v.front();        // bad",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.13",
+      "title": "Prefer the shorthand notation for simple, single-type argument concepts",
+      "section": "T: Templates and generic programming",
+      "summary": "To say \"`T` is `sortable`\": template<typename T>       // Correct but verbose: \"The parameter is",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.20",
+      "title": "Avoid \"concepts\" without meaningful semantics",
+      "section": "T: Templates and generic programming",
+      "summary": "template<typename T> // bad; insufficient",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.21",
+      "title": "Require a complete set of operations for a concept",
+      "section": "T: Templates and generic programming",
+      "summary": "template<typename T> concept Subtractable = requires(T a, T b) { a - b; }; This makes no semantic sense.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.22",
+      "title": "Specify axioms for concepts",
+      "section": "T: Templates and generic programming",
+      "summary": "template<typename T> // The operators +, -, *, and / for a number are assumed to follow the usual mathematical rules",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.23",
+      "title": "Differentiate a refined concept from its more general case by adding new use patterns.",
+      "section": "T: Templates and generic programming",
+      "summary": "template<typename I> // Note: input_iterator is defined in <iterator>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.24",
+      "title": "Use tag classes or traits to differentiate concepts that differ only in semantics.",
+      "section": "T: Templates and generic programming",
+      "summary": "template<typename I>    // iterator providing random access // Note: random_access_iterator is defined in <iterator>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.25",
+      "title": "Avoid complementary constraints",
+      "section": "T: Templates and generic programming",
+      "summary": "Initially, people will try to define functions with complementary requirements: template<typename T>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.26",
+      "title": "Prefer to define concepts in terms of use-patterns rather than simple syntax",
+      "section": "T: Templates and generic programming",
+      "summary": "You might be tempted to define a concept `Equality` like this: template<typename T> concept Equality = has_equal<T> && has_not_equal<T>;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.40",
+      "title": "Use function objects to pass operations to algorithms",
+      "section": "T: Templates and generic programming",
+      "summary": "bool greater(double x, double y) { return x > y; } sort(v, greater);                                    // pointer to function: potentially slow",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.41",
+      "title": "Require only essential properties in a template's concepts",
+      "section": "T: Templates and generic programming",
+      "summary": "Consider, a `sort` instrumented with (oversimplified) simple debug support: void sort(sortable auto& s)  // sort sequence s",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.42",
+      "title": "Use template aliases to simplify notation and hide implementation details",
+      "section": "T: Templates and generic programming",
+      "summary": "template<typename T, size_t N> class Matrix {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.43",
+      "title": "Prefer `using` over `typedef` for defining aliases",
+      "section": "T: Templates and generic programming",
+      "summary": "typedef int (*PFI)(int);   // OK, but convoluted using PFI2 = int (*)(int);   // OK, preferred",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.44",
+      "title": "Use function templates to deduce class template argument types (where feasible)",
+      "section": "T: Templates and generic programming",
+      "summary": "tuple<int, string, double> t1 = {1, \"Hamlet\", 3.14};   // explicit type auto t2 = make_tuple(1, \"Ophelia\"s, 3.14);         // better; deduced type",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.46",
+      "title": "Require template arguments to be at least semiregular",
+      "section": "T: Templates and generic programming",
+      "summary": "class X { public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.47",
+      "title": "Avoid highly visible unconstrained templates with common names",
+      "section": "T: Templates and generic programming",
+      "summary": "namespace Bad { struct S { int m; };",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.48",
+      "title": "If your compiler does not support concepts, fake them with `enable_if`",
+      "section": "T: Templates and generic programming",
+      "summary": "template<typename T> enable_if_t<is_integral_v<T>>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.49",
+      "title": "Where possible, avoid type-erasure",
+      "section": "T: Templates and generic programming",
+      "summary": "??? **Exceptions**: Type erasure is sometimes appropriate, such as for `std::function`.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.def",
+      "title": "Template definitions",
+      "section": "T: Templates and generic programming",
+      "summary": "A template definition (class or function) can contain arbitrary code, so only a comprehensive review of C++ programming techniques would cover this topic. However, this section focuses on what is specific to template implementation.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.60",
+      "title": "Minimize a template's context dependencies",
+      "section": "T: Templates and generic programming",
+      "summary": "template<typename C> void sort(C& c)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.61",
+      "title": "Do not over-parameterize members (SCARY)",
+      "section": "T: Templates and generic programming",
+      "summary": "template<typename T, typename A = std::allocator<T>> // requires Regular<T> && Allocator<A>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.62",
+      "title": "Place non-dependent class template members in a non-templated base class",
+      "section": "T: Templates and generic programming",
+      "summary": "template<typename T> class Foo {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.64",
+      "title": "Use specialization to provide alternative implementations of class templates",
+      "section": "T: Templates and generic programming",
+      "summary": "??? string specialization (==) ??? representation specialization ?",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.65",
+      "title": "Use tag dispatch to provide alternative implementations of a function",
+      "section": "T: Templates and generic programming",
+      "summary": "This is a simplified version of `std::copy` (ignoring the possibility of non-contiguous sequences) struct trivially_copyable_tag {};",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.67",
+      "title": "Use specialization to provide alternative implementations for irregular types",
+      "section": "T: Templates and generic programming",
+      "summary": "???",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.68",
+      "title": "Use `{}` rather than `()` within templates to avoid ambiguities",
+      "section": "T: Templates and generic programming",
+      "summary": "template<typename T, typename U> void f(T t, U u)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.69",
+      "title": "Inside a template, don't make an unqualified non-member function call unless you intend it to be a customization point",
+      "section": "T: Templates and generic programming",
+      "summary": "There are three major ways to let calling code customize a template. template<class T>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.temp-hier",
+      "title": "Template and hierarchy rules:",
+      "section": "T: Templates and generic programming",
+      "summary": "Templates are the backbone of C++'s support for generic programming and class hierarchies the backbone of its support for object-oriented programming.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.80",
+      "title": "Do not naively templatize a class hierarchy",
+      "section": "T: Templates and generic programming",
+      "summary": "template<typename T> struct Container {         // an interface",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.81",
+      "title": "Do not mix hierarchies and arrays",
+      "section": "T: Templates and generic programming",
+      "summary": "Assume that `Apple` and `Pear` are two kinds of `Fruit`s. void maul(Fruit* p)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.82",
+      "title": "Linearize a hierarchy when virtual functions are undesirable",
+      "section": "T: Templates and generic programming",
+      "summary": "???",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.83",
+      "title": "Do not declare a member function template virtual",
+      "section": "T: Templates and generic programming",
+      "summary": "class Shape { // ...",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.84",
+      "title": "Use a non-template core implementation to provide an ABI-stable interface",
+      "section": "T: Templates and generic programming",
+      "summary": "It could be a base class: struct Link_base {   // stable",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.var",
+      "title": "Variadic template rules",
+      "section": "T: Templates and generic programming",
+      "summary": "???",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.100",
+      "title": "Use variadic templates when you need a function that takes a variable number of arguments of a variety of types",
+      "section": "T: Templates and generic programming",
+      "summary": "??? printf",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.101",
+      "title": "??? How to pass arguments to a variadic template ???",
+      "section": "T: Templates and generic programming",
+      "summary": "??? beware of move-only and reference arguments",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.102",
+      "title": "How to process arguments to a variadic template",
+      "section": "T: Templates and generic programming",
+      "summary": "??? forwarding, type checking, references",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.103",
+      "title": "Don't use variadic templates for homogeneous argument lists",
+      "section": "T: Templates and generic programming",
+      "summary": "???",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.meta",
+      "title": "Template metaprogramming (TMP)",
+      "section": "T: Templates and generic programming",
+      "summary": "Templates provide a general mechanism for compile-time programming. Metaprogramming is programming where at least one input or one result is a type.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.120",
+      "title": "Use template metaprogramming only when you really need to",
+      "section": "T: Templates and generic programming",
+      "summary": "??? enable_if",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.121",
+      "title": "Use template metaprogramming primarily to emulate concepts",
+      "section": "T: Templates and generic programming",
+      "summary": "template<typename Iter> /*requires*/ enable_if<random_access_iterator<Iter>, void>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.122",
+      "title": "Use templates (usually template aliases) to compute types at compile time",
+      "section": "T: Templates and generic programming",
+      "summary": "??? big object / small object optimization",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.123",
+      "title": "Use `constexpr` functions to compute values at compile time",
+      "section": "T: Templates and generic programming",
+      "summary": "template<typename T> // requires Number<T>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.124",
+      "title": "Prefer to use standard-library TMP facilities",
+      "section": "T: Templates and generic programming",
+      "summary": "???",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.125",
+      "title": "If you need to go beyond the standard-library TMP facilities, use an existing library",
+      "section": "T: Templates and generic programming",
+      "summary": "???",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.140",
+      "title": "If an operation can be reused, give it a name",
+      "section": "T: Templates and generic programming",
+      "summary": "See [F.10](#Rf-name)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.141",
+      "title": "Use an unnamed lambda if you need a simple function object in one place only",
+      "section": "T: Templates and generic programming",
+      "summary": "See [F.11](#Rf-lambda) ???",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.143",
+      "title": "Don't write unintentionally non-generic code",
+      "section": "T: Templates and generic programming",
+      "summary": "Use `!=` instead of `<` to compare iterators; `!=` works for more objects because it doesn't rely on ordering. for (auto i = first; i < last; ++i) {   // less generic",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.144",
+      "title": "Don't specialize function templates",
+      "section": "T: Templates and generic programming",
+      "summary": "??? **Exceptions**: If you do have a valid reason to specialize a function template, just write a single function template that delegates to a class template, then specialize the class template (including the ability to write partial specializations).",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "T.150",
+      "title": "Check that a class matches a concept using `static_assert`",
+      "section": "T: Templates and generic programming",
+      "summary": "class X { public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CPL.1",
+      "title": "Prefer C++ to C",
+      "section": "CPL: C-style programming",
+      "summary": "char ch = 7; void* pv = &ch;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CPL.2",
+      "title": "If you must use C, use the common subset of C and C++, and compile the C code as C++",
+      "section": "CPL: C-style programming",
+      "summary": "int* p1 = malloc(10 * sizeof(int));                      // not C++ int* p2 = static_cast<int*>(malloc(10 * sizeof(int)));   // not C, C-style C++",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "CPL.3",
+      "title": "If you must use C for interfaces, use C++ in the calling code using such interfaces",
+      "section": "CPL: C-style programming",
+      "summary": "For example, to use a 3rd party C library or C systems interface, define the low-level interface in the common subset of C and C++ for better type checking. Whenever possible encapsulate the low-level interface in an interface that follows the C++ guidelines (for better abstraction, memory safety, and resource safety) and use that C++ interface in C++ code.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SF.1",
+      "title": "Use a `.cpp` suffix for code files and `.h` for interface files if your project doesn't already follow another convention",
+      "section": "SF: Source files",
+      "summary": "See [NL.27](#Rl-file-suffix)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SF.2",
+      "title": "A header file must not contain object definitions or non-inline function definitions",
+      "section": "SF: Source files",
+      "summary": "// file.h: namespace Foo {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SF.3",
+      "title": "Use header files for all declarations used in multiple source files",
+      "section": "SF: Source files",
+      "summary": "// bar.cpp: void bar() { cout << \"bar\\n\"; }",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SF.4",
+      "title": "Include header files before other declarations in a file",
+      "section": "SF: Source files",
+      "summary": "#include <vector> #include <algorithm>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SF.5",
+      "title": "A `.cpp` file must include the header file(s) that defines its interface",
+      "section": "SF: Source files",
+      "summary": "// foo.h: void foo(int);",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SF.6",
+      "title": "Use `using namespace` directives for transition, for foundation libraries (such as `std`), or within a local scope (only)",
+      "section": "SF: Source files",
+      "summary": "#include <string> #include <vector>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SF.7",
+      "title": "Don't write `using namespace` at global scope in a header file",
+      "section": "SF: Source files",
+      "summary": "// bad.h #include <iostream>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SF.8",
+      "title": "Use `#include` guards for all header files",
+      "section": "SF: Source files",
+      "summary": "// file foobar.h: #ifndef LIBRARY_FOOBAR_H",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SF.9",
+      "title": "Avoid cyclic dependencies among source files",
+      "section": "SF: Source files",
+      "summary": "// file1.h: #include \"file2.h\"",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SF.10",
+      "title": "Avoid dependencies on implicitly `#include`d names",
+      "section": "SF: Source files",
+      "summary": "#include <iostream> using namespace std;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SF.11",
+      "title": "Header files should be self-contained",
+      "section": "SF: Source files",
+      "summary": "#include \"helpers.h\" // helpers.h depends on std::string and includes <string>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SF.12",
+      "title": "Prefer the quoted form of `#include` for files relative to the including file and the angle bracket form everywhere else",
+      "section": "SF: Source files",
+      "summary": "// foo.cpp: #include <string>                // From the standard library, requires the <> form",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SF.13",
+      "title": "Use portable header identifiers in `#include` statements",
+      "section": "SF: Source files",
+      "summary": "// good examples #include <vector>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SF.20",
+      "title": "Use `namespace`s to express logical structure",
+      "section": "SF: Source files",
+      "summary": "???",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SF.21",
+      "title": "Don't use an unnamed (anonymous) namespace in a header",
+      "section": "SF: Source files",
+      "summary": "// file foo.h: namespace",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SF.22",
+      "title": "Use an unnamed (anonymous) namespace for all internal/non-exported entities",
+      "section": "SF: Source files",
+      "summary": "static int f(); int g();",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SL.1",
+      "title": "Use libraries wherever possible",
+      "section": "SL: The Standard Library",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SL.2",
+      "title": "Prefer the standard library to other libraries",
+      "section": "SL: The Standard Library",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SL.3",
+      "title": "Do not add non-standard entities to namespace `std`",
+      "section": "SL: The Standard Library",
+      "summary": "namespace std { // BAD: violates standard class My_vector {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SL.4",
+      "title": "Use the standard library in a type-safe manner",
+      "section": "SL: The Standard Library",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SL.con",
+      "title": "Containers",
+      "section": "SL: The Standard Library",
+      "summary": "??? Container rule summary:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SL.str",
+      "title": "String",
+      "section": "SL: The Standard Library",
+      "summary": "Text manipulation is a huge topic. `std::string` doesn't cover all of it.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SL.io",
+      "title": "Iostream",
+      "section": "SL: The Standard Library",
+      "summary": "`iostream`s is a type safe, extensible, formatted and unformatted I/O library for streaming I/O. It supports multiple (and user extensible) buffering strategies and multiple locales.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SL.regex",
+      "title": "Regex",
+      "section": "SL: The Standard Library",
+      "summary": "`<regex>` is the standard C++ regular expression library. It supports a variety of regular expression pattern conventions.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "SL.chrono",
+      "title": "Time",
+      "section": "SL: The Standard Library",
+      "summary": "`<chrono>` (defined in namespace `std::chrono`) provides the notions of `time_point` and `duration` together with functions for outputting time in various units.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "A.1",
+      "title": "Separate stable code from less stable code",
+      "section": "A: Architectural ideas",
+      "summary": "Isolating less stable code facilitates its unit testing, interface improvement, refactoring, and eventual deprecation.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "A.2",
+      "title": "Express potentially reusable parts as a library",
+      "section": "A: Architectural ideas",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "A.4",
+      "title": "There should be no cycles among libraries",
+      "section": "A: Architectural ideas",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NR.1",
+      "title": "Don't insist that all declarations should be at the top of a function",
+      "section": "NR: Non-Rules and myths",
+      "summary": "int use(int x) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NR.2",
+      "title": "Don't insist on having only a single `return`-statement in a function",
+      "section": "NR: Non-Rules and myths",
+      "summary": "template<class T> //  requires Number<T>",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NR.3",
+      "title": "Don't avoid exceptions",
+      "section": "NR: Non-Rules and myths",
+      "summary": "??? * [RAII](#Re-raii)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NR.4",
+      "title": "Don't insist on placing each class definition in its own source file",
+      "section": "NR: Non-Rules and myths",
+      "summary": "??? * Use namespaces containing logically cohesive sets of classes and functions.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NR.5",
+      "title": "Don't use two-phase initialization",
+      "section": "NR: Non-Rules and myths",
+      "summary": "// Old conventional style: many problems class Picture",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NR.6",
+      "title": "Don't place all cleanup actions at the end of a function and `goto exit`",
+      "section": "NR: Non-Rules and myths",
+      "summary": "void do_something(int n) {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NR.7",
+      "title": "Don't make data members `protected`",
+      "section": "NR: Non-Rules and myths",
+      "summary": "??? * [Avoid `protected` data](#Rh-protected)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "RF.rules",
+      "title": "Coding rules",
+      "section": "RF: References",
+      "summary": "* [AUTOSAR Guidelines for the use of the C++14 language in critical and safety-related systems v22.11](https://www.autosar.org/fileadmin/standards/R22-11/AP/AUTOSAR_RS_CPP14Guidelines.pdf) (obsolete, replaced by [MISRA C++:2023](https://misra.org.uk/product/misra-cpp2023/)) * [Boost Library Requirements and Guidelines](http://www.boost.org/development/requirements.html).",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "RF.books",
+      "title": "Books with coding guidelines",
+      "section": "RF: References",
+      "summary": "* [Meyers96](#Meyers96) Scott Meyers: *More Effective C++*. Addison-Wesley 1996. * [Meyers97](#Meyers97) Scott Meyers: *Effective C++, Second Edition*. Addison-Wesley 1997.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "RF.web",
+      "title": "Websites",
+      "section": "RF: References",
+      "summary": "* [isocpp.org](https://isocpp.org) * [Bjarne Stroustrup's home pages](http://www.stroustrup.com)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "RS.video",
+      "title": "Videos about \"modern C++\"",
+      "section": "RF: References",
+      "summary": "* Bjarne Stroustrup: [C++11 Style](http://channel9.msdn.com/Events/GoingNative/GoingNative-2012/Keynote-Bjarne-Stroustrup-Cpp11-Style). 2012. * Bjarne Stroustrup: [The Essence of C++: With Examples in C++84, C++98, C++11, and C++14](http://channel9.msdn.com/Events/GoingNative/2013/Opening-Keynote-Bjarne-Stroustrup). 2013",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "RF.man",
+      "title": "Manuals",
+      "section": "RF: References",
+      "summary": "* ISO C++ Standard C++11. * ISO C++ Standard C++14.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "RF.core",
+      "title": "Core Guidelines materials",
+      "section": "RF: References",
+      "summary": "This section contains materials that have been useful for presenting the core guidelines and the ideas behind them: * [Our documents directory](https://github.com/isocpp/CppCoreGuidelines/tree/master/docs)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "GSL.view",
+      "title": "Views",
+      "section": "GSL: Guidelines support library",
+      "summary": "These types allow the user to distinguish between owning and non-owning pointers and between pointers to a single object and pointers to the first element of a sequence. These \"views\" are never owners.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "GSL.owner",
+      "title": "Ownership pointers",
+      "section": "GSL: Guidelines support library",
+      "summary": "* `unique_ptr<T>`     // unique ownership: `std::unique_ptr<T>` * `shared_ptr<T>`     // shared ownership: `std::shared_ptr<T>` (a counted pointer)",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "GSL.assert",
+      "title": "Assertions",
+      "section": "GSL: Guidelines support library",
+      "summary": "* `Expects`     // precondition assertion. Currently placed in function bodies. Later, should be moved to declarations. // `Expects(p)` terminates the program unless `p == true`",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "GSL.util",
+      "title": "Utilities",
+      "section": "GSL: Guidelines support library",
+      "summary": "* `finally`        // `finally(f)` makes a `final_action{f}` with a destructor that invokes `f` * `narrow_cast`    // `narrow_cast<T>(x)` is `static_cast<T>(x)`",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "GSL.concept",
+      "title": "Concepts",
+      "section": "GSL: Guidelines support library",
+      "summary": "These concepts (type predicates) are borrowed from Andrew Sutton's Origin library,",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "GSL.ptr",
+      "title": "Smart pointer concepts",
+      "section": "GSL: Guidelines support library",
+      "summary": "* `Pointer`  // A type with `*`, `->`, `==`, and default construction (default construction is assumed to set the singular \"null\" value) * `Unique_pointer`  // A type that matches `Pointer`, is movable, and is not copyable",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NL.1",
+      "title": "Don't say in comments what can be clearly stated in code",
+      "section": "NL: Naming and layout suggestions",
+      "summary": "auto x = m * v1 + vv;   // multiply m with v1 and add the result to vv",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NL.2",
+      "title": "State intent in comments",
+      "section": "NL: Naming and layout suggestions",
+      "summary": "void stable_sort(Sortable& c) // sort c in the order determined by <, keep equal elements (as defined by ==) in",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NL.3",
+      "title": "Keep comments crisp",
+      "section": "NL: Naming and layout suggestions",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NL.4",
+      "title": "Maintain a consistent indentation style",
+      "section": "NL: Naming and layout suggestions",
+      "summary": "int i; for (i = 0; i < max; ++i); // bug waiting to happen",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NL.5",
+      "title": "Avoid encoding type information in names",
+      "section": "NL: Naming and layout suggestions",
+      "summary": "void print_int(int i); void print_string(const char*);",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NL.7",
+      "title": "Make the length of a name roughly proportional to the length of its scope",
+      "section": "NL: Naming and layout suggestions",
+      "summary": "**Rationale**: The larger the scope the greater the chance of confusion and of an unintended name clash. double sqrt(double x);   // return the square root of x; x must be non-negative",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NL.8",
+      "title": "Use a consistent naming style",
+      "section": "NL: Naming and layout suggestions",
+      "summary": "**Rationale**: Consistency in naming and naming style increases readability. ISO Standard, use lower case only and digits, separate words with underscores:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NL.9",
+      "title": "Use `ALL_CAPS` for macro names only",
+      "section": "NL: Naming and layout suggestions",
+      "summary": "void f() {",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NL.10",
+      "title": "Prefer `underscore_style` names",
+      "section": "NL: Naming and layout suggestions",
+      "summary": "[Stroustrup](http://www.stroustrup.com/Programming/PPP-style.pdf): ISO Standard, but with upper case used for your own types and concepts:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NL.11",
+      "title": "Make literals readable",
+      "section": "NL: Naming and layout suggestions",
+      "summary": "Use digit separators to avoid long strings of digits auto c = 299'792'458; // m/s2",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NL.15",
+      "title": "Use spaces sparingly",
+      "section": "NL: Naming and layout suggestions",
+      "summary": "#include < map > int main(int argc, char * argv [ ])",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NL.16",
+      "title": "Use a conventional class member declaration order",
+      "section": "NL: Naming and layout suggestions",
+      "summary": "class X { public:",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NL.17",
+      "title": "Use K&R-derived layout",
+      "section": "NL: Naming and layout suggestions",
+      "summary": "struct Cable { int x;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NL.18",
+      "title": "Use C++-style declarator layout",
+      "section": "NL: Naming and layout suggestions",
+      "summary": "T& operator[](size_t);   // OK T &operator[](size_t);   // just strange",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NL.19",
+      "title": "Avoid names that are easily misread",
+      "section": "NL: Naming and layout suggestions",
+      "summary": "int oO01lL = 6; // bad int splunk = 7;",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NL.20",
+      "title": "Don't place two statements on the same line",
+      "section": "NL: Naming and layout suggestions",
+      "summary": "int x = 7; char* p = 29;    // don't int x = 7; f(x);  ++x;      // don't",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NL.21",
+      "title": "Declare one name (only) per declaration",
+      "section": "NL: Naming and layout suggestions",
+      "summary": "",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NL.25",
+      "title": "Don't use `void` as an argument type",
+      "section": "NL: Naming and layout suggestions",
+      "summary": "void f(void);   // bad void g();       // better",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NL.26",
+      "title": "Use conventional `const` notation",
+      "section": "NL: Naming and layout suggestions",
+      "summary": "const int x = 7;    // OK int const y = 9;    // bad",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "NL.27",
+      "title": "Use a `.cpp` suffix for code files and `.h` for interface files",
+      "section": "NL: Naming and layout suggestions",
+      "summary": "// foo.h: extern int a;   // a declaration",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "FAQ.1",
+      "title": "What do these guidelines aim to achieve?",
+      "section": "FAQ: Answers to frequently asked questions",
+      "summary": "See the <a href=\"#S-abstract\">top of this page</a>. This is an open-source project to maintain modern authoritative guidelines for writing C++ code using the current C++ Standard. The guidelines are designed to be modern, machine-enforceable wherever possible, and open to contributions and forking so that organizations can easily incorporate them into their own corporate coding guidelines.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "FAQ.2",
+      "title": "When and where was this work first announced?",
+      "section": "FAQ: Answers to frequently asked questions",
+      "summary": "It was announced by [Bjarne Stroustrup in his CppCon 2015 opening keynote, \"Writing Good C++14\"](https://isocpp.org/blog/2015/09/stroustrup-cppcon15-keynote). See also the [accompanying isocpp.org blog post](https://isocpp.org/blog/2015/09/bjarne-stroustrup-announces-cpp-core-guidelines), and for the rationale of the type and memory safety guidelines see [Herb Sutter's follow-up CppCon 2015 talk, \"Writing Good C++14 ... By Default\"](https://isocpp.org/blog/2015/09/sutter-cppcon15-day2plenary).",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "FAQ.3",
+      "title": "Who are the authors and maintainers of these guidelines?",
+      "section": "FAQ: Answers to frequently asked questions",
+      "summary": "The initial primary authors and maintainers are Bjarne Stroustrup and Herb Sutter, and the guidelines so far were developed with contributions from experts at CERN, Microsoft, Morgan Stanley, and several other organizations. At the time of their release, the guidelines are in a \"0.6\" state, and contributions are welcome. As Stroustrup said in his announcement: \"We need help!\"",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "FAQ.4",
+      "title": "How can I contribute?",
+      "section": "FAQ: Answers to frequently asked questions",
+      "summary": "See [CONTRIBUTING.md](https://github.com/isocpp/CppCoreGuidelines/blob/master/CONTRIBUTING.md). We appreciate volunteer help!",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "FAQ.5",
+      "title": "How can I become an editor/maintainer?",
+      "section": "FAQ: Answers to frequently asked questions",
+      "summary": "By contributing a lot first and having the consistent quality of your contributions recognized. See [CONTRIBUTING.md](https://github.com/isocpp/CppCoreGuidelines/blob/master/CONTRIBUTING.md). We appreciate volunteer help!",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "FAQ.6",
+      "title": "Have these guidelines been approved by the ISO C++ standards committee? Do they represent the consensus of the committee?",
+      "section": "FAQ: Answers to frequently asked questions",
+      "summary": "No. These guidelines are outside the standard. They are intended to serve the standard, and be maintained as current guidelines about how to use the current Standard C++ effectively. We aim to keep them in sync with the standard as that is evolved by the committee.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "FAQ.7",
+      "title": "If these guidelines are not approved by the committee, why are they under `github.com/isocpp`?",
+      "section": "FAQ: Answers to frequently asked questions",
+      "summary": "Because `isocpp` is the Standard C++ Foundation; the committee's repositories are under [github.com/*cplusplus*](https://github.com/cplusplus). Some neutral organization has to own the copyright and license to make it clear this is not being dominated by any one person or vendor. The natural entity is the Foundation, which exists to promote the use and up-to-date understanding of modern Standard C++ and the work of the committee. This follows the same pattern that isocpp.org did for the [C++ FAQ](https://isocpp.org/faq), which was initially the work of Bjarne Stroustrup, Marshall Cline, and Herb Sutter and contributed to the open project in the same way.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "FAQ.8",
+      "title": "Will there be a C++98 version of these Guidelines? A C++11 version?",
+      "section": "FAQ: Answers to frequently asked questions",
+      "summary": "No. These guidelines are about how to best use modern standard C++ and write code assuming you have a modern conforming compiler.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "FAQ.9",
+      "title": "Do these guidelines propose new language features?",
+      "section": "FAQ: Answers to frequently asked questions",
+      "summary": "No. These guidelines are about how to best use modern Standard C++, and they limit themselves to recommending only those features.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "FAQ.10",
+      "title": "What version of Markdown do these guidelines use?",
+      "section": "FAQ: Answers to frequently asked questions",
+      "summary": "These coding standards are written using [CommonMark](http://commonmark.org), and `<a>` HTML anchors. We are considering the following extensions from [GitHub Flavored Markdown (GFM)](https://help.github.com/articles/github-flavored-markdown/):",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "FAQ.50",
+      "title": "What is the GSL (guidelines support library)?",
+      "section": "FAQ: Answers to frequently asked questions",
+      "summary": "The GSL is the small set of types and aliases specified in these guidelines. As of this writing, their specification herein is too sparse; we plan to add a WG21-style interface specification to ensure that different implementations agree, and to propose as a contribution for possible standardization, subject as usual to whatever the committee decides to accept/improve/alter/reject.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "FAQ.51",
+      "title": "Is [github.com/Microsoft/GSL](https://github.com/Microsoft/GSL) the GSL?",
+      "section": "FAQ: Answers to frequently asked questions",
+      "summary": "No. That is just a first implementation contributed by Microsoft. Other implementations by other vendors are encouraged, as are forks of and contributions to that implementation. As of this writing one week into the public project, at least one GPLv3 open-source implementation already exists. We plan to produce a WG21-style interface specification to ensure that different implementations agree.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "FAQ.52",
+      "title": "Why not supply an actual GSL implementation in/with these guidelines?",
+      "section": "FAQ: Answers to frequently asked questions",
+      "summary": "We are reluctant to bless one particular implementation because we do not want to make people think there is only one, and inadvertently stifle parallel implementations. And if these guidelines included an actual implementation, then whoever contributed it could be mistakenly seen as too influential. We prefer to follow the long-standing approach of the committee, namely to specify interfaces, not implementations. But at the same time we want at least one implementation available; we hope for many.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "FAQ.53",
+      "title": "Why weren't the GSL types proposed through Boost?",
+      "section": "FAQ: Answers to frequently asked questions",
+      "summary": "Because we want to use them immediately, and because they are temporary in that we want to retire them as soon as types that fill the same needs exist in the standard library.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "FAQ.54",
+      "title": "Has the GSL (guidelines support library) been approved by the ISO C++ standards committee?",
+      "section": "FAQ: Answers to frequently asked questions",
+      "summary": "No. The GSL exists only to supply a few types and aliases that are not currently in the standard library. If the committee decides on standardized versions (of these or other types that fill the same need) then they can be removed from the GSL.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "FAQ.55",
+      "title": "If you're using the standard types where available, why is the GSL `span` different from the `string_view` in the Library Fundamentals 1 Technical Specification and C++17 Working Paper? Why not just use the committee-approved `string_view`?",
+      "section": "FAQ: Answers to frequently asked questions",
+      "summary": "The consensus on the taxonomy of views for the C++ Standard Library was that \"view\" means \"read-only\", and \"span\" means \"read/write\". If you only need a read-only view of characters that does not need guaranteed bounds-checking and you have C++17, use C++17 `std::string_view`. Otherwise, if you need a read-write view that does not need guaranteed bounds-checking and you have C++20, use C++20 `std::span<char>`. Otherwise, use `gsl::span<char>`.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "FAQ.56",
+      "title": "Is `owner` the same as the proposed `observer_ptr`?",
+      "section": "FAQ: Answers to frequently asked questions",
+      "summary": "No. `owner` owns, is an alias, and can be applied to any indirection type. The main intent of `observer_ptr` is to signify a *non*-owning pointer.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "FAQ.57",
+      "title": "Is `stack_array` the same as the standard `array`?",
+      "section": "FAQ: Answers to frequently asked questions",
+      "summary": "No. `stack_array` is guaranteed to be allocated on the stack. Although a `std::array` contains its storage directly inside itself, the `array` object can be put anywhere, including the heap.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "FAQ.58",
+      "title": "Is `dyn_array` the same as `vector` or the proposed `dynarray`?",
+      "section": "FAQ: Answers to frequently asked questions",
+      "summary": "No. `dyn_array` is a container, like `vector`, but it is not resizable; its size is fixed at runtime when it is constructed. It is a safe way to refer to a dynamically \"heap\"-allocated fixed-size array. Unlike `vector`, it is intended to replace array-`new[]`. Unlike the `dynarray` that has been proposed in the committee, this does not anticipate compiler/language magic to somehow allocate it on the stack when it is a member of an object that is allocated on the stack; it simply refers to a \"dynamic\" or heap-based array.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "FAQ.59",
+      "title": "Is `Expects` the same as `assert`?",
+      "section": "FAQ: Answers to frequently asked questions",
+      "summary": "No. It is a placeholder for language support for contract preconditions.",
+      "has_examples": false,
+      "example_count": 0
+    },
+    {
+      "id": "FAQ.60",
+      "title": "Is `Ensures` the same as `assert`?",
+      "section": "FAQ: Answers to frequently asked questions",
+      "summary": "No. It is a placeholder for language support for contract postconditions.",
+      "has_examples": false,
+      "example_count": 0
+    }
+  ],
+  "metadata": {
+    "source_file": "CppCoreGuidelines.md",
+    "total_guidelines": 497,
+    "total_sections": 32,
+    "guidelines_with_examples": 0
+  }
+}

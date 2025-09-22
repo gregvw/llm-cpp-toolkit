@@ -1,0 +1,2482 @@
+{
+  "P.1": {
+    "title": "Express ideas directly in code",
+    "section": "P: Philosophy",
+    "has_code": false
+  },
+  "P.2": {
+    "title": "Write in ISO Standard C++",
+    "section": "P: Philosophy",
+    "has_code": false
+  },
+  "P.3": {
+    "title": "Express intent",
+    "section": "P: Philosophy",
+    "has_code": false
+  },
+  "P.4": {
+    "title": "Ideally, a program should be statically type safe",
+    "section": "P: Philosophy",
+    "has_code": false
+  },
+  "P.5": {
+    "title": "Prefer compile-time checking to run-time checking",
+    "section": "P: Philosophy",
+    "has_code": false
+  },
+  "P.6": {
+    "title": "What cannot be checked at compile time should be checkable at run time",
+    "section": "P: Philosophy",
+    "has_code": false
+  },
+  "P.7": {
+    "title": "Catch run-time errors early",
+    "section": "P: Philosophy",
+    "has_code": false
+  },
+  "P.8": {
+    "title": "Don't leak any resources",
+    "section": "P: Philosophy",
+    "has_code": false
+  },
+  "P.9": {
+    "title": "Don't waste time or space",
+    "section": "P: Philosophy",
+    "has_code": false
+  },
+  "P.10": {
+    "title": "Prefer immutable data to mutable data",
+    "section": "P: Philosophy",
+    "has_code": false
+  },
+  "P.11": {
+    "title": "Encapsulate messy constructs, rather than spreading through the code",
+    "section": "P: Philosophy",
+    "has_code": false
+  },
+  "P.12": {
+    "title": "Use supporting tools as appropriate",
+    "section": "P: Philosophy",
+    "has_code": false
+  },
+  "P.13": {
+    "title": "Use support libraries as appropriate",
+    "section": "P: Philosophy",
+    "has_code": false
+  },
+  "I.1": {
+    "title": "Make interfaces explicit",
+    "section": "I: Interfaces",
+    "has_code": false
+  },
+  "I.2": {
+    "title": "Avoid non-`const` global variables",
+    "section": "I: Interfaces",
+    "has_code": false
+  },
+  "I.3": {
+    "title": "Avoid singletons",
+    "section": "I: Interfaces",
+    "has_code": false
+  },
+  "I.4": {
+    "title": "Make interfaces precisely and strongly typed",
+    "section": "I: Interfaces",
+    "has_code": false
+  },
+  "I.5": {
+    "title": "State preconditions (if any)",
+    "section": "I: Interfaces",
+    "has_code": false
+  },
+  "I.6": {
+    "title": "Prefer `Expects()` for expressing preconditions",
+    "section": "I: Interfaces",
+    "has_code": false
+  },
+  "I.7": {
+    "title": "State postconditions",
+    "section": "I: Interfaces",
+    "has_code": false
+  },
+  "I.8": {
+    "title": "Prefer `Ensures()` for expressing postconditions",
+    "section": "I: Interfaces",
+    "has_code": false
+  },
+  "I.9": {
+    "title": "If an interface is a template, document its parameters using concepts",
+    "section": "I: Interfaces",
+    "has_code": false
+  },
+  "I.10": {
+    "title": "Use exceptions to signal a failure to perform a required task",
+    "section": "I: Interfaces",
+    "has_code": false
+  },
+  "I.11": {
+    "title": "Never transfer ownership by a raw pointer (`T*`) or reference (`T&`)",
+    "section": "I: Interfaces",
+    "has_code": false
+  },
+  "I.12": {
+    "title": "Declare a pointer that must not be null as `not_null`",
+    "section": "I: Interfaces",
+    "has_code": false
+  },
+  "I.13": {
+    "title": "Do not pass an array as a single pointer",
+    "section": "I: Interfaces",
+    "has_code": false
+  },
+  "I.22": {
+    "title": "Avoid complex initialization of global objects",
+    "section": "I: Interfaces",
+    "has_code": false
+  },
+  "I.23": {
+    "title": "Keep the number of function arguments low",
+    "section": "I: Interfaces",
+    "has_code": false
+  },
+  "I.24": {
+    "title": "Avoid adjacent parameters that can be invoked by the same arguments in either order with different meaning",
+    "section": "I: Interfaces",
+    "has_code": false
+  },
+  "I.25": {
+    "title": "Prefer empty abstract classes as interfaces to class hierarchies",
+    "section": "I: Interfaces",
+    "has_code": false
+  },
+  "I.26": {
+    "title": "If you want a cross-compiler ABI, use a C-style subset",
+    "section": "I: Interfaces",
+    "has_code": false
+  },
+  "I.27": {
+    "title": "For stable library ABI, consider the Pimpl idiom",
+    "section": "I: Interfaces",
+    "has_code": false
+  },
+  "I.30": {
+    "title": "Encapsulate rule violations",
+    "section": "I: Interfaces",
+    "has_code": false
+  },
+  "F.def": {
+    "title": "Function definitions",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.1": {
+    "title": "\"Package\" meaningful operations as carefully named functions",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.2": {
+    "title": "A function should perform a single logical operation",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.3": {
+    "title": "Keep functions short and simple",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.4": {
+    "title": "If a function might have to be evaluated at compile time, declare it `constexpr`",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.5": {
+    "title": "If a function is very small and time-critical, declare it `inline`",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.6": {
+    "title": "If your function must not throw, declare it `noexcept`",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.7": {
+    "title": "For general use, take `T*` or `T&` arguments rather than smart pointers",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.8": {
+    "title": "Prefer pure functions",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.9": {
+    "title": "Unused parameters should be unnamed",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.10": {
+    "title": "If an operation can be reused, give it a name",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.11": {
+    "title": "Use an unnamed lambda if you need a simple function object in one place only",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.call": {
+    "title": "Parameter passing",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.15": {
+    "title": "Prefer simple and conventional ways of passing information",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.16": {
+    "title": "For \"in\" parameters, pass cheaply-copied types by value and others by reference to `const`",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.17": {
+    "title": "For \"in-out\" parameters, pass by reference to non-`const`",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.18": {
+    "title": "For \"will-move-from\" parameters, pass by `X&&` and `std::move` the parameter",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.19": {
+    "title": "For \"forward\" parameters, pass by `TP&&` and only `std::forward` the parameter",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.20": {
+    "title": "For \"out\" output values, prefer return values to output parameters",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.21": {
+    "title": "To return multiple \"out\" values, prefer returning a struct",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.60": {
+    "title": "Prefer `T*` over `T&` when \"no argument\" is a valid option",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.22": {
+    "title": "Use `T*` or `owner` to designate a single object",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.23": {
+    "title": "Use a `not_null` to indicate that \"null\" is not a valid value",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.24": {
+    "title": "Use a `span` or a `span_p` to designate a half-open sequence",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.25": {
+    "title": "Use a `zstring` or a `not_null` to designate a C-style string",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.26": {
+    "title": "Use a `unique_ptr` to transfer ownership where a pointer is needed",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.27": {
+    "title": "Use a `shared_ptr` to share ownership",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.42": {
+    "title": "Return a `T*` to indicate a position (only)",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.43": {
+    "title": "Never (directly or indirectly) return a pointer or a reference to a local object",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.44": {
+    "title": "Return a `T&` when copy is undesirable and \"returning no object\" isn't needed",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.45": {
+    "title": "Don't return a `T&&`",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.46": {
+    "title": "`int` is the return type for `main()`",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.47": {
+    "title": "Return `T&` from assignment operators",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.48": {
+    "title": "Don't `return std::move(local)`",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.49": {
+    "title": "Don't return `const T`",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.50": {
+    "title": "Use a lambda when a function won't do (to capture local variables, or to write a local function)",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.51": {
+    "title": "Where there is a choice, prefer default arguments over overloading",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.52": {
+    "title": "Prefer capturing by reference in lambdas that will be used locally, including passed to algorithms",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.53": {
+    "title": "Avoid capturing by reference in lambdas that will be used non-locally, including returned, stored on the heap, or passed to another thread",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.54": {
+    "title": "When writing a lambda that captures `this` or any class data member, don't use `[=]` default capture",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.55": {
+    "title": "Don't use `va_arg` arguments",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "F.56": {
+    "title": "Avoid unnecessary condition nesting",
+    "section": "F: Functions",
+    "has_code": false
+  },
+  "C.1": {
+    "title": "Organize related data into structures (`struct`s or `class`es)",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.2": {
+    "title": "Use `class` if the class has an invariant; use `struct` if the data members can vary independently",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.3": {
+    "title": "Represent the distinction between an interface and an implementation using a class",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.4": {
+    "title": "Make a function a member only if it needs direct access to the representation of a class",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.5": {
+    "title": "Place helper functions in the same namespace as the class they support",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.7": {
+    "title": "Don't define a class or enum and declare a variable of its type in the same statement",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.8": {
+    "title": "Use `class` rather than `struct` if any member is non-public",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.9": {
+    "title": "Minimize exposure of members",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.concrete": {
+    "title": "Concrete types",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.10": {
+    "title": "Prefer concrete types over class hierarchies",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.11": {
+    "title": "Make concrete types regular",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.12": {
+    "title": "Don't make data members `const` or references in a copyable or movable type",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.ctor": {
+    "title": "Constructors",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.defop": {
+    "title": "Default Operations",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.20": {
+    "title": "If you can avoid defining default operations, do",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.21": {
+    "title": "If you define or `=delete` any copy, move, or destructor function, define or `=delete` them all",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.22": {
+    "title": "Make default operations consistent",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.dtor": {
+    "title": "Destructors",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.30": {
+    "title": "Define a destructor if a class needs an explicit action at object destruction",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.31": {
+    "title": "All resources acquired by a class must be released by the class's destructor",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.32": {
+    "title": "If a class has a raw pointer (`T*`) or reference (`T&`), consider whether it might be owning",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.33": {
+    "title": "If a class has an owning pointer member, define a destructor",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.35": {
+    "title": "A base class destructor should be either public and virtual, or protected and non-virtual",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.36": {
+    "title": "A destructor must not fail",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.37": {
+    "title": "Make destructors `noexcept`",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.40": {
+    "title": "Define a constructor if a class has an invariant",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.41": {
+    "title": "A constructor should create a fully initialized object",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.42": {
+    "title": "If a constructor cannot construct a valid object, throw an exception",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.43": {
+    "title": "Ensure that a copyable class has a default constructor",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.44": {
+    "title": "Prefer default constructors to be simple and non-throwing",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.45": {
+    "title": "Don't define a default constructor that only initializes data members; use default member initializers instead",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.46": {
+    "title": "By default, declare single-argument constructors explicit",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.47": {
+    "title": "Define and initialize data members in the order of member declaration",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.48": {
+    "title": "Prefer default member initializers to member initializers in constructors for constant initializers",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.49": {
+    "title": "Prefer initialization to assignment in constructors",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.50": {
+    "title": "Use a factory function if you need \"virtual behavior\" during initialization",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.51": {
+    "title": "Use delegating constructors to represent common actions for all constructors of a class",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.52": {
+    "title": "Use inheriting constructors to import constructors into a derived class that does not need further explicit initialization",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.copy": {
+    "title": "Copy and move",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.60": {
+    "title": "Make copy assignment non-`virtual`, take the parameter by `const&`, and return by non-`const&`",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.61": {
+    "title": "A copy operation should copy",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.62": {
+    "title": "Make copy assignment safe for self-assignment",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.63": {
+    "title": "Make move assignment non-`virtual`, take the parameter by `&&`, and return by non-`const&`",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.64": {
+    "title": "A move operation should move and leave its source in a valid state",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.65": {
+    "title": "Make move assignment safe for self-assignment",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.66": {
+    "title": "Make move operations `noexcept`",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.67": {
+    "title": "A polymorphic class should suppress public copy/move",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.other": {
+    "title": "Other default operation rules",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.80": {
+    "title": "Use `=default` if you have to be explicit about using the default semantics",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.81": {
+    "title": "Use `=delete` when you want to disable default behavior (without wanting an alternative)",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.82": {
+    "title": "Don't call virtual functions in constructors and destructors",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.83": {
+    "title": "For value-like types, consider providing a `noexcept` swap function",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.84": {
+    "title": "A `swap` function must not fail",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.85": {
+    "title": "Make `swap` `noexcept`",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.86": {
+    "title": "Make `==` symmetric with respect to operand types and `noexcept`",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.87": {
+    "title": "Beware of `==` on base classes",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.89": {
+    "title": "Make a `hash` `noexcept`",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.90": {
+    "title": "Rely on constructors and assignment operators, not `memset` and `memcpy`",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.con": {
+    "title": "Containers and other resource handles",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.100": {
+    "title": "Follow the STL when defining a container",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.101": {
+    "title": "Give a container value semantics",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.102": {
+    "title": "Give a container move operations",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.103": {
+    "title": "Give a container an initializer list constructor",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.104": {
+    "title": "Give a container a default constructor that sets it to empty",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.109": {
+    "title": "If a resource handle has pointer semantics, provide `*` and `->`",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.lambdas": {
+    "title": "Function objects and lambdas",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.hier": {
+    "title": "Class hierarchies (OOP)",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.120": {
+    "title": "Use class hierarchies to represent concepts with inherent hierarchical structure (only)",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.121": {
+    "title": "If a base class is used as an interface, make it a pure abstract class",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.122": {
+    "title": "Use abstract classes as interfaces when complete separation of interface and implementation is needed",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.hierclass": {
+    "title": "Designing classes in a hierarchy:",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.126": {
+    "title": "An abstract class typically doesn't need a user-written constructor",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.127": {
+    "title": "A class with a virtual function should have a virtual or protected destructor",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.128": {
+    "title": "Virtual functions should specify exactly one of `virtual`, `override`, or `final`",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.129": {
+    "title": "When designing a class hierarchy, distinguish between implementation inheritance and interface inheritance",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.130": {
+    "title": "For making deep copies of polymorphic classes prefer a virtual `clone` function instead of public copy construction/assignment",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.131": {
+    "title": "Avoid trivial getters and setters",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.132": {
+    "title": "Don't make a function `virtual` without reason",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.133": {
+    "title": "Avoid `protected` data",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.134": {
+    "title": "Ensure all non-`const` data members have the same access level",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.135": {
+    "title": "Use multiple inheritance to represent multiple distinct interfaces",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.136": {
+    "title": "Use multiple inheritance to represent the union of implementation attributes",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.137": {
+    "title": "Use `virtual` bases to avoid overly general base classes",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.138": {
+    "title": "Create an overload set for a derived class and its bases with `using`",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.139": {
+    "title": "Use `final` on classes sparingly",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.140": {
+    "title": "Do not provide different default arguments for a virtual function and an overrider",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.hier-access": {
+    "title": "Accessing objects in a hierarchy",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.145": {
+    "title": "Access polymorphic objects through pointers and references",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.146": {
+    "title": "Use `dynamic_cast` where class hierarchy navigation is unavoidable",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.147": {
+    "title": "Use `dynamic_cast` to a reference type when failure to find the required class is considered an error",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.148": {
+    "title": "Use `dynamic_cast` to a pointer type when failure to find the required class is considered a valid alternative",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.149": {
+    "title": "Use `unique_ptr` or `shared_ptr` to avoid forgetting to `delete` objects created using `new`",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.150": {
+    "title": "Use `make_unique()` to construct objects owned by `unique_ptr`s",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.151": {
+    "title": "Use `make_shared()` to construct objects owned by `shared_ptr`s",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.152": {
+    "title": "Never assign a pointer to an array of derived class objects to a pointer to its base",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.153": {
+    "title": "Prefer virtual function to casting",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.over": {
+    "title": "Overloading and overloaded operators",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.160": {
+    "title": "Define operators primarily to mimic conventional usage",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.161": {
+    "title": "Use non-member functions for symmetric operators",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.162": {
+    "title": "Overload operations that are roughly equivalent",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.163": {
+    "title": "Overload only for operations that are roughly equivalent",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.164": {
+    "title": "Avoid implicit conversion operators",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.165": {
+    "title": "Use `using` for customization points",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.166": {
+    "title": "Overload unary `&` only as part of a system of smart pointers and references",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.167": {
+    "title": "Use an operator for an operation with its conventional meaning",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.168": {
+    "title": "Define overloaded operators in the namespace of their operands",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.170": {
+    "title": "If you feel like overloading a lambda, use a generic lambda",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.union": {
+    "title": "Unions",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.180": {
+    "title": "Use `union`s to save memory",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.181": {
+    "title": "Avoid \"naked\" `union`s",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.182": {
+    "title": "Use anonymous `union`s to implement tagged unions",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "C.183": {
+    "title": "Don't use a `union` for type punning",
+    "section": "C: Classes and class hierarchies",
+    "has_code": false
+  },
+  "R.1": {
+    "title": "Manage resources automatically using resource handles and RAII (Resource Acquisition Is Initialization)",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.2": {
+    "title": "In interfaces, use raw pointers to denote individual objects (only)",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.3": {
+    "title": "A raw pointer (a `T*`) is non-owning",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.4": {
+    "title": "A raw reference (a `T&`) is non-owning",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.5": {
+    "title": "Prefer scoped objects, don't heap-allocate unnecessarily",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.6": {
+    "title": "Avoid non-`const` global variables",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.alloc": {
+    "title": "Allocation and deallocation",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.10": {
+    "title": "Avoid `malloc()` and `free()`",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.11": {
+    "title": "Avoid calling `new` and `delete` explicitly",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.12": {
+    "title": "Immediately give the result of an explicit resource allocation to a manager object",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.13": {
+    "title": "Perform at most one explicit resource allocation in a single expression statement",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.14": {
+    "title": "Avoid `[]` parameters, prefer `span`",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.15": {
+    "title": "Always overload matched allocation/deallocation pairs",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.smart": {
+    "title": "Smart pointers",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.20": {
+    "title": "Use `unique_ptr` or `shared_ptr` to represent ownership",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.21": {
+    "title": "Prefer `unique_ptr` over `shared_ptr` unless you need to share ownership",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.22": {
+    "title": "Use `make_shared()` to make `shared_ptr`s",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.23": {
+    "title": "Use `make_unique()` to make `unique_ptr`s",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.24": {
+    "title": "Use `std::weak_ptr` to break cycles of `shared_ptr`s",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.30": {
+    "title": "Take smart pointers as parameters only to explicitly express lifetime semantics",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.31": {
+    "title": "If you have non-`std` smart pointers, follow the basic pattern from `std`",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.32": {
+    "title": "Take a `unique_ptr` parameter to express that a function assumes ownership of a `widget`",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.33": {
+    "title": "Take a `unique_ptr&` parameter to express that a function reseats the `widget`",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.34": {
+    "title": "Take a `shared_ptr` parameter to express shared ownership",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.35": {
+    "title": "Take a `shared_ptr&` parameter to express that a function might reseat the shared pointer",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.36": {
+    "title": "Take a `const shared_ptr&` parameter to express that it might retain a reference count to the object ???",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "R.37": {
+    "title": "Do not pass a pointer or reference obtained from an aliased smart pointer",
+    "section": "R: Resource management",
+    "has_code": false
+  },
+  "ES.1": {
+    "title": "Prefer the standard library to other libraries and to \"handcrafted code\"",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.2": {
+    "title": "Prefer suitable abstractions to direct use of language features",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.3": {
+    "title": "Don't repeat yourself, avoid redundant code",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.dcl": {
+    "title": "Declarations",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.5": {
+    "title": "Keep scopes small",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.6": {
+    "title": "Declare names in for-statement initializers and conditions to limit scope",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.7": {
+    "title": "Keep common and local names short, and keep uncommon and non-local names longer",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.8": {
+    "title": "Avoid similar-looking names",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.9": {
+    "title": "Avoid `ALL_CAPS` names",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.10": {
+    "title": "Declare one name (only) per declaration",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.11": {
+    "title": "Use `auto` to avoid redundant repetition of type names",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.12": {
+    "title": "Do not reuse names in nested scopes",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.20": {
+    "title": "Always initialize an object",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.21": {
+    "title": "Don't introduce a variable (or constant) before you need to use it",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.22": {
+    "title": "Don't declare a variable until you have a value to initialize it with",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.23": {
+    "title": "Prefer the `{}`-initializer syntax",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.24": {
+    "title": "Use a `unique_ptr` to hold pointers",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.25": {
+    "title": "Declare an object `const` or `constexpr` unless you want to modify its value later on",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.26": {
+    "title": "Don't use a variable for two unrelated purposes",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.27": {
+    "title": "Use `std::array` or `stack_array` for arrays on the stack",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.28": {
+    "title": "Use lambdas for complex initialization, especially of `const` variables",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.30": {
+    "title": "Don't use macros for program text manipulation",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.31": {
+    "title": "Don't use macros for constants or \"functions\"",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.32": {
+    "title": "Use `ALL_CAPS` for all macro names",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.33": {
+    "title": "If you must use macros, give them unique names",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.34": {
+    "title": "Don't define a (C-style) variadic function",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.expr": {
+    "title": "Expressions",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.40": {
+    "title": "Avoid complicated expressions",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.41": {
+    "title": "If in doubt about operator precedence, parenthesize",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.42": {
+    "title": "Keep use of pointers simple and straightforward",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.43": {
+    "title": "Avoid expressions with undefined order of evaluation",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.44": {
+    "title": "Don't depend on order of evaluation of function arguments",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.45": {
+    "title": "Avoid \"magic constants\"; use symbolic constants",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.46": {
+    "title": "Avoid lossy (narrowing, truncating) arithmetic conversions",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.47": {
+    "title": "Use `nullptr` rather than `0` or `NULL`",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.48": {
+    "title": "Avoid casts",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.49": {
+    "title": "If you must use a cast, use a named cast",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.50": {
+    "title": "Don't cast away `const`",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.55": {
+    "title": "Avoid the need for range checking",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.56": {
+    "title": "Write `std::move()` only when you need to explicitly move an object to another scope",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.60": {
+    "title": "Avoid `new` and `delete` outside resource management functions",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.61": {
+    "title": "Delete arrays using `delete[]` and non-arrays using `delete`",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.62": {
+    "title": "Don't compare pointers into different arrays",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.63": {
+    "title": "Don't slice",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.64": {
+    "title": "Use the `T{e}`notation for construction",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.65": {
+    "title": "Don't dereference an invalid pointer",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.stmt": {
+    "title": "Statements",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.70": {
+    "title": "Prefer a `switch`-statement to an `if`-statement when there is a choice",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.71": {
+    "title": "Prefer a range-`for`-statement to a `for`-statement when there is a choice",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.72": {
+    "title": "Prefer a `for`-statement to a `while`-statement when there is an obvious loop variable",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.73": {
+    "title": "Prefer a `while`-statement to a `for`-statement when there is no obvious loop variable",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.74": {
+    "title": "Prefer to declare a loop variable in the initializer part of a `for`-statement",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.75": {
+    "title": "Avoid `do`-statements",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.76": {
+    "title": "Avoid `goto`",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.77": {
+    "title": "Minimize the use of `break` and `continue` in loops",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.78": {
+    "title": "Don't rely on implicit fallthrough in `switch` statements",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.79": {
+    "title": "Use `default` to handle common cases (only)",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.84": {
+    "title": "Don't try to declare a local variable with no name",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.85": {
+    "title": "Make empty statements visible",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.86": {
+    "title": "Avoid modifying loop control variables inside the body of raw for-loops",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.87": {
+    "title": "Don't add redundant `==` or `!=` to conditions",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.100": {
+    "title": "Don't mix signed and unsigned arithmetic",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.101": {
+    "title": "Use unsigned types for bit manipulation",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.102": {
+    "title": "Use signed types for arithmetic",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.103": {
+    "title": "Don't overflow",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.104": {
+    "title": "Don't underflow",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.105": {
+    "title": "Don't divide by integer zero",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.106": {
+    "title": "Don't try to avoid negative values by using `unsigned`",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "ES.107": {
+    "title": "Don't use `unsigned` for subscripts, prefer `gsl::index`",
+    "section": "ES: Expressions and statements",
+    "has_code": false
+  },
+  "CP.1": {
+    "title": "Assume that your code will run as part of a multi-threaded program",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.2": {
+    "title": "Avoid data races",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.3": {
+    "title": "Minimize explicit sharing of writable data",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.4": {
+    "title": "Think in terms of tasks, rather than threads",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.8": {
+    "title": "Don't try to use `volatile` for synchronization",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.9": {
+    "title": "Whenever feasible use tools to validate your concurrent code",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.con": {
+    "title": "Concurrency",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.20": {
+    "title": "Use RAII, never plain `lock()`/`unlock()`",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.21": {
+    "title": "Use `std::lock()` or `std::scoped_lock` to acquire multiple `mutex`es",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.22": {
+    "title": "Never call unknown code while holding a lock (e.g., a callback)",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.23": {
+    "title": "Think of a joining `thread` as a scoped container",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.24": {
+    "title": "Think of a `thread` as a global container",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.25": {
+    "title": "Prefer `gsl::joining_thread` over `std::thread`",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.26": {
+    "title": "Don't `detach()` a thread",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.31": {
+    "title": "Pass small amounts of data between threads by value, rather than by reference or pointer",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.32": {
+    "title": "To share ownership between unrelated `thread`s use `shared_ptr`",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.40": {
+    "title": "Minimize context switching",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.41": {
+    "title": "Minimize thread creation and destruction",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.42": {
+    "title": "Don't `wait` without a condition",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.43": {
+    "title": "Minimize time spent in a critical section",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.44": {
+    "title": "Remember to name your `lock_guard`s and `unique_lock`s",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.50": {
+    "title": "Define a `mutex` together with the data it guards. Use `synchronized_value` where possible",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.coro": {
+    "title": "Coroutines",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.51": {
+    "title": "Do not use capturing lambdas that are coroutines",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.52": {
+    "title": "Do not hold locks or other synchronization primitives across suspension points",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.53": {
+    "title": "Parameters to coroutines should not be passed by reference",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.par": {
+    "title": "Parallelism",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.mess": {
+    "title": "Message passing",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.60": {
+    "title": "Use a `future` to return a value from a concurrent task",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.61": {
+    "title": "Use `async()` to spawn concurrent tasks",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.vec": {
+    "title": "Vectorization",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.free": {
+    "title": "Lock-free programming",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.100": {
+    "title": "Don't use lock-free programming unless you absolutely have to",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.101": {
+    "title": "Distrust your hardware/compiler combination",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.102": {
+    "title": "Carefully study the literature",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.110": {
+    "title": "Do not write your own double-checked locking for initialization",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.111": {
+    "title": "Use a conventional pattern if you really need double-checked locking",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.etc": {
+    "title": "Etc. concurrency rules",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.200": {
+    "title": "Use `volatile` only to talk to non-C++ memory",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "CP.201": {
+    "title": "??? Signals",
+    "section": "CP: Concurrency and parallelism",
+    "has_code": false
+  },
+  "E.1": {
+    "title": "Develop an error-handling strategy early in a design",
+    "section": "E: Error handling",
+    "has_code": false
+  },
+  "E.2": {
+    "title": "Throw an exception to signal that a function can't perform its assigned task",
+    "section": "E: Error handling",
+    "has_code": false
+  },
+  "E.3": {
+    "title": "Use exceptions for error handling only",
+    "section": "E: Error handling",
+    "has_code": false
+  },
+  "E.4": {
+    "title": "Design your error-handling strategy around invariants",
+    "section": "E: Error handling",
+    "has_code": false
+  },
+  "E.5": {
+    "title": "Let a constructor establish an invariant, and throw if it cannot",
+    "section": "E: Error handling",
+    "has_code": false
+  },
+  "E.6": {
+    "title": "Use RAII to prevent leaks",
+    "section": "E: Error handling",
+    "has_code": false
+  },
+  "E.7": {
+    "title": "State your preconditions",
+    "section": "E: Error handling",
+    "has_code": false
+  },
+  "E.8": {
+    "title": "State your postconditions",
+    "section": "E: Error handling",
+    "has_code": false
+  },
+  "E.12": {
+    "title": "Use `noexcept` when exiting a function because of a `throw` is impossible or unacceptable",
+    "section": "E: Error handling",
+    "has_code": false
+  },
+  "E.13": {
+    "title": "Never throw while being the direct owner of an object",
+    "section": "E: Error handling",
+    "has_code": false
+  },
+  "E.14": {
+    "title": "Use purpose-designed user-defined types as exceptions (not built-in types)",
+    "section": "E: Error handling",
+    "has_code": false
+  },
+  "E.15": {
+    "title": "Throw by value, catch exceptions from a hierarchy by reference",
+    "section": "E: Error handling",
+    "has_code": false
+  },
+  "E.16": {
+    "title": "Destructors, deallocation, `swap`, and exception type copy/move construction must never fail",
+    "section": "E: Error handling",
+    "has_code": false
+  },
+  "E.17": {
+    "title": "Don't try to catch every exception in every function",
+    "section": "E: Error handling",
+    "has_code": false
+  },
+  "E.18": {
+    "title": "Minimize the use of explicit `try`/`catch`",
+    "section": "E: Error handling",
+    "has_code": false
+  },
+  "E.19": {
+    "title": "Use a `final_action` object to express cleanup if no suitable resource handle is available",
+    "section": "E: Error handling",
+    "has_code": false
+  },
+  "E.25": {
+    "title": "If you can't throw exceptions, simulate RAII for resource management",
+    "section": "E: Error handling",
+    "has_code": false
+  },
+  "E.26": {
+    "title": "If you can't throw exceptions, consider failing fast",
+    "section": "E: Error handling",
+    "has_code": false
+  },
+  "E.27": {
+    "title": "If you can't throw exceptions, use error codes systematically",
+    "section": "E: Error handling",
+    "has_code": false
+  },
+  "E.28": {
+    "title": "Avoid error handling based on global state (e.g. `errno`)",
+    "section": "E: Error handling",
+    "has_code": false
+  },
+  "E.30": {
+    "title": "Don't use exception specifications",
+    "section": "E: Error handling",
+    "has_code": false
+  },
+  "E.31": {
+    "title": "Properly order your `catch`-clauses",
+    "section": "E: Error handling",
+    "has_code": false
+  },
+  "T.gp": {
+    "title": "Generic programming",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.1": {
+    "title": "Use templates to raise the level of abstraction of code",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.2": {
+    "title": "Use templates to express algorithms that apply to many argument types",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.3": {
+    "title": "Use templates to express containers and ranges",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.4": {
+    "title": "Use templates to express syntax tree manipulation",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.5": {
+    "title": "Combine generic and OO techniques to amplify their strengths, not their costs",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.concepts": {
+    "title": "Concept rules",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.con-use": {
+    "title": "Concept use",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.10": {
+    "title": "Specify concepts for all template arguments",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.11": {
+    "title": "Whenever possible use standard concepts",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.12": {
+    "title": "Prefer concept names over `auto` for local variables",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.13": {
+    "title": "Prefer the shorthand notation for simple, single-type argument concepts",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.20": {
+    "title": "Avoid \"concepts\" without meaningful semantics",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.21": {
+    "title": "Require a complete set of operations for a concept",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.22": {
+    "title": "Specify axioms for concepts",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.23": {
+    "title": "Differentiate a refined concept from its more general case by adding new use patterns.",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.24": {
+    "title": "Use tag classes or traits to differentiate concepts that differ only in semantics.",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.25": {
+    "title": "Avoid complementary constraints",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.26": {
+    "title": "Prefer to define concepts in terms of use-patterns rather than simple syntax",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.40": {
+    "title": "Use function objects to pass operations to algorithms",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.41": {
+    "title": "Require only essential properties in a template's concepts",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.42": {
+    "title": "Use template aliases to simplify notation and hide implementation details",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.43": {
+    "title": "Prefer `using` over `typedef` for defining aliases",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.44": {
+    "title": "Use function templates to deduce class template argument types (where feasible)",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.46": {
+    "title": "Require template arguments to be at least semiregular",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.47": {
+    "title": "Avoid highly visible unconstrained templates with common names",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.48": {
+    "title": "If your compiler does not support concepts, fake them with `enable_if`",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.49": {
+    "title": "Where possible, avoid type-erasure",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.def": {
+    "title": "Template definitions",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.60": {
+    "title": "Minimize a template's context dependencies",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.61": {
+    "title": "Do not over-parameterize members (SCARY)",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.62": {
+    "title": "Place non-dependent class template members in a non-templated base class",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.64": {
+    "title": "Use specialization to provide alternative implementations of class templates",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.65": {
+    "title": "Use tag dispatch to provide alternative implementations of a function",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.67": {
+    "title": "Use specialization to provide alternative implementations for irregular types",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.68": {
+    "title": "Use `{}` rather than `()` within templates to avoid ambiguities",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.69": {
+    "title": "Inside a template, don't make an unqualified non-member function call unless you intend it to be a customization point",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.temp-hier": {
+    "title": "Template and hierarchy rules:",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.80": {
+    "title": "Do not naively templatize a class hierarchy",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.81": {
+    "title": "Do not mix hierarchies and arrays",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.82": {
+    "title": "Linearize a hierarchy when virtual functions are undesirable",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.83": {
+    "title": "Do not declare a member function template virtual",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.84": {
+    "title": "Use a non-template core implementation to provide an ABI-stable interface",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.var": {
+    "title": "Variadic template rules",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.100": {
+    "title": "Use variadic templates when you need a function that takes a variable number of arguments of a variety of types",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.101": {
+    "title": "??? How to pass arguments to a variadic template ???",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.102": {
+    "title": "How to process arguments to a variadic template",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.103": {
+    "title": "Don't use variadic templates for homogeneous argument lists",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.meta": {
+    "title": "Template metaprogramming (TMP)",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.120": {
+    "title": "Use template metaprogramming only when you really need to",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.121": {
+    "title": "Use template metaprogramming primarily to emulate concepts",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.122": {
+    "title": "Use templates (usually template aliases) to compute types at compile time",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.123": {
+    "title": "Use `constexpr` functions to compute values at compile time",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.124": {
+    "title": "Prefer to use standard-library TMP facilities",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.125": {
+    "title": "If you need to go beyond the standard-library TMP facilities, use an existing library",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.140": {
+    "title": "If an operation can be reused, give it a name",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.141": {
+    "title": "Use an unnamed lambda if you need a simple function object in one place only",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.143": {
+    "title": "Don't write unintentionally non-generic code",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.144": {
+    "title": "Don't specialize function templates",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "T.150": {
+    "title": "Check that a class matches a concept using `static_assert`",
+    "section": "T: Templates and generic programming",
+    "has_code": false
+  },
+  "CPL.1": {
+    "title": "Prefer C++ to C",
+    "section": "CPL: C-style programming",
+    "has_code": false
+  },
+  "CPL.2": {
+    "title": "If you must use C, use the common subset of C and C++, and compile the C code as C++",
+    "section": "CPL: C-style programming",
+    "has_code": false
+  },
+  "CPL.3": {
+    "title": "If you must use C for interfaces, use C++ in the calling code using such interfaces",
+    "section": "CPL: C-style programming",
+    "has_code": false
+  },
+  "SF.1": {
+    "title": "Use a `.cpp` suffix for code files and `.h` for interface files if your project doesn't already follow another convention",
+    "section": "SF: Source files",
+    "has_code": false
+  },
+  "SF.2": {
+    "title": "A header file must not contain object definitions or non-inline function definitions",
+    "section": "SF: Source files",
+    "has_code": false
+  },
+  "SF.3": {
+    "title": "Use header files for all declarations used in multiple source files",
+    "section": "SF: Source files",
+    "has_code": false
+  },
+  "SF.4": {
+    "title": "Include header files before other declarations in a file",
+    "section": "SF: Source files",
+    "has_code": false
+  },
+  "SF.5": {
+    "title": "A `.cpp` file must include the header file(s) that defines its interface",
+    "section": "SF: Source files",
+    "has_code": false
+  },
+  "SF.6": {
+    "title": "Use `using namespace` directives for transition, for foundation libraries (such as `std`), or within a local scope (only)",
+    "section": "SF: Source files",
+    "has_code": false
+  },
+  "SF.7": {
+    "title": "Don't write `using namespace` at global scope in a header file",
+    "section": "SF: Source files",
+    "has_code": false
+  },
+  "SF.8": {
+    "title": "Use `#include` guards for all header files",
+    "section": "SF: Source files",
+    "has_code": false
+  },
+  "SF.9": {
+    "title": "Avoid cyclic dependencies among source files",
+    "section": "SF: Source files",
+    "has_code": false
+  },
+  "SF.10": {
+    "title": "Avoid dependencies on implicitly `#include`d names",
+    "section": "SF: Source files",
+    "has_code": false
+  },
+  "SF.11": {
+    "title": "Header files should be self-contained",
+    "section": "SF: Source files",
+    "has_code": false
+  },
+  "SF.12": {
+    "title": "Prefer the quoted form of `#include` for files relative to the including file and the angle bracket form everywhere else",
+    "section": "SF: Source files",
+    "has_code": false
+  },
+  "SF.13": {
+    "title": "Use portable header identifiers in `#include` statements",
+    "section": "SF: Source files",
+    "has_code": false
+  },
+  "SF.20": {
+    "title": "Use `namespace`s to express logical structure",
+    "section": "SF: Source files",
+    "has_code": false
+  },
+  "SF.21": {
+    "title": "Don't use an unnamed (anonymous) namespace in a header",
+    "section": "SF: Source files",
+    "has_code": false
+  },
+  "SF.22": {
+    "title": "Use an unnamed (anonymous) namespace for all internal/non-exported entities",
+    "section": "SF: Source files",
+    "has_code": false
+  },
+  "SL.1": {
+    "title": "Use libraries wherever possible",
+    "section": "SL: The Standard Library",
+    "has_code": false
+  },
+  "SL.2": {
+    "title": "Prefer the standard library to other libraries",
+    "section": "SL: The Standard Library",
+    "has_code": false
+  },
+  "SL.3": {
+    "title": "Do not add non-standard entities to namespace `std`",
+    "section": "SL: The Standard Library",
+    "has_code": false
+  },
+  "SL.4": {
+    "title": "Use the standard library in a type-safe manner",
+    "section": "SL: The Standard Library",
+    "has_code": false
+  },
+  "SL.con": {
+    "title": "Containers",
+    "section": "SL: The Standard Library",
+    "has_code": false
+  },
+  "SL.str": {
+    "title": "String",
+    "section": "SL: The Standard Library",
+    "has_code": false
+  },
+  "SL.io": {
+    "title": "Iostream",
+    "section": "SL: The Standard Library",
+    "has_code": false
+  },
+  "SL.regex": {
+    "title": "Regex",
+    "section": "SL: The Standard Library",
+    "has_code": false
+  },
+  "SL.chrono": {
+    "title": "Time",
+    "section": "SL: The Standard Library",
+    "has_code": false
+  },
+  "A.1": {
+    "title": "Separate stable code from less stable code",
+    "section": "A: Architectural ideas",
+    "has_code": false
+  },
+  "A.2": {
+    "title": "Express potentially reusable parts as a library",
+    "section": "A: Architectural ideas",
+    "has_code": false
+  },
+  "A.4": {
+    "title": "There should be no cycles among libraries",
+    "section": "A: Architectural ideas",
+    "has_code": false
+  },
+  "NR.1": {
+    "title": "Don't insist that all declarations should be at the top of a function",
+    "section": "NR: Non-Rules and myths",
+    "has_code": false
+  },
+  "NR.2": {
+    "title": "Don't insist on having only a single `return`-statement in a function",
+    "section": "NR: Non-Rules and myths",
+    "has_code": false
+  },
+  "NR.3": {
+    "title": "Don't avoid exceptions",
+    "section": "NR: Non-Rules and myths",
+    "has_code": false
+  },
+  "NR.4": {
+    "title": "Don't insist on placing each class definition in its own source file",
+    "section": "NR: Non-Rules and myths",
+    "has_code": false
+  },
+  "NR.5": {
+    "title": "Don't use two-phase initialization",
+    "section": "NR: Non-Rules and myths",
+    "has_code": false
+  },
+  "NR.6": {
+    "title": "Don't place all cleanup actions at the end of a function and `goto exit`",
+    "section": "NR: Non-Rules and myths",
+    "has_code": false
+  },
+  "NR.7": {
+    "title": "Don't make data members `protected`",
+    "section": "NR: Non-Rules and myths",
+    "has_code": false
+  },
+  "RF.rules": {
+    "title": "Coding rules",
+    "section": "RF: References",
+    "has_code": false
+  },
+  "RF.books": {
+    "title": "Books with coding guidelines",
+    "section": "RF: References",
+    "has_code": false
+  },
+  "RF.web": {
+    "title": "Websites",
+    "section": "RF: References",
+    "has_code": false
+  },
+  "RS.video": {
+    "title": "Videos about \"modern C++\"",
+    "section": "RF: References",
+    "has_code": false
+  },
+  "RF.man": {
+    "title": "Manuals",
+    "section": "RF: References",
+    "has_code": false
+  },
+  "RF.core": {
+    "title": "Core Guidelines materials",
+    "section": "RF: References",
+    "has_code": false
+  },
+  "GSL.view": {
+    "title": "Views",
+    "section": "GSL: Guidelines support library",
+    "has_code": false
+  },
+  "GSL.owner": {
+    "title": "Ownership pointers",
+    "section": "GSL: Guidelines support library",
+    "has_code": false
+  },
+  "GSL.assert": {
+    "title": "Assertions",
+    "section": "GSL: Guidelines support library",
+    "has_code": false
+  },
+  "GSL.util": {
+    "title": "Utilities",
+    "section": "GSL: Guidelines support library",
+    "has_code": false
+  },
+  "GSL.concept": {
+    "title": "Concepts",
+    "section": "GSL: Guidelines support library",
+    "has_code": false
+  },
+  "GSL.ptr": {
+    "title": "Smart pointer concepts",
+    "section": "GSL: Guidelines support library",
+    "has_code": false
+  },
+  "NL.1": {
+    "title": "Don't say in comments what can be clearly stated in code",
+    "section": "NL: Naming and layout suggestions",
+    "has_code": false
+  },
+  "NL.2": {
+    "title": "State intent in comments",
+    "section": "NL: Naming and layout suggestions",
+    "has_code": false
+  },
+  "NL.3": {
+    "title": "Keep comments crisp",
+    "section": "NL: Naming and layout suggestions",
+    "has_code": false
+  },
+  "NL.4": {
+    "title": "Maintain a consistent indentation style",
+    "section": "NL: Naming and layout suggestions",
+    "has_code": false
+  },
+  "NL.5": {
+    "title": "Avoid encoding type information in names",
+    "section": "NL: Naming and layout suggestions",
+    "has_code": false
+  },
+  "NL.7": {
+    "title": "Make the length of a name roughly proportional to the length of its scope",
+    "section": "NL: Naming and layout suggestions",
+    "has_code": false
+  },
+  "NL.8": {
+    "title": "Use a consistent naming style",
+    "section": "NL: Naming and layout suggestions",
+    "has_code": false
+  },
+  "NL.9": {
+    "title": "Use `ALL_CAPS` for macro names only",
+    "section": "NL: Naming and layout suggestions",
+    "has_code": false
+  },
+  "NL.10": {
+    "title": "Prefer `underscore_style` names",
+    "section": "NL: Naming and layout suggestions",
+    "has_code": false
+  },
+  "NL.11": {
+    "title": "Make literals readable",
+    "section": "NL: Naming and layout suggestions",
+    "has_code": false
+  },
+  "NL.15": {
+    "title": "Use spaces sparingly",
+    "section": "NL: Naming and layout suggestions",
+    "has_code": false
+  },
+  "NL.16": {
+    "title": "Use a conventional class member declaration order",
+    "section": "NL: Naming and layout suggestions",
+    "has_code": false
+  },
+  "NL.17": {
+    "title": "Use K&R-derived layout",
+    "section": "NL: Naming and layout suggestions",
+    "has_code": false
+  },
+  "NL.18": {
+    "title": "Use C++-style declarator layout",
+    "section": "NL: Naming and layout suggestions",
+    "has_code": false
+  },
+  "NL.19": {
+    "title": "Avoid names that are easily misread",
+    "section": "NL: Naming and layout suggestions",
+    "has_code": false
+  },
+  "NL.20": {
+    "title": "Don't place two statements on the same line",
+    "section": "NL: Naming and layout suggestions",
+    "has_code": false
+  },
+  "NL.21": {
+    "title": "Declare one name (only) per declaration",
+    "section": "NL: Naming and layout suggestions",
+    "has_code": false
+  },
+  "NL.25": {
+    "title": "Don't use `void` as an argument type",
+    "section": "NL: Naming and layout suggestions",
+    "has_code": false
+  },
+  "NL.26": {
+    "title": "Use conventional `const` notation",
+    "section": "NL: Naming and layout suggestions",
+    "has_code": false
+  },
+  "NL.27": {
+    "title": "Use a `.cpp` suffix for code files and `.h` for interface files",
+    "section": "NL: Naming and layout suggestions",
+    "has_code": false
+  },
+  "FAQ.1": {
+    "title": "What do these guidelines aim to achieve?",
+    "section": "FAQ: Answers to frequently asked questions",
+    "has_code": false
+  },
+  "FAQ.2": {
+    "title": "When and where was this work first announced?",
+    "section": "FAQ: Answers to frequently asked questions",
+    "has_code": false
+  },
+  "FAQ.3": {
+    "title": "Who are the authors and maintainers of these guidelines?",
+    "section": "FAQ: Answers to frequently asked questions",
+    "has_code": false
+  },
+  "FAQ.4": {
+    "title": "How can I contribute?",
+    "section": "FAQ: Answers to frequently asked questions",
+    "has_code": false
+  },
+  "FAQ.5": {
+    "title": "How can I become an editor/maintainer?",
+    "section": "FAQ: Answers to frequently asked questions",
+    "has_code": false
+  },
+  "FAQ.6": {
+    "title": "Have these guidelines been approved by the ISO C++ standards committee? Do they represent the consensus of the committee?",
+    "section": "FAQ: Answers to frequently asked questions",
+    "has_code": false
+  },
+  "FAQ.7": {
+    "title": "If these guidelines are not approved by the committee, why are they under `github.com/isocpp`?",
+    "section": "FAQ: Answers to frequently asked questions",
+    "has_code": false
+  },
+  "FAQ.8": {
+    "title": "Will there be a C++98 version of these Guidelines? A C++11 version?",
+    "section": "FAQ: Answers to frequently asked questions",
+    "has_code": false
+  },
+  "FAQ.9": {
+    "title": "Do these guidelines propose new language features?",
+    "section": "FAQ: Answers to frequently asked questions",
+    "has_code": false
+  },
+  "FAQ.10": {
+    "title": "What version of Markdown do these guidelines use?",
+    "section": "FAQ: Answers to frequently asked questions",
+    "has_code": false
+  },
+  "FAQ.50": {
+    "title": "What is the GSL (guidelines support library)?",
+    "section": "FAQ: Answers to frequently asked questions",
+    "has_code": false
+  },
+  "FAQ.51": {
+    "title": "Is [github.com/Microsoft/GSL](https://github.com/Microsoft/GSL) the GSL?",
+    "section": "FAQ: Answers to frequently asked questions",
+    "has_code": false
+  },
+  "FAQ.52": {
+    "title": "Why not supply an actual GSL implementation in/with these guidelines?",
+    "section": "FAQ: Answers to frequently asked questions",
+    "has_code": false
+  },
+  "FAQ.53": {
+    "title": "Why weren't the GSL types proposed through Boost?",
+    "section": "FAQ: Answers to frequently asked questions",
+    "has_code": false
+  },
+  "FAQ.54": {
+    "title": "Has the GSL (guidelines support library) been approved by the ISO C++ standards committee?",
+    "section": "FAQ: Answers to frequently asked questions",
+    "has_code": false
+  },
+  "FAQ.55": {
+    "title": "If you're using the standard types where available, why is the GSL `span` different from the `string_view` in the Library Fundamentals 1 Technical Specification and C++17 Working Paper? Why not just use the committee-approved `string_view`?",
+    "section": "FAQ: Answers to frequently asked questions",
+    "has_code": false
+  },
+  "FAQ.56": {
+    "title": "Is `owner` the same as the proposed `observer_ptr`?",
+    "section": "FAQ: Answers to frequently asked questions",
+    "has_code": false
+  },
+  "FAQ.57": {
+    "title": "Is `stack_array` the same as the standard `array`?",
+    "section": "FAQ: Answers to frequently asked questions",
+    "has_code": false
+  },
+  "FAQ.58": {
+    "title": "Is `dyn_array` the same as `vector` or the proposed `dynarray`?",
+    "section": "FAQ: Answers to frequently asked questions",
+    "has_code": false
+  },
+  "FAQ.59": {
+    "title": "Is `Expects` the same as `assert`?",
+    "section": "FAQ: Answers to frequently asked questions",
+    "has_code": false
+  },
+  "FAQ.60": {
+    "title": "Is `Ensures` the same as `assert`?",
+    "section": "FAQ: Answers to frequently asked questions",
+    "has_code": false
+  }
+}
