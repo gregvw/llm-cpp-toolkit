@@ -1,0 +1,22 @@
+{
+  "tool": "include-what-you-use",
+  "ok": true,
+  "issues": [
+    {
+      "file": "test_includes.cpp",
+      "suggest_add": [
+        "#include <memory>"
+      ],
+      "suggest_remove": [
+        "#include <map>",
+        "#include <set>",
+        "#include <algorithm>"
+      ]
+    }
+  ],
+  "meta": {
+    "version": "include-what-you-use 0.20",
+    "timestamp": "2025-11-20T22:45:00Z",
+    "command": "include-what-you-use test_includes.cpp"
+  }
+}

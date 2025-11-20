@@ -1,0 +1,68 @@
+{
+  "tool": "cppcheck",
+  "ok": true,
+  "issues": [
+    {
+      "id": "nullPointer",
+      "severity": "error",
+      "message": "Null pointer dereference: ptr",
+      "verbose": "Dereferencing 'ptr' which is known to be null when it is initialized to nullptr at line 8",
+      "locations": [
+        {
+          "file": "test_memory.cpp",
+          "line": 9,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "id": "uninitvar",
+      "severity": "error",
+      "message": "Uninitialized variable: value",
+      "verbose": "The variable 'value' is used but not initialized. This leads to undefined behavior.",
+      "locations": [
+        {
+          "file": "test_memory.cpp",
+          "line": 15,
+          "column": 18
+        }
+      ]
+    },
+    {
+      "id": "memleak",
+      "severity": "error",
+      "message": "Memory leak: data",
+      "verbose": "Memory allocated with 'new[]' is not freed. Use 'delete[]' to free the memory.",
+      "locations": [
+        {
+          "file": "test_memory.cpp",
+          "line": 20,
+          "column": 17
+        },
+        {
+          "file": "test_memory.cpp",
+          "line": 22,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "id": "bufferAccessOutOfBounds",
+      "severity": "error",
+      "message": "Buffer access out of bounds: buffer",
+      "verbose": "The size of 'buffer' is 10 bytes, but strcpy can write more bytes",
+      "locations": [
+        {
+          "file": "test_memory.cpp",
+          "line": 27,
+          "column": 5
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "version": "Cppcheck 2.13.0",
+    "timestamp": "2025-11-20T22:45:00Z",
+    "command": "cppcheck --enable=all --json test_memory.cpp"
+  }
+}
