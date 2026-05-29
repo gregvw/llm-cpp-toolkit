@@ -1,0 +1,38 @@
+cmake_minimum_required(VERSION {{ cmake_minimum }})
+project({{ project_name }} CXX)
+
+# C++ standard (explicit, no compiler extensions).
+set(CMAKE_CXX_STANDARD {{ cpp_standard }})
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Export compile_commands.json for clangd and `llmtk context export`.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+{% if pic %}
+# Position-independent code (library preset).
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+{% endif %}
+
+{% if target_type == "library" %}
+add_library({{ project_name }} src/main.cpp)
+target_include_directories({{ project_name }} PUBLIC include)
+{% else %}
+add_executable({{ project_name }} src/main.cpp)
+target_include_directories({{ project_name }} PRIVATE include)
+{% endif %}
+
+# Warnings kept explicit so they are easy to inspect and override.
+target_compile_options({{ project_name }} PRIVATE -Wall -Wextra -Wpedantic)
+{% if enable_sanitizers %}
+
+# AddressSanitizer + UBSan in Debug builds (full preset).
+target_compile_options({{ project_name }} PRIVATE $<$<CONFIG:Debug>:-fsanitize=address,undefined>)
+target_link_options({{ project_name }} PRIVATE $<$<CONFIG:Debug>:-fsanitize=address,undefined>)
+{% endif %}
+{% if enable_tests %}
+
+enable_testing()
+{% if target_type == "executable" %}
+add_test(NAME {{ project_name }}_smoke COMMAND {{ project_name }})
+{% endif %}
+{% endif %}

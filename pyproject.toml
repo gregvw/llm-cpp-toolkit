@@ -21,7 +21,11 @@ classifiers = [
   "Intended Audience :: Developers",
   "Topic :: Software Development :: Build Tools"
 ]
-dependencies = []
+# Jinja2 powers `llmtk init` project scaffolding (and nothing else); it is a
+# normal runtime dependency because init requires it at run time.
+dependencies = [
+  "jinja2>=3.1",
+]
 
 [dependency-groups]
 dev = [
