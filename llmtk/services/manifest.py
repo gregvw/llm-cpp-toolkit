@@ -1,6 +1,7 @@
 """Manifest loading and processing services."""
 
 import datetime
+import ast
 import json
 import pathlib
 import shutil
@@ -33,7 +34,87 @@ def load_yaml(path: pathlib.Path) -> Optional[Dict[str, Any]]:
         except Exception:
             pass
 
-    return None
+    return load_minimal_yaml(path)
+
+
+def load_minimal_yaml(path: pathlib.Path) -> Optional[Dict[str, Any]]:
+    """Load the manifest subset needed for zero-dependency capabilities.
+
+    This is intentionally small: it recognizes top-level manifest sections and
+    simple scalar/list fields for each command/tool. Full nested schemas are
+    loaded when PyYAML or yq is available.
+    """
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None
+
+    data: Dict[str, Any] = {}
+    current_section: Optional[str] = None
+    current_item: Optional[str] = None
+
+    for raw_line in lines:
+        line_without_comment = raw_line.split("#", 1)[0].rstrip()
+        if not line_without_comment.strip():
+            continue
+        indent = len(line_without_comment) - len(line_without_comment.lstrip(" "))
+        stripped = line_without_comment.strip()
+
+        if indent == 0 and ":" in stripped:
+            key, value = stripped.split(":", 1)
+            key = key.strip()
+            value = value.strip()
+            if value:
+                data[key] = _parse_scalar(value)
+                current_section = None
+            else:
+                data.setdefault(key, {})
+                current_section = key
+            current_item = None
+            continue
+
+        if current_section in {"tools", "commands"} and indent == 2 and ":" in stripped:
+            key, value = stripped.split(":", 1)
+            current_item = key.strip()
+            data.setdefault(current_section, {})[current_item] = {}
+            value = value.strip()
+            if value:
+                data[current_section][current_item] = _parse_scalar(value)
+            continue
+
+        if current_section in {"tools", "commands"} and current_item and indent == 4 and ":" in stripped:
+            key, value = stripped.split(":", 1)
+            key = key.strip()
+            value = value.strip()
+            if value:
+                item = data.setdefault(current_section, {}).setdefault(current_item, {})
+                if isinstance(item, dict):
+                    item[key] = _parse_scalar(value)
+
+    return data
+
+
+def _parse_scalar(value: str) -> Any:
+    """Parse a small YAML scalar/list value."""
+    value = value.strip()
+    if value in {"true", "false"}:
+        return value == "true"
+    if value in {"null", "None"}:
+        return None
+    if (value.startswith("[") and value.endswith("]")) or (value.startswith("{") and value.endswith("}")):
+        try:
+            return ast.literal_eval(value)
+        except (SyntaxError, ValueError):
+            return value
+    if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+        try:
+            return ast.literal_eval(value)
+        except (SyntaxError, ValueError):
+            return value[1:-1]
+    try:
+        return int(value)
+    except ValueError:
+        return value
 
 def load_tools_manifest() -> Optional[Dict[str, Any]]:
     """Load the tools manifest."""
@@ -58,14 +139,17 @@ def generate_capabilities_json(out_path: pathlib.Path) -> pathlib.Path:
 
     data = {
         "$schema": f"https://llmtk.ai/schemas/capabilities-v1.json",
+        "schema_version": 1,
         "_meta": {
-            "generated_at": datetime.datetime.now(datetime.UTC).isoformat(),
+            "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "toolkit_version": get_version(),
             "tools_manifest": str(tools_manifest),
             "commands_manifest": str(commands_manifest),
+            "stable_status": "supported",
         },
         "tools": {},
         "commands": {},
+        "planned_commands": {},
     }
 
     tools_section = tools.get("tools") if isinstance(tools, dict) else None
@@ -88,7 +172,9 @@ def generate_capabilities_json(out_path: pathlib.Path) -> pathlib.Path:
     if isinstance(commands_section, dict):
         for name, entry in commands_section.items():
             entry = entry or {}
-            data["commands"][name] = {
+            status = entry.get("status", "planned")
+            payload = {
+                "status": status,
                 "description": entry.get("description"),
                 "args": entry.get("args") or [],
                 "runs": entry.get("runs") or [],
@@ -96,6 +182,10 @@ def generate_capabilities_json(out_path: pathlib.Path) -> pathlib.Path:
                 "json_summary": entry.get("json_summary"),
                 "examples": entry.get("examples") or [],
             }
+            if status == "supported":
+                data["commands"][name] = payload
+            else:
+                data["planned_commands"][name] = payload
 
     write_json(out_path, data)
     return out_path

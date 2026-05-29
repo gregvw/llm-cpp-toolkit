@@ -22,4 +22,14 @@ This directory ships lightweight adapter stubs so editors and agent shells can a
 
 All three adapters forward the `LLMTK_BOOTSTRAP_USE_SOURCE` environment variable so development builds prefer the local checkout over published releases. Remove it when running against an installed copy.
 
-If your editor expects TCP sockets instead of stdio you can pair the same configs with `llmtk agent serve --port 8765`; the MCP variant remains the canonical, manifest-driven surface.
+The supported agent transport is stdio MCP via `llmtk agent mcp`. TCP serving is not part of the stable v1 surface.
+
+Stable MCP tools:
+
+- `llmtk.context_export`
+- `llmtk.preflight`
+- `llmtk.diagnostics`
+- `llmtk.test`
+- `llmtk.deps`
+- `llmtk.capabilities`
+- `llmtk.list_exports`

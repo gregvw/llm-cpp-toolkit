@@ -3,13 +3,14 @@
 import argparse
 import sys
 from .core.dry_run import activate_dry_run
+from .core.utils import get_version
 from .commands import setup_commands
 
 def create_parser() -> argparse.ArgumentParser:
     """Create the main argument parser."""
     parser = argparse.ArgumentParser(
         prog="llmtk",
-        description="LLM C++ Toolkit - AI-assisted C++ development tools"
+        description="LLM C++ Toolkit - C++/CMake build intelligence for AI agents"
     )
 
     parser.add_argument(
@@ -21,7 +22,7 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--version",
         action="version",
-        version="llmtk 1.0.0"
+        version=f"llmtk {get_version()}"
     )
 
     # Create subparsers for commands

@@ -301,7 +301,7 @@ def _build_summary(
         compile_commands_rel = str(compile_commands.relative_to(project_root))
 
     cmake_api_rel = str((exports_dir / "cmake-file-api").relative_to(project_root))
-    timestamp = datetime.datetime.now(datetime.UTC).isoformat()
+    timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
     summary: Dict[str, Any] = {
         "compile_commands": compile_commands_rel,

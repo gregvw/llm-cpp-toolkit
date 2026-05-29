@@ -12,7 +12,7 @@ def cmd_telemetry(args: argparse.Namespace) -> int:
     """Execute the telemetry command."""
     action = getattr(args, "telemetry_action", "status")
     state = telemetry_state()
-    timestamp = datetime.datetime.now(datetime.UTC).isoformat()
+    timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
     if action == "status":
         status = "enabled" if telemetry_enabled() else "disabled"

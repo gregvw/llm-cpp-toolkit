@@ -4,9 +4,16 @@
 
 Choose your preferred installation method:
 
-### Quick Install (npm)
+### Python Development (uv)
 ```bash
-npm install -g llm-cpp-toolkit
+uv sync
+uv run python cli/llmtk doctor
+```
+
+### Quick Install (isolated Python)
+```bash
+uv tool install llm-cpp-toolkit
+# or: pipx install llm-cpp-toolkit
 llmtk --version
 ```
 
@@ -31,8 +38,12 @@ llmtk context export --build build
 # Analyze code with multiple tools
 llmtk analyze src/ include/
 
-# Reduce a failing test case
-llmtk reduce test.cpp "gcc test.cpp && ./a.out"
+# Run fast validation and structured tests
+llmtk preflight --paths src/ include/ --json exports/reports/preflight.json
+llmtk test --json
+
+# Expose the stable C++ workflow to MCP-capable agents
+llmtk agent mcp
 ```
 
 ## Development Usage
@@ -41,6 +52,7 @@ If working from the repo directly:
 ```bash
 python3 cli/llmtk doctor
 python3 cli/llmtk context export --build build
+python3 cli/llmtk preflight --paths src/ include/
 python3 cli/llmtk analyze src/ include/
 ```
 
@@ -51,6 +63,6 @@ All artifacts are written under `exports/` directory for easy parsing by LLMs an
 - `exports/context.json` - Project context summary
 - `exports/compile_commands.json` - Compilation database
 - `exports/cmake-file-api/` - CMake introspection data
-- `exports/reports/` - Analysis reports (clang-tidy, IWYU, cppcheck)
-- `exports/repros/` - Reduced test cases
-
+- `exports/reports/` - Analysis and preflight reports
+- `exports/tests/` - CTest JSON/SARIF summaries
+- `exports/diagnostics/` - Thinned compiler stderr reports

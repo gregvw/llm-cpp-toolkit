@@ -1,13 +1,10 @@
 """stderr-thin command implementation for llmtk."""
 
 import argparse
-import os
 import subprocess
 import sys
-from pathlib import Path
-from typing import Optional
 
-from ..core.context import get_project_root
+from ..core.context import get_modules_dir, get_project_root
 from ..core.dry_run import is_dry_run
 
 
@@ -93,7 +90,7 @@ def handle_stderr_thin(args: argparse.Namespace) -> int:
 def run_stderr_thin(args: argparse.Namespace) -> int:
     """Run the stderr-thin processor."""
     project_root = get_project_root()
-    stderr_thin_script = project_root / "modules" / "stderr_thin.py"
+    stderr_thin_script = get_modules_dir() / "stderr_thin.py"
 
     if not stderr_thin_script.exists():
         print(f"Error: stderr-thin module not found at {stderr_thin_script}", file=sys.stderr)

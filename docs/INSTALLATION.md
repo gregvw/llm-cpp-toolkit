@@ -12,9 +12,27 @@ Comprehensive installation options for llm-cpp-toolkit across different platform
 | **No sudo access** | Local install | `llmtk install --local` |
 | **CI/CD pipeline** | Docker or Nix | `nix develop` or `docker run` |
 | **Team development** | Nix flake | `nix develop github:gregvw/...` |
+| **Python development** | uv | `uv sync` |
 | **Long-term use** | Package manager | `brew install llmtk` |
 
 ## 📦 Installation Methods
+
+### 0. Python Development with uv
+
+Use uv when developing or validating releases from a checkout:
+
+```bash
+git clone https://github.com/gregvw/llm-cpp-toolkit.git
+cd llm-cpp-toolkit
+uv sync
+uv run python cli/llmtk doctor
+uv run python -m pytest
+uv build --no-sources
+```
+
+For an isolated user install, prefer `uv tool install llm-cpp-toolkit` when uv
+is available. `pipx install llm-cpp-toolkit` remains supported because the
+package keeps standard Python packaging metadata.
 
 ### 1. One-Line Script (Recommended for Getting Started)
 

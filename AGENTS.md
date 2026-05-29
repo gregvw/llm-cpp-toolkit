@@ -1,8 +1,8 @@
 # Overview
 
-The goal is to create an extensive common CLI toolkit of utilities that would aid an LLM in C++ development
-on a Linux or MacOS system that can be easily and broadly shared with other users wishing to improve the
-performance and efficiency of their AI coding assistants. 
+The goal is to make `llmtk` a C++/CMake build intelligence backend for AI coding agents. The durable value is not a generic bundle of CLI utilities; it is deterministic C++ project context, diagnostics, test results, and dependency metadata exposed through a small CLI and MCP tools.
+
+For multi-agent work, use the planner/implementer/reviewer protocol in `docs/AGENT_COLLABORATION.md`. The default pairing is Codex as planner/reviewer and Claude as implementer, with role swaps only at clean milestone boundaries.
 
 ## Detailed Goal
 

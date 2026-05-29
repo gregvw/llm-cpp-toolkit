@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 
-from ..core.context import get_project_root
+from ..core.context import get_modules_dir, get_project_root
 from ..core.dry_run import is_dry_run
 
 
@@ -57,7 +57,7 @@ def run_analyze(paths: Optional[List[str]] = None, sarif: bool = False) -> int:
     env["LLMTK_PROJECT_ROOT"] = str(project_root)
 
     # Use analyze.sh for the core analysis
-    analyze_script = project_root / "modules" / "analyze.sh"
+    analyze_script = get_modules_dir() / "analyze.sh"
     if not analyze_script.exists():
         print(f"Error: analyze script not found at {analyze_script}", file=sys.stderr)
         return 1
@@ -102,7 +102,7 @@ def run_analyze(paths: Optional[List[str]] = None, sarif: bool = False) -> int:
 def convert_to_sarif(project_root: Path) -> int:
     """Convert analysis results to SARIF format."""
     reports_dir = project_root / "exports" / "reports"
-    sarif_converter = project_root / "modules" / "sarif_converter.py"
+    sarif_converter = get_modules_dir() / "sarif_converter.py"
 
     if not sarif_converter.exists():
         print(f"Error: SARIF converter not found at {sarif_converter}", file=sys.stderr)

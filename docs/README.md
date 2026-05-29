@@ -1,18 +1,18 @@
 # LLM C++ Toolkit
 
-This repository provides a CLI-first toolkit to help LLMs and agents work effectively with C++/CMake projects. It standardizes environment checks, context export, code analysis, and repro reduction with JSON outputs that are easy to parse.
+This repository provides a C++/CMake build intelligence backend for AI coding agents. It standardizes environment checks, CMake context export, diagnostics, dependency graphs, and CTest summaries with JSON outputs and a stable MCP surface.
 
 The content below mirrors the project instructions maintained for agents in `AGENTS.md`, adapted as user-facing documentation.
 
 ## Overview
 
-The goal is to create an extensive common CLI toolkit of utilities that aid an LLM in C++ development on Linux or macOS, easily shared to improve the performance and efficiency of AI coding assistants.
+The goal is to provide deterministic C++ project facts to agents that otherwise have to infer build state from noisy terminal output. Generic editor/file/Git operations are secondary to C++ build intelligence.
 
 ## Detailed Goal
 
 1) One repo with:
 - A machine‑readable manifest describing tools, versions, commands, and how to parse outputs.
-- A tiny wrapper CLI (`llmtk`) that installs, checks, and exposes consistent subcommands.
+- A tiny wrapper CLI (`llmtk`) that checks, exports, diagnoses, and exposes consistent subcommands.
 - Multiple installation paths: Nix flake, Linuxbrew tap, Docker/DevContainer, and a zero‑dependency Bash installer.
 - Docs auto‑generated from the manifest for humans and a compact `capabilities.json` for agents.
 - “Context pack” commands to export artifacts LLMs thrive on (compile DB, CMake JSON, logs).
@@ -69,15 +69,12 @@ commands:
       - "exports/reports/clang-tidy.json"
       - "exports/reports/iwyu.json"
       - "exports/reports/cppcheck.json"
-  reduce:
-    description: Minimize a failing repro with cvise.
-    args:
-      - {name: input, required: true}
-      - {name: test_cmd, required: true}
-    runs: ["modules/reduce.sh"]
+  test:
+    status: supported
+    description: Run CTest suites and emit structured results.
     outputs:
-      - "exports/repros/minimized.cpp"
-      - "exports/repros/report.json"
+      - "exports/tests/ctest_results.json"
+      - "exports/tests/ctest_results.sarif"
 ```
 
 4) Build management: a Python script (`build_manager`) that configures, builds, and tests with strict flags (`-Werror -Wall -Wextra -Wconversion -Wshadow`), sanitizer support (`-fsanitize=undefined,address`), and sensible clang‑tidy defaults, while producing concise, LLM‑friendly summaries.
@@ -94,7 +91,6 @@ llm-cpp-toolkit/
 ├─ modules/                     # thin adapters around tools
 │  ├─ cmake_introspect.sh
 │  ├─ compile_db.sh
-│  ├─ reduce.sh                 # cvise wrappers
 │  ├─ analyze.sh                # orchestration for analyzers
 ├─ presets/
 │  ├─ .clang-tidy
@@ -119,9 +115,13 @@ llm-cpp-toolkit/
 
 - `llmtk doctor` – machine‑readable health report (exports/doctor.json).
 - `llmtk context export` – emits compile DB + CMake File API (exports/context.json).
-- `llmtk analyze` – runs clang‑tidy/IWYU/cppcheck → JSON reports (now wired).
-- `llmtk reduce` – cvise wrapper to minimize repros.
-- Manifests drive behavior; installers and auto‑generated docs can be layered next.
+- `llmtk analyze` – runs clang‑tidy/IWYU/cppcheck → JSON reports.
+- `llmtk preflight` – fast syntax/config checks before expensive builds.
+- `llmtk stderr-thin` – compacts compiler stderr into budget-aware diagnostics.
+- `llmtk test` – CTest JSON/SARIF summaries.
+- `llmtk deps` – CMake target dependency graph exports.
+- `llmtk agent mcp` – MCP tools for the stable C++ workflow.
+- Planned commands remain in the manifest with `status: planned` until their CLI, docs, tests, and MCP contracts converge.
 
 ## Quickstart
 

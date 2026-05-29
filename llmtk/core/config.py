@@ -79,7 +79,7 @@ def ensure_telemetry_id() -> str:
     if "id" not in state:
         state["id"] = uuid.uuid4().hex
         state["enabled"] = state.get("enabled", False)
-        state["created"] = datetime.datetime.now(datetime.UTC).isoformat()
+        state["created"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
         save_user_config(get_user_config())
     return state["id"]
 

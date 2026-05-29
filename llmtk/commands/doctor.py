@@ -35,7 +35,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             "include-what-you-use", "cppcheck", "rg", "fd", "jq", "yq", "bear", "ccache", "mold"
         ]
 
-    report = {"_meta": {"generated_at": datetime.datetime.now(datetime.UTC).isoformat()}}
+    report = {"_meta": {"generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat()}}
 
     found_tools = []
     missing_core = []

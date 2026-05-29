@@ -88,11 +88,15 @@ brew install llm-cpp-toolkit
 2. Copy `homebrew/llm-cpp-toolkit.rb` to `Formula/llm-cpp-toolkit.rb`
 3. Update SHA256 hash for releases
 
-### 6. pipx (Python virtualised CLI)
+### 6. uv / pipx (Python isolated CLI)
 **Best for:** Users who want an isolated Python environment with checksum
 verification.
 
 ```bash
+# Preferred when uv is available
+uv tool install llm-cpp-toolkit
+
+# Standards-compatible fallback
 pipx install llm-cpp-toolkit
 llmtk --bootstrap-info
 ```
@@ -132,11 +136,13 @@ Use the unified build script to build all or specific packages:
 1. Update `VERSION` and regeneration artifacts (`llmtk docs`, etc.).
 2. Update `src/llmtk_bootstrap/data/releases.json` with the new tarball URL and
    checksum (see `scripts/release/sign_artifacts.py`).
-3. Run `python3 scripts/release/check_version_pins.py` to verify installers
+3. Run `uv build --no-sources` to validate the publishable Python package without
+   relying on local source paths.
+4. Run `uv run python scripts/release/check_version_pins.py` to verify installers
    reference the new version.
-4. Commit and tag the release.
-5. Create a new release on GitHub; CI can produce the packaging assets.
-6. Run `scripts/release/sign_artifacts.py dist --sign --key <KEY>` on the
+5. Commit and tag the release.
+6. Create a new release on GitHub; CI can produce the packaging assets.
+7. Run `uv run python scripts/release/sign_artifacts.py dist --sign --key <KEY>` on the
    downloaded artifacts to generate `SHA256SUMS(.sig)`.
 
 ### Manual
@@ -170,6 +176,11 @@ Use the unified build script to build all or specific packages:
 - **Automated:** No (manual tap maintenance)
 
 ## Requirements by Platform
+
+### Python Development
+- Python 3.9+
+- uv for development, CI, lock/build workflows, and release validation
+- pipx remains supported for users who want isolated installs without adopting uv
 
 ### AppImage
 - Linux system with AppImage support

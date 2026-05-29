@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-cpp-toolkit"
-description = "Bootstrapper for the llmtk CLI with checksum-validated releases"
+description = "C++/CMake build intelligence backend for AI coding agents"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
@@ -22,6 +22,14 @@ classifiers = [
   "Topic :: Software Development :: Build Tools"
 ]
 dependencies = []
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0",
+]
+
+[tool.uv]
+package = true
 
 [project.scripts]
 llmtk = "llmtk_bootstrap.bootstrap:main"

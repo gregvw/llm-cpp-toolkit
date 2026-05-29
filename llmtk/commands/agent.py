@@ -1,17 +1,113 @@
 """Agent command for llmtk - JSON request handler and MCP server."""
 
 import argparse
+import contextlib
+import io
 import json
-import os
+import subprocess
 import sys
-import threading
-import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
-from ..core.context import get_exports_dir, get_project_root
+from ..core.context import get_exports_dir, get_modules_dir, get_project_root
 from ..core.dry_run import is_dry_run
-from ..core.utils import write_json
+from ..core.utils import get_version
+
+
+MCP_TOOLS: List[Dict[str, Any]] = [
+    {
+        "name": "llmtk.context_export",
+        "description": "Export C++/CMake project context into exports/context.json",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "deep": {"type": "boolean", "description": "Include target, preset, cache, and toolchain metadata"},
+                "build": {"type": "string", "description": "Build directory to use"},
+                "preset": {"type": "string", "description": "CMake configure preset to use"},
+                "preview": {"type": "boolean", "description": "Preview actions without executing"},
+            },
+        },
+    },
+    {
+        "name": "llmtk.preflight",
+        "description": "Run fast syntax/config checks and write exports/reports/preflight.json",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "diff": {"type": "string", "description": "Git base ref or BASE...TARGET range"},
+                "since": {"type": "string", "description": "Git ref for changed files"},
+                "paths": {"type": "array", "items": {"type": "string"}, "description": "Explicit paths to check"},
+                "extensions": {"type": "array", "items": {"type": "string"}, "description": "Extension filter"},
+                "strict": {"type": "boolean", "description": "Treat warnings as errors"},
+                "json": {"type": "string", "description": "JSON output path"},
+                "sarif": {"type": "string", "description": "SARIF output path"},
+            },
+        },
+    },
+    {
+        "name": "llmtk.diagnostics",
+        "description": "Thin compiler stderr into structured diagnostics JSON",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "log": {"type": "string", "description": "Path to stderr log"},
+                "text": {"type": "string", "description": "Raw stderr text"},
+                "level": {"type": "string", "enum": ["summary", "focused", "detailed"]},
+                "context_budget": {"type": "integer", "description": "Maximum characters in text highlights"},
+                "json": {"type": "string", "description": "JSON output path"},
+                "text_output": {"type": "string", "description": "Text output path"},
+                "sarif": {"type": "string", "description": "SARIF output path"},
+            },
+        },
+    },
+    {
+        "name": "llmtk.test",
+        "description": "Run CTest and write structured JSON/SARIF test exports",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "build_dir": {"type": "string", "description": "CMake build directory"},
+                "regex": {"type": "string", "description": "CTest -R filter"},
+                "exclude": {"type": "string", "description": "CTest -E filter"},
+                "label": {"type": "string", "description": "CTest -L filter"},
+                "parallel": {"type": "integer", "description": "Parallel test jobs"},
+                "timeout": {"type": "integer", "description": "Per-test timeout in seconds"},
+                "rerun_failed": {"type": "boolean", "description": "Use ctest --rerun-failed"},
+                "preview": {"type": "boolean", "description": "List tests without running them"},
+                "json": {"type": "string", "description": "JSON output path"},
+                "sarif": {"type": "string", "description": "SARIF output path"},
+            },
+        },
+    },
+    {
+        "name": "llmtk.deps",
+        "description": "Export CMake target dependency graph JSON",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "build_dir": {"type": "string", "description": "CMake build directory"},
+                "output_dir": {"type": "string", "description": "Dependency graph output directory"},
+                "graphviz": {"type": "boolean", "description": "Also write Graphviz DOT output"},
+                "symbols": {"type": "boolean", "description": "Include symbol-level analysis when available"},
+            },
+        },
+    },
+    {
+        "name": "llmtk.capabilities",
+        "description": "Return stable llmtk command/tool capabilities from the manifests",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "llmtk.list_exports",
+        "description": "List generated artifacts under exports/",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "glob": {"type": "string", "description": "Glob pattern to filter exports"},
+            },
+        },
+    },
+]
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:
@@ -125,8 +221,16 @@ def _process_single_request(request: Dict[str, Any]) -> Dict[str, Any]:
             return _handle_list_exports(request_id, params)
         elif kind == "get_capabilities":
             return _handle_get_capabilities(request_id, params)
-        elif kind == "expand_context":
+        elif kind in {"expand_context", "context_export"}:
             return _handle_expand_context(request_id, params)
+        elif kind == "preflight":
+            return _handle_preflight(request_id, params)
+        elif kind == "diagnostics":
+            return _handle_diagnostics(request_id, params)
+        elif kind == "test":
+            return _handle_test(request_id, params)
+        elif kind == "deps":
+            return _handle_deps(request_id, params)
         else:
             return {
                 "id": request_id,
@@ -546,6 +650,177 @@ def _handle_expand_context(request_id: str, params: Dict[str, Any]) -> Dict[str,
         }
 
 
+def _handle_preflight(request_id: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    """Handle preflight request."""
+    try:
+        from .preflight import run_preflight_for_agent, default_json_path
+
+        stdout_content, stderr_content, exit_code = _capture_command(run_preflight_for_agent, params)
+        json_path = Path(params.get("json") or default_json_path())
+        return _artifact_response(
+            request_id,
+            exit_code,
+            json_path,
+            stdout_content,
+            stderr_content,
+            "preflight",
+        )
+    except Exception as e:
+        return {"id": request_id, "status": "error", "error": f"Failed to run preflight: {e}"}
+
+
+def _handle_test(request_id: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    """Handle test request."""
+    try:
+        from .test import run_test_for_agent
+
+        stdout_content, stderr_content, exit_code = _capture_command(run_test_for_agent, params)
+        json_path = Path(params.get("json") or get_exports_dir() / "tests" / "ctest_results.json")
+        return _artifact_response(
+            request_id,
+            exit_code,
+            json_path,
+            stdout_content,
+            stderr_content,
+            "test",
+            allow_nonzero=True,
+        )
+    except Exception as e:
+        return {"id": request_id, "status": "error", "error": f"Failed to run tests: {e}"}
+
+
+def _handle_deps(request_id: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    """Handle dependency graph request."""
+    try:
+        from .deps import run_deps_for_agent
+
+        stdout_content, stderr_content, exit_code = _capture_command(run_deps_for_agent, params)
+        output_dir = Path(params.get("output_dir") or "exports/dependency_graphs")
+        json_path = output_dir / "dependencies.json"
+        return _artifact_response(
+            request_id,
+            exit_code,
+            json_path,
+            stdout_content,
+            stderr_content,
+            "deps",
+        )
+    except Exception as e:
+        return {"id": request_id, "status": "error", "error": f"Failed to export dependency graph: {e}"}
+
+
+def _handle_diagnostics(request_id: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    """Handle stderr thinning request."""
+    log = params.get("log")
+    stderr_text = params.get("text")
+    if not log and stderr_text is None:
+        return {
+            "id": request_id,
+            "status": "error",
+            "error": "Provide either 'log' or 'text' for diagnostics",
+        }
+
+    diagnostics_dir = get_exports_dir() / "diagnostics"
+    json_path = Path(params.get("json") or diagnostics_dir / "stderr-thin.json")
+    text_path = Path(params.get("text_output") or diagnostics_dir / "stderr-thin.txt")
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    text_path.parent.mkdir(parents=True, exist_ok=True)
+
+    cmd = [
+        sys.executable,
+        str(get_modules_dir() / "stderr_thin.py"),
+        "--level",
+        str(params.get("level", "focused")),
+        "--context-budget",
+        str(params.get("context_budget", 8000)),
+        "--json",
+        str(json_path),
+        "--text",
+        str(text_path),
+    ]
+    if params.get("sarif"):
+        cmd.extend(["--sarif", str(params["sarif"])])
+    if log:
+        safe_log = _safe_path(str(log))
+        if not safe_log:
+            return {"id": request_id, "status": "error", "error": f"Invalid or unsafe path: {log}"}
+        cmd.extend(["--log", str(safe_log)])
+
+    result = subprocess.run(
+        cmd,
+        cwd=get_project_root(),
+        input=None if log else str(stderr_text),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return _artifact_response(
+        request_id,
+        result.returncode,
+        json_path,
+        result.stdout,
+        result.stderr,
+        "diagnostics",
+    )
+
+
+def _capture_command(func: Any, params: Dict[str, Any]) -> tuple[str, str, int]:
+    """Run a command handler while capturing stdout/stderr for agent responses."""
+    stdout_buffer = io.StringIO()
+    stderr_buffer = io.StringIO()
+    with contextlib.redirect_stdout(stdout_buffer), contextlib.redirect_stderr(stderr_buffer):
+        exit_code = func(params)
+    return stdout_buffer.getvalue().strip(), stderr_buffer.getvalue().strip(), int(exit_code or 0)
+
+
+def _artifact_response(
+    request_id: str,
+    exit_code: int,
+    json_path: Path,
+    stdout_content: str,
+    stderr_content: str,
+    operation: str,
+    *,
+    allow_nonzero: bool = False,
+) -> Dict[str, Any]:
+    """Build a standard response around a JSON artifact."""
+    data = _read_json_artifact(json_path)
+    if exit_code != 0 and not allow_nonzero:
+        return {
+            "id": request_id,
+            "status": "error",
+            "error": f"{operation} failed with exit code {exit_code}",
+            "data": {
+                "artifact": str(json_path),
+                "json": data,
+                "stdout": stdout_content,
+                "stderr": stderr_content,
+                "exit_code": exit_code,
+            },
+        }
+    return {
+        "id": request_id,
+        "status": "success",
+        "data": {
+            "artifact": str(json_path),
+            "json": data,
+            "stdout": stdout_content,
+            "stderr": stderr_content,
+            "exit_code": exit_code,
+        },
+    }
+
+
+def _read_json_artifact(path: Path) -> Optional[Dict[str, Any]]:
+    """Read a JSON artifact when it exists and is parseable."""
+    try:
+        if path.exists():
+            return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    return None
+
+
 class MCPServer:
     """Simple MCP (Model Context Protocol) server over stdio."""
 
@@ -556,26 +831,6 @@ class MCPServer:
     def run(self) -> int:
         """Run the MCP server loop."""
         try:
-            # Send initialize response
-            self._send_message({
-                "jsonrpc": "2.0",
-                "result": {
-                    "protocolVersion": "2024-11-05",
-                    "capabilities": {
-                        "tools": {
-                            "list_tools": True,
-                            "call_tool": True
-                        }
-                    },
-                    "serverInfo": {
-                        "name": "llmtk",
-                        "version": "1.0.0"
-                    }
-                },
-                "id": None
-            })
-
-            # Process messages
             for line in sys.stdin:
                 line = line.strip()
                 if not line:
@@ -617,78 +872,24 @@ class MCPServer:
         message_id = message.get("id")
         params = message.get("params", {})
 
-        if method == "tools/list":
+        if method == "initialize":
             return {
                 "jsonrpc": "2.0",
                 "result": {
-                    "tools": [
-                        {
-                            "name": "llmtk.read_file",
-                            "description": "Read a file from the workspace",
-                            "inputSchema": {
-                                "type": "object",
-                                "properties": {
-                                    "path": {"type": "string", "description": "File path relative to workspace root"}
-                                },
-                                "required": ["path"]
-                            }
-                        },
-                        {
-                            "name": "llmtk.write_file",
-                            "description": "Write content to a file in the workspace",
-                            "inputSchema": {
-                                "type": "object",
-                                "properties": {
-                                    "path": {"type": "string", "description": "File path relative to workspace root"},
-                                    "content": {"type": "string", "description": "File content"}
-                                },
-                                "required": ["path", "content"]
-                            }
-                        },
-                        {
-                            "name": "llmtk.list_directory",
-                            "description": "List contents of a directory",
-                            "inputSchema": {
-                                "type": "object",
-                                "properties": {
-                                    "path": {"type": "string", "description": "Directory path relative to workspace root"}
-                                },
-                                "required": ["path"]
-                            }
-                        },
-                        {
-                            "name": "llmtk.list_exports",
-                            "description": "List files in the exports directory",
-                            "inputSchema": {
-                                "type": "object",
-                                "properties": {
-                                    "glob": {"type": "string", "description": "Glob pattern to filter files"}
-                                }
-                            }
-                        },
-                        {
-                            "name": "llmtk.expand_context",
-                            "description": "Export project context for LLM consumption",
-                            "inputSchema": {
-                                "type": "object",
-                                "properties": {
-                                    "deep": {"type": "boolean", "description": "Generate deep context with target metadata"},
-                                    "build": {"type": "string", "description": "Build directory to use"},
-                                    "preset": {"type": "string", "description": "CMake preset to use"},
-                                    "preview": {"type": "boolean", "description": "Preview actions without executing"}
-                                }
-                            }
-                        },
-                        {
-                            "name": "llmtk.get_capabilities",
-                            "description": "Get toolkit capabilities summary",
-                            "inputSchema": {
-                                "type": "object",
-                                "properties": {}
-                            }
-                        }
-                    ]
+                    "protocolVersion": "2025-03-26",
+                    "capabilities": {"tools": {}},
+                    "serverInfo": {"name": "llmtk", "version": get_version()},
                 },
+                "id": message_id,
+            }
+
+        if method == "notifications/initialized":
+            return None
+
+        if method == "tools/list":
+            return {
+                "jsonrpc": "2.0",
+                "result": {"tools": MCP_TOOLS},
                 "id": message_id
             }
 
@@ -698,6 +899,12 @@ class MCPServer:
 
             # Map MCP tool names to internal request kinds
             tool_mapping = {
+                "llmtk.context_export": "context_export",
+                "llmtk.preflight": "preflight",
+                "llmtk.diagnostics": "diagnostics",
+                "llmtk.test": "test",
+                "llmtk.deps": "deps",
+                "llmtk.capabilities": "get_capabilities",
                 "llmtk.read_file": "read_file",
                 "llmtk.write_file": "write_file",
                 "llmtk.list_directory": "list_directory",

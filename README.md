@@ -1,10 +1,10 @@
 # LLM C++ Toolkit
 
-A comprehensive CLI toolkit designed to help LLMs and AI agents work effectively with C++ and CMake projects. Provides standardized environment checks, context export, code analysis, and repro reduction with JSON outputs optimized for AI consumption. This toolkit is directly targets three well-known "pain points" of AI-assisted C++ development:
+A C++/CMake build intelligence backend for AI coding agents. `llmtk` gives agents deterministic project facts, diagnostics, test results, and dependency metadata through a small CLI and an MCP endpoint. The project is focused on three durable pain points in AI-assisted C++ development:
 
-1. Repeatable tool bootstrapping
-2. Exporting machine-readable project context
-3. Producing analysis output an agent can actually digest
+1. Repeatable C++ tool and environment checks
+2. Machine-readable CMake/compile context
+3. Structured diagnostics and test output that agents can consume without parsing terminal scrollback
 
 ## 🚀 Quick Start
 
@@ -23,6 +23,16 @@ llmtk --bootstrap-info      # inspect cached release metadata
 The pipx package bootstraps a published tarball, verifies its SHA256 sum, and
 then executes the toolkit in-place. To work from a local checkout while testing
 packaged changes, run `LLMTK_BOOTSTRAP_USE_SOURCE=$PWD llmtk doctor`.
+
+### Development with uv
+```bash
+uv sync
+uv run python cli/llmtk doctor
+uv run python -m pytest
+uv build --no-sources
+```
+
+`uv` is the preferred development and release workflow. Published packages remain standards-compatible so `pipx install llm-cpp-toolkit` continues to work for users who do not have uv installed.
 
 ### Alternative Installation Methods
 - **Local (no sudo):** `git clone ... && llmtk install --local`
@@ -80,13 +90,6 @@ llmtk analyze --sarif src/  # Generate SARIF output for CI/IDE integration
 # Extract dependency graphs
 llmtk deps --json --graphviz
 
-# Export diff-oriented context for incremental analysis
-llmtk diff-context diff --base=main --target=feature-branch
-llmtk diff-context incremental --cache=.llmtk-cache
-
-# Benchmark configure/build/test with performance exports
-llmtk bench --runs 3 --warmup 1
-
 # Run tests with structured outputs
 llmtk test --json
 
@@ -99,9 +102,6 @@ llmtk capabilities
 # Drive the JSON agent loop or expose MCP tools
 llmtk agent request '{"requests":[{"id":"caps","kind":"get_capabilities"}]}'
 llmtk agent mcp
-
-# Reduce a failing test case
-llmtk reduce test.cpp "gcc test.cpp && ./a.out"
 
 # Preview any command without side effects
 llmtk --dry-run analyze src/
@@ -148,17 +148,29 @@ entire `exports/` directory is ignored by default via `.gitignore`.
 - **⚡ Preflight Checks** - Fast syntax and delimiter validation before expensive build operations
 - **🔬 Code Analysis** - Run clang-tidy, include-what-you-use, and cppcheck with JSON output
 - **📊 Dependency Graphs** - Extract target dependency graphs from CMake codemodel with JSON and Graphviz export
-- **🔄 Incremental Context** - Diff-oriented context packs, minimal dependency graphs per error, and automated bisect helpers for regression hunting
 - **🧾 Structured Testing** - Parse CTest results into JSON and SARIF for gating workflows
-- **📈 Build & Performance Insights** - Benchmark configure/build/test, inspect ccache hit rates, parallelism, slow translation units, and peak memory via `llmtk bench`
 - **🧠 Deterministic Diagnostics** - Collapse compiler stderr with `llmtk stderr-thin` into budget-aware highlights
 - **🔏 Supply-Chain Ready** - pipx bootstrap with checksum enforcement and signed release artifacts
-- **🧪 Advanced Sanitizer Support** - Multiple sanitizer variants with proper isolation
-- **🪚 Test Case Reduction** - Minimize failing code with cvise integration
-- **🤖 LLM-Optimized** - JSON outputs designed for AI agent consumption
+- **🤖 Agent-Optimized** - Stable JSON artifacts and MCP tools designed for AI coding assistants
 - **📋 Manifest-Driven** - Tool versions and commands defined in YAML manifests
 - **🗂️ Capabilities Summary** - `exports/capabilities.json` captures the toolkit's API surface for agents
 - **🛡️ Preview & Privacy Controls** - Global `--dry-run` mode plus opt-in telemetry stored locally
+
+### Supported Agent Surface
+
+The stable v1 agent backend surface is:
+
+- `llmtk doctor`
+- `llmtk context export`
+- `llmtk preflight`
+- `llmtk analyze`
+- `llmtk stderr-thin`
+- `llmtk test`
+- `llmtk deps`
+- `llmtk capabilities`
+- `llmtk agent mcp`
+
+Planned commands such as `bench`, `reduce`, `diff-context`, `gate`, `format`, `tidy`, and `lsp-bridge` remain in the manifest as non-stable roadmap items until their CLI, docs, tests, and MCP contracts converge.
 
 ## 🧪 Sanitizer Variants
 
@@ -304,6 +316,7 @@ The toolkit follows a manifest-driven architecture:
 - **`cli/llmtk`** - Python CLI entry point
 - **`modules/`** - Tool adapter scripts
 - **`presets/`** - Configuration templates
+- **`docs/AGENT_COLLABORATION.md`** - Planner/implementer/reviewer protocol for Codex and Claude
 
 ## 🤝 Contributing
 

@@ -1,6 +1,7 @@
 schema: 1
 commands:
   doctor:
+    status: supported
     description: Inspect environment and report tool availability.
     outputs:
       - path: "exports/doctor.json"
@@ -13,6 +14,7 @@ commands:
             version_line: string|null
 
   context-export:
+    status: supported
     description: Collect artifacts LLMs rely on.
     runs:
       - "modules/compile_db.sh"
@@ -30,6 +32,7 @@ commands:
     json_summary: "exports/context.json"
 
   preflight:
+    status: supported
     description: Fast syntax and delimiter validation before expensive build operations.
     args:
       - name: diff
@@ -124,6 +127,7 @@ commands:
       - "llmtk preflight --strict --extensions .cpp .h .json"
 
   analyze:
+    status: supported
     description: Run clang-tidy + IWYU + cppcheck with JSON reports.
     args:
       - name: paths
@@ -195,6 +199,7 @@ commands:
                   locations: [object]
 
   test:
+    status: supported
     description: Run CTest suites and emit structured results for LLM consumption.
     args:
       - name: build-dir
@@ -258,6 +263,7 @@ commands:
       - path: "exports/tests/ctest_stderr.txt"
 
   bench:
+    status: planned
     description: Benchmark configure/build/test workflows and report performance insights.
     args:
       - name: build-dir
@@ -302,6 +308,7 @@ commands:
     json_summary: "exports/perf/bench.json"
 
   stderr-thin:
+    status: supported
     description: Collapse compiler stderr into deterministic, budget-aware highlights.
     args:
       - name: log
@@ -344,6 +351,7 @@ commands:
       - "llmtk stderr-thin --context-budget=4000 -- cmake --build build"
 
   reduce:
+    status: planned
     description: Minimize a failing repro with cvise.
     args:
       - { name: input, required: true }
@@ -359,6 +367,7 @@ commands:
           input: string
 
   capabilities:
+    status: supported
     description: Emit machine-readable toolkit capabilities summary.
     outputs:
       - path: "exports/capabilities.json"
@@ -372,6 +381,7 @@ commands:
           commands: object
 
   tidy:
+    status: planned
     description: Run clang-tidy with optional fix application.
     args:
       - name: paths
@@ -387,6 +397,7 @@ commands:
       - "llmtk tidy --checks='*' src/"
 
   format:
+    status: planned
     description: Run clang-format on code with check or apply options.
     args:
       - name: paths
@@ -405,6 +416,7 @@ commands:
       - "llmtk format --style=Google src/"
 
   gate:
+    status: planned
     description: Enforce SARIF severity budgets for CI gating.
     args:
       - name: sarif_file
@@ -426,6 +438,7 @@ commands:
       - "llmtk gate --config=.llmtk-gate.yaml analysis.sarif"
 
   deps:
+    status: supported
     description: Extract and export CMake target dependency graphs for agent consumption.
     args:
       - name: build-dir
@@ -486,6 +499,7 @@ commands:
       - "llmtk deps --build-dir=custom_build --output-dir=custom_exports"
 
   diff-context:
+    status: planned
     description: Export diff-oriented context packs for incremental analysis and regression hunting.
     args:
       - name: command
@@ -578,6 +592,7 @@ commands:
       - "llmtk diff-context diff --include-errors --error-log=build.log"
 
   lsp-bridge:
+    status: planned
     description: Bridge to clangd LSP for structured diagnostics with filtering compatible with stderr-thin.
     args:
       - name: files
@@ -663,6 +678,7 @@ commands:
       - "llmtk lsp-bridge --context-budget=4000 src/"
 
   agent:
+    status: supported
     description: Agent operations for LLM integration - JSON request handler and MCP server.
     args:
       - name: command
