@@ -14,6 +14,11 @@ from ..core.dry_run import is_dry_run
 from ..core.utils import get_version
 
 
+# Preflight exit codes that represent a successful run: 0 (clean), 2 (warnings),
+# 3 (errors found). Higher codes (e.g. 10) indicate the tool itself failed.
+PREFLIGHT_SUCCESS_CODES = {0, 2, 3}
+
+
 MCP_TOOLS: List[Dict[str, Any]] = [
     {
         "name": "llmtk.context_export",
@@ -664,6 +669,9 @@ def _handle_preflight(request_id: str, params: Dict[str, Any]) -> Dict[str, Any]
             stdout_content,
             stderr_content,
             "preflight",
+            # Exit 2 (warnings) and 3 (errors) mean the run succeeded and found
+            # issues — surface the findings rather than reporting a tool failure.
+            success_exit_codes=PREFLIGHT_SUCCESS_CODES,
         )
     except Exception as e:
         return {"id": request_id, "status": "error", "error": f"Failed to run preflight: {e}"}
@@ -782,10 +790,21 @@ def _artifact_response(
     operation: str,
     *,
     allow_nonzero: bool = False,
+    success_exit_codes: Optional[set] = None,
 ) -> Dict[str, Any]:
-    """Build a standard response around a JSON artifact."""
+    """Build a standard response around a JSON artifact.
+
+    A run is treated as successful when its exit code is 0, when
+    ``allow_nonzero`` is set (any code is fine, e.g. ctest with failing tests),
+    or when the code is listed in ``success_exit_codes`` (e.g. preflight codes
+    that mean "ran fine, found issues"). Anything else is a tool failure.
+    """
     data = _read_json_artifact(json_path)
-    if exit_code != 0 and not allow_nonzero:
+    if success_exit_codes is not None:
+        succeeded = exit_code in success_exit_codes
+    else:
+        succeeded = allow_nonzero or exit_code == 0
+    if not succeeded:
         return {
             "id": request_id,
             "status": "error",

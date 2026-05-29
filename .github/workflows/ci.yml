@@ -59,3 +59,28 @@ jobs:
           cmake --build test_proj/build
           ./test_proj/build/test_proj
         shell: bash
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install CMake, Ninja, and a C++ compiler
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends cmake ninja-build g++
+        shell: bash
+
+      - name: Sync locked environment
+        run: uv sync --locked
+
+      - name: Run unit and integration tests
+        run: uv run --locked python -m unittest discover -v
+        shell: bash
