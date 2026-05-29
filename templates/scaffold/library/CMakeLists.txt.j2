@@ -9,30 +9,29 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Export compile_commands.json for clangd and `llmtk context export`.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 {% if pic %}
-# Position-independent code (library preset).
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 {% endif %}
 
-{% if target_type == "library" %}
-add_library({{ project_name }} src/main.cpp)
+# Library target. Public headers live under include/.
+add_library({{ project_name }} src/{{ project_name }}.cpp)
 target_include_directories({{ project_name }} PUBLIC include)
-{% else %}
-add_executable({{ project_name }} src/main.cpp)
-target_include_directories({{ project_name }} PRIVATE include)
-{% endif %}
 
 # Warnings kept explicit so they are easy to inspect and override.
 target_compile_options({{ project_name }} PRIVATE -Wall -Wextra -Wpedantic)
 {% if enable_sanitizers %}
 
-# AddressSanitizer + UBSan in Debug builds (full preset).
+# AddressSanitizer + UBSan in Debug builds.
 target_compile_options({{ project_name }} PRIVATE $<$<CONFIG:Debug>:-fsanitize=address,undefined>)
 target_link_options({{ project_name }} PRIVATE $<$<CONFIG:Debug>:-fsanitize=address,undefined>)
 {% endif %}
+
+# Example program that links the library.
+add_executable({{ project_name }}_example examples/{{ project_name }}_example.cpp)
+target_link_libraries({{ project_name }}_example PRIVATE {{ project_name }})
 {% if enable_tests %}
 
 enable_testing()
-{% if target_type == "executable" %}
-add_test(NAME {{ project_name }}_smoke COMMAND {{ project_name }})
-{% endif %}
+add_executable({{ project_name }}_test tests/{{ project_name }}_test.cpp)
+target_link_libraries({{ project_name }}_test PRIVATE {{ project_name }})
+add_test(NAME {{ project_name }}_test COMMAND {{ project_name }}_test)
 {% endif %}

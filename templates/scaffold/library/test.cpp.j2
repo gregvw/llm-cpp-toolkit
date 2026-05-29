@@ -1,0 +1,6 @@
+#include "{{ project_name }}/{{ project_name }}.hpp"
+
+// Minimal CTest-compatible test: non-zero return == failure, no test framework.
+int main() {
+    return {{ identifier }}::answer() == 42 ? 0 : 1;
+}
