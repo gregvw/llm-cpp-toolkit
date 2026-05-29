@@ -9,6 +9,7 @@ from typing import Optional
 from ..core.context import get_root, get_exports_dir
 from ..core.utils import run, write_json
 from ..services.manifest import load_tools_manifest
+from ..services.scaffold import context_from_preset, render_scaffold
 
 
 def cmd_init(args: argparse.Namespace) -> int:
@@ -40,33 +41,15 @@ def init_new_project(project_name: str, args: argparse.Namespace) -> int:
         (project_path / "tests").mkdir(exist_ok=True)
         (project_path / "exports").mkdir(exist_ok=True)
 
-        # Create CMakeLists.txt
-        cmake_content = generate_cmake_content(project_name, args)
-        (project_path / "CMakeLists.txt").write_text(cmake_content)
-
-        # Create main.cpp
-        main_cpp = f'''#include <iostream>
-
-int main() {{
-    std::cout << "Hello from {project_name}!" << std::endl;
-    return 0;
-}}
-'''
-        (project_path / "src" / "main.cpp").write_text(main_cpp)
-
-        # Create .gitignore
-        gitignore_content = """build/
-.llmtk/
-.cache/
-compile_commands.json
-*.o
-*.a
-*.so
-*.dylib
-*.dll
-*.exe
-"""
-        (project_path / ".gitignore").write_text(gitignore_content)
+        # Render scaffold files (CMakeLists.txt, src/main.cpp, .gitignore,
+        # CMakePresets.json) from Jinja2 templates.
+        ctx = context_from_preset(
+            project_name,
+            preset=getattr(args, "preset", "executable"),
+            cpp_standard=getattr(args, "std", "17"),
+            cmake_minimum=getattr(args, "cmake_min", "3.20"),
+        )
+        render_scaffold(ctx, project_path)
 
         # Initialize git repository
         original_cwd = os.getcwd()
@@ -85,9 +68,10 @@ compile_commands.json
         print(f"📁 Project created in: {project_path.absolute()}")
         print("\n🚀 Next steps:")
         print(f"   cd {project_name}")
-        print("   mkdir build && cd build")
-        print("   cmake .. && make")
-        print("   ./src/main")
+        print("   cmake -S . -B build")
+        print("   cmake --build build")
+        if ctx.target_type == "executable":
+            print(f"   ./build/{project_name}")
 
         return 0
 
@@ -133,48 +117,6 @@ def init_existing_project(project_path: pathlib.Path) -> int:
     except Exception as e:
         print(f"Error upgrading project: {e}")
         return 1
-
-
-def generate_cmake_content(project_name: str, args: argparse.Namespace) -> str:
-    """Generate CMakeLists.txt content."""
-    std_version = getattr(args, 'std', '17')
-    cmake_min = getattr(args, 'cmake_min', '3.20')
-    preset = getattr(args, 'preset', 'executable')
-
-    content = f"""cmake_minimum_required(VERSION {cmake_min})
-project({project_name})
-
-# Set C++ standard
-set(CMAKE_CXX_STANDARD {std_version})
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Export compile commands for tools like clangd
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-# Enable more warnings
-set(CMAKE_CXX_FLAGS "${{CMAKE_CXX_FLAGS}} -Wall -Wextra -Wpedantic")
-
-# Debug and Release configurations
-set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
-
-# Add executable
-add_executable({project_name} src/main.cpp)
-
-# Include directories
-target_include_directories({project_name} PRIVATE include)
-
-# Enable testing
-enable_testing()
-
-# Copy compile_commands.json to project root for tools
-if(EXISTS "${{CMAKE_BINARY_DIR}}/compile_commands.json")
-    file(COPY "${{CMAKE_BINARY_DIR}}/compile_commands.json"
-         DESTINATION "${{CMAKE_SOURCE_DIR}}")
-endif()
-"""
-
-    return content
 
 
 def generate_capabilities(project_path: pathlib.Path) -> None:
