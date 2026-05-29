@@ -4,6 +4,7 @@ import argparse
 import contextlib
 import io
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -109,6 +110,33 @@ MCP_TOOLS: List[Dict[str, Any]] = [
             "type": "object",
             "properties": {
                 "glob": {"type": "string", "description": "Glob pattern to filter exports"},
+            },
+        },
+    },
+    {
+        "name": "llmtk.agent_prepare",
+        "description": (
+            "Prepare a C++ workspace for an agent in one call: runs capabilities, "
+            "doctor, context export, and preflight (plus an optional CTest step), "
+            "then returns compact JSON with status, artifact paths, warnings, and "
+            "recommended next actions. Orchestrates existing stable commands only."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "build": {"type": "string", "description": "CMake build directory (default: build)"},
+                "preset": {"type": "string", "description": "CMake configure preset for context export"},
+                "deep": {"type": "boolean", "description": "Use deep context export"},
+                "paths": {"type": "array", "items": {"type": "string"}, "description": "Explicit paths for preflight"},
+                "diff": {"type": "string", "description": "Git base ref for preflight discovery"},
+                "since": {"type": "string", "description": "Git ref for preflight discovery"},
+                "strict": {"type": "boolean", "description": "Treat preflight warnings as errors"},
+                "no_syntax": {"type": "boolean", "description": "Disable preflight external syntax probes"},
+                "tests": {
+                    "type": "string",
+                    "enum": ["skip", "preview", "run"],
+                    "description": "Optional CTest step (default: skip)",
+                },
             },
         },
     },
@@ -236,6 +264,8 @@ def _process_single_request(request: Dict[str, Any]) -> Dict[str, Any]:
             return _handle_test(request_id, params)
         elif kind == "deps":
             return _handle_deps(request_id, params)
+        elif kind == "agent_prepare":
+            return _handle_agent_prepare(request_id, params)
         else:
             return {
                 "id": request_id,
@@ -772,6 +802,215 @@ def _handle_diagnostics(request_id: str, params: Dict[str, Any]) -> Dict[str, An
     )
 
 
+@contextlib.contextmanager
+def _suppress_console():
+    """Discard stdout/stderr (including subprocess fds) for the duration.
+
+    Orchestration runs commands that print to stdout and spawn cmake/ctest;
+    suppressing at the fd level keeps that noise out of the JSON-RPC stream.
+    Results are read back from the on-disk artifacts afterward.
+    """
+    sys.stdout.flush()
+    sys.stderr.flush()
+    devnull = os.open(os.devnull, os.O_WRONLY)
+    saved_out, saved_err = os.dup(1), os.dup(2)
+    try:
+        os.dup2(devnull, 1)
+        os.dup2(devnull, 2)
+        yield
+    finally:
+        sys.stdout.flush()
+        sys.stderr.flush()
+        os.dup2(saved_out, 1)
+        os.dup2(saved_err, 2)
+        for fd in (devnull, saved_out, saved_err):
+            os.close(fd)
+
+
+def _rel(path: Path) -> str:
+    """Express a path relative to the project root when possible."""
+    try:
+        return str(Path(path).resolve().relative_to(get_project_root().resolve()))
+    except (ValueError, OSError):
+        return str(path)
+
+
+def _handle_agent_prepare(request_id: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    """Orchestrate stable commands to prepare a workspace for an agent.
+
+    Runs capabilities, doctor, context export, and preflight (plus an optional
+    CTest step), then returns a compact summary: an overall status, per-step
+    results with artifact paths, collected warnings, and recommended next
+    actions. It only composes existing stable commands; it adds no new CLI
+    surface and does not template any JSON output.
+    """
+    steps: Dict[str, Any] = {}
+    warnings: List[str] = []
+    next_actions: List[str] = []
+    errored: List[str] = []
+    exports_dir = get_exports_dir()
+
+    with _suppress_console():
+        # 1) capabilities
+        try:
+            from ..services.manifest import generate_capabilities_json
+
+            caps_path = exports_dir / "capabilities.json"
+            generate_capabilities_json(caps_path)
+            caps = _read_json_artifact(caps_path) or {}
+            steps["capabilities"] = {
+                "ok": True,
+                "artifact": _rel(caps_path),
+                "commands": sorted((caps.get("commands") or {}).keys()),
+            }
+        except Exception as exc:  # noqa: BLE001
+            steps["capabilities"] = {"ok": False, "error": str(exc)}
+            errored.append("capabilities")
+
+        # 2) doctor
+        try:
+            from .doctor import cmd_doctor
+
+            cmd_doctor(argparse.Namespace(_from_install=True, cmake=False))
+            doctor_path = exports_dir / "doctor.json"
+            summary = (_read_json_artifact(doctor_path) or {}).get("_summary", {})
+            missing_core = summary.get("missing_core") or []
+            steps["doctor"] = {
+                "ok": not missing_core,
+                "artifact": _rel(doctor_path),
+                "found": summary.get("found"),
+                "missing_core": missing_core,
+            }
+            if missing_core:
+                warnings.append(f"doctor: missing core tools: {', '.join(missing_core)}")
+                next_actions.append("Run `llmtk install` to install missing core tools")
+        except Exception as exc:  # noqa: BLE001
+            steps["doctor"] = {"ok": False, "error": str(exc)}
+            errored.append("doctor")
+
+        # 3) context export
+        try:
+            from .context import _handle_export
+
+            rc = _handle_export(argparse.Namespace(
+                build=params.get("build", "build"),
+                preset=params.get("preset"),
+                preview=False,
+                deep=bool(params.get("deep", False)),
+            ))
+            ctx_path = exports_dir / "context.json"
+            ctx_data = _read_json_artifact(ctx_path) or {}
+            ok = rc == 0
+            steps["context_export"] = {
+                "ok": ok,
+                "artifact": _rel(ctx_path),
+                "compile_commands": ctx_data.get("compile_commands"),
+            }
+            if not ok:
+                warnings.append("context export failed; the build could not be configured")
+                next_actions.append(
+                    "Ensure cmake and a generator (e.g. Ninja) are installed and the project configures"
+                )
+            for note in ctx_data.get("_warnings", []) or []:
+                warnings.append(f"context: {note}")
+        except Exception as exc:  # noqa: BLE001
+            steps["context_export"] = {"ok": False, "error": str(exc)}
+            warnings.append(f"context export error: {exc}")
+
+        # 4) preflight
+        try:
+            from .preflight import default_json_path, run_preflight_for_agent
+
+            pf_params = {
+                k: params[k]
+                for k in ("diff", "since", "paths", "extensions", "strict", "no_syntax", "json")
+                if k in params
+            }
+            rc = run_preflight_for_agent(pf_params)
+            pf_path = Path(pf_params.get("json") or default_json_path())
+            pf_summary = (_read_json_artifact(pf_path) or {}).get("summary", {})
+            errors = int(pf_summary.get("errors", 0) or 0)
+            pf_warns = int(pf_summary.get("warnings", 0) or 0)
+            steps["preflight"] = {
+                "ok": errors == 0 and rc != 10,
+                "artifact": _rel(pf_path),
+                "errors": errors,
+                "warnings": pf_warns,
+            }
+            if rc == 10:
+                warnings.append("preflight failed to run")
+                errored.append("preflight")
+            elif errors:
+                warnings.append(f"preflight: {errors} error(s)")
+                next_actions.append("Resolve preflight errors before building")
+            elif pf_warns:
+                warnings.append(f"preflight: {pf_warns} warning(s)")
+        except Exception as exc:  # noqa: BLE001
+            steps["preflight"] = {"ok": False, "error": str(exc)}
+            errored.append("preflight")
+
+        # 5) optional CTest step
+        tests_mode = str(params.get("tests", "skip"))
+        if tests_mode in ("preview", "run"):
+            try:
+                from .test import run_test_for_agent
+
+                rc = run_test_for_agent({
+                    "build_dir": params.get("build", "build"),
+                    "preview": tests_mode == "preview",
+                })
+                stats = (_read_json_artifact(exports_dir / "tests" / "ctest_results.json") or {}).get("stats", {})
+                steps["test"] = {
+                    "mode": tests_mode,
+                    "ok": rc == 0,
+                    "artifact": _rel(exports_dir / "tests" / "ctest_results.json"),
+                    "stats": {k: stats.get(k) for k in ("total", "passed", "failed")},
+                }
+                failed = int(stats.get("failed", 0) or 0)
+                if tests_mode == "run" and failed:
+                    warnings.append(f"tests: {failed} failing")
+                    next_actions.append("Investigate failing tests")
+            except Exception as exc:  # noqa: BLE001
+                steps["test"] = {"ok": False, "error": str(exc)}
+                warnings.append(f"test error: {exc}")
+        else:
+            steps["test"] = {"mode": "skip"}
+
+        # 6) list exports (single source of truth for the artifact inventory)
+        artifacts: List[str] = []
+        try:
+            listing = _handle_list_exports(request_id, {})
+            if listing.get("status") == "success":
+                for entry in listing["data"].get("files", []):
+                    full = entry.get("full_path")
+                    if full:
+                        artifacts.append(full)
+            steps["list_exports"] = {"ok": True, "count": len(artifacts)}
+        except Exception as exc:  # noqa: BLE001
+            steps["list_exports"] = {"ok": False, "error": str(exc)}
+
+    if errored:
+        status = "error"
+    elif warnings:
+        status = "warnings"
+    else:
+        status = "ok"
+    if status == "ok":
+        next_actions.append("Workspace is ready; proceed with builds or edits")
+
+    return {
+        "id": request_id,
+        "status": "success",
+        "data": {
+            "status": status,
+            "steps": steps,
+            "artifacts": sorted(artifacts),
+            "warnings": warnings,
+            "next_actions": next_actions,
+        },
+    }
+
+
 def _capture_command(func: Any, params: Dict[str, Any]) -> tuple[str, str, int]:
     """Run a command handler while capturing stdout/stderr for agent responses."""
     stdout_buffer = io.StringIO()
@@ -924,6 +1163,7 @@ class MCPServer:
                 "llmtk.test": "test",
                 "llmtk.deps": "deps",
                 "llmtk.capabilities": "get_capabilities",
+                "llmtk.agent_prepare": "agent_prepare",
                 "llmtk.read_file": "read_file",
                 "llmtk.write_file": "write_file",
                 "llmtk.list_directory": "list_directory",
