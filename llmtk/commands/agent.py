@@ -931,8 +931,11 @@ def _handle_agent_prepare(request_id: str, params: Dict[str, Any]) -> Dict[str, 
             pf_summary = (_read_json_artifact(pf_path) or {}).get("summary", {})
             errors = int(pf_summary.get("errors", 0) or 0)
             pf_warns = int(pf_summary.get("warnings", 0) or 0)
+            # preflight exit codes: 0 clean, 2 warnings (non-strict, non-blocking),
+            # 3 errors OR strict warnings (blocking), 10 internal error. Only 0
+            # and 2 are "passing" — under --strict a 3 means warnings blocked.
             steps["preflight"] = {
-                "ok": errors == 0 and rc != 10,
+                "ok": rc in {0, 2},
                 "artifact": _rel(pf_path),
                 "errors": errors,
                 "warnings": pf_warns,
@@ -945,6 +948,8 @@ def _handle_agent_prepare(request_id: str, params: Dict[str, Any]) -> Dict[str, 
                 next_actions.append("Resolve preflight errors before building")
             elif pf_warns:
                 warnings.append(f"preflight: {pf_warns} warning(s)")
+                if rc == 3:  # strict mode: warnings are blocking
+                    next_actions.append("Resolve preflight warnings before building")
         except Exception as exc:  # noqa: BLE001
             steps["preflight"] = {"ok": False, "error": str(exc)}
             errored.append("preflight")

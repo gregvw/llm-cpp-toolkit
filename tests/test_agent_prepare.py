@@ -143,6 +143,39 @@ class AgentPrepareEnvelopeTests(unittest.TestCase):
             self.assertTrue(data["steps"]["capabilities"]["ok"])
 
 
+class AgentPrepareStrictPreflightTests(unittest.TestCase):
+    def test_strict_warnings_mark_preflight_not_ok(self):
+        """Under --strict, preflight exit 3 (warnings-only) must not read as ok."""
+        import llmtk.commands.preflight as pf_mod
+        from llmtk.core.utils import write_json
+
+        def fake_run_preflight(params):
+            out = Path(params.get("json") or pf_mod.default_json_path())
+            write_json(out, {
+                "tool": "llmtk-preflight",
+                "findings": [{"severity": "warning", "rule": "demo_warning"}],
+                "summary": {"errors": 0, "warnings": 1},
+            })
+            return 3  # strict mode treats warnings as blocking
+
+        with sandbox():
+            original = pf_mod.run_preflight_for_agent
+            pf_mod.run_preflight_for_agent = fake_run_preflight
+            try:
+                data = _prepare_via_mcp({"strict": True})
+            finally:
+                pf_mod.run_preflight_for_agent = original
+
+            step = data["steps"]["preflight"]
+            self.assertFalse(step["ok"])
+            self.assertEqual(step["errors"], 0)
+            self.assertEqual(step["warnings"], 1)
+            self.assertTrue(
+                any("Resolve preflight warnings before building" in a for a in data["next_actions"]),
+                data["next_actions"],
+            )
+
+
 class AgentPrepareFullTests(unittest.TestCase):
     @REQUIRES_TOOLCHAIN
     def test_full_prepare_on_fixture(self):
