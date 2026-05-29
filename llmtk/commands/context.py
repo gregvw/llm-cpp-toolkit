@@ -393,8 +393,17 @@ def _load_index(reply_dir: Path) -> Tuple[Optional[Dict[str, Any]], Optional[str
         return None, latest.name
 
 
-def _load_reply_json(reply_dir: Path, replies: Dict[str, Any], key: str) -> Optional[Dict[str, Any]]:
-    entry = replies.get(key)
+def _load_reply_json(reply_dir: Path, replies: Dict[str, Any], kind: str) -> Optional[Dict[str, Any]]:
+    # The File API index keys stateless queries by their query name (e.g.
+    # "codemodel-v2") while each entry records its "kind" (e.g. "codemodel").
+    # Prefer an exact key match, then fall back to matching the kind.
+    entry = replies.get(kind)
+    if not isinstance(entry, dict):
+        entry = next(
+            (value for value in replies.values()
+             if isinstance(value, dict) and value.get("kind") == kind),
+            None,
+        )
     if not isinstance(entry, dict):
         return None
     json_file = entry.get("jsonFile")
@@ -403,9 +412,7 @@ def _load_reply_json(reply_dir: Path, replies: Dict[str, Any], key: str) -> Opti
     path = reply_dir / json_file
     try:
         return json.loads(path.read_text())
-    except json.JSONDecodeError:
-        return None
-    except FileNotFoundError:
+    except (json.JSONDecodeError, FileNotFoundError):
         return None
 
 

@@ -62,14 +62,26 @@ uv run python -m unittest discover        # 13 tests, OK
 uv build --no-sources                     # builds sdist + wheel
 ```
 
+## CLI-level coverage
+
+`tests/test_cli_surface.py` drives commands through the real argument parser
+(`create_parser` → `parse_args` → `func`) so registration and argument wiring
+are covered too:
+
+- `doctor` writes a structured `exports/doctor.json` (`_meta`, `_summary`,
+  per-tool entries).
+- `stderr-thin --log ... --json ...` produces structured diagnostics JSON.
+- `context export --deep` summarizes targets/toolchains/cache on the fixture.
+
+Adding the deep test surfaced and fixed a real bug: `_load_reply_json` looked up
+File API replies by bare kind (`"codemodel"`), but stateless queries are keyed
+by query name (`"codemodel-v2"`), so deep mode silently emitted empty
+targets/toolchains/cache. It now matches by the entry's `kind`.
+
 ## Remaining gaps
 
-- `analyze`, `doctor`, and `stderr-thin` (CLI) are part of the stable surface
-  but are only covered indirectly (diagnostics via MCP exercises the
-  `stderr_thin` module). Dedicated CLI-level tests could be added next.
+- `analyze` (CLI) is still only covered indirectly.
 - Preflight integration tests run with `--no-syntax` for determinism, so the
   external clang syntax-probe path is not covered.
-- The `context export --deep` path (codemodel/toolchains/cache summaries) is
-  configured but only the basic summary is asserted.
 - `agent mcp` is tested at the message-handler level (`_handle_message`); the
   stdio read loop (`MCPServer.run`) is not driven end to end.
