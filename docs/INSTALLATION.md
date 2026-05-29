@@ -368,5 +368,5 @@ After successful installation:
 1. **Test basic functionality**: `llmtk doctor`
 2. **Set up a project**: `llmtk context export`
 3. **Run analysis**: `llmtk analyze`
-4. **Read the quick start**: [QUICKSTART.md](../QUICKSTART.md)
+4. **Read the quick start**: [QUICKSTART.md](QUICKSTART.md)
 5. **Explore examples**: Check `examples/` directory

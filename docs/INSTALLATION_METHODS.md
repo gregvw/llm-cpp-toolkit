@@ -117,7 +117,7 @@ All installation methods have been tested:
 
 ### 📚 **Documentation Created**
 
-1. **[QUICKSTART.md](../QUICKSTART.md)**: Fast path to productivity
+1. **[QUICKSTART.md](QUICKSTART.md)**: Fast path to productivity
 2. **[docs/INSTALLATION.md](INSTALLATION.md)**: Comprehensive installation guide
 3. **Updated README.md**: Reflects new capabilities
 4. **Container configurations**: Docker and devcontainer setup
