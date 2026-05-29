@@ -278,7 +278,8 @@ exports/
 │   └── ctest_stdout.txt
 └── diagnostics/             # Deterministic stderr thinning outputs
     ├── stderr-thin.json
-    └── stderr-thin.txt
+    ├── stderr-thin.txt
+    └── stderr-raw.txt       # Raw, unprocessed stderr capture
 ```
 
 The `capabilities.json` file is automatically generated during `llmtk init` and `llmtk capabilities` commands, providing a machine-readable summary of all available tools and commands for AI agents to consume.

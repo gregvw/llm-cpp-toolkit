@@ -317,6 +317,13 @@ class MCPProtocolTests(unittest.TestCase):
             self.assertEqual(data["exit_code"], 0)
             self.assertGreaterEqual(len(data["json"]["diagnostics"]), 1)
 
+            # All three manifest-declared diagnostics artifacts are produced,
+            # including the raw, unprocessed stderr capture.
+            diagnostics_dir = proj / "exports" / "diagnostics"
+            for name in ("stderr-thin.json", "stderr-thin.txt", "stderr-raw.txt"):
+                self.assertTrue((diagnostics_dir / name).exists(), f"missing {name}")
+            self.assertIn("expected ']'", (diagnostics_dir / "stderr-raw.txt").read_text())
+
 
 if __name__ == "__main__":
     unittest.main()
