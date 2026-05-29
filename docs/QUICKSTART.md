@@ -46,6 +46,12 @@ llmtk test --json
 llmtk agent mcp
 ```
 
+Over MCP, agents can call the individual commands as tools (`llmtk.context_export`,
+`llmtk.preflight`, `llmtk.test`, `llmtk.deps`, `llmtk.capabilities`, …) or the
+high-level `llmtk.agent_prepare` tool, which runs capabilities, doctor, context
+export, and preflight (plus an optional CTest step) in one call and returns a
+compact status with artifact paths, warnings, and recommended next actions.
+
 ## Development Usage
 
 If working from the repo directly:
@@ -66,3 +72,4 @@ All artifacts are written under `exports/` directory for easy parsing by LLMs an
 - `exports/reports/` - Analysis and preflight reports
 - `exports/tests/` - CTest JSON/SARIF summaries
 - `exports/diagnostics/` - Thinned compiler stderr reports
+- `exports/dependency_graphs/` - Target dependency graphs (`llmtk deps`)
