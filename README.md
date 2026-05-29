@@ -28,7 +28,7 @@ packaged changes, run `LLMTK_BOOTSTRAP_USE_SOURCE=$PWD llmtk doctor`.
 ```bash
 uv sync
 uv run python cli/llmtk doctor
-uv run python -m pytest
+uv run python -m unittest discover
 uv build --no-sources
 ```
 
@@ -103,6 +103,10 @@ llmtk capabilities
 llmtk agent request '{"requests":[{"id":"caps","kind":"get_capabilities"}]}'
 llmtk agent mcp
 
+# One call to prepare a workspace (capabilities + doctor + context + preflight,
+# optional tests) returning compact status/artifacts/next-actions JSON
+llmtk agent request '{"requests":[{"id":"prep","kind":"agent_prepare","params":{}}]}'
+
 # Preview any command without side effects
 llmtk --dry-run analyze src/
 
@@ -124,16 +128,19 @@ This wrapper injects `-Wall -Wextra -Wconversion -Wshadow -Werror`, Address/UB s
 ### Project Initialization Options
 ```bash
 # Create projects with custom settings
-llmtk init myproject --std=20 --cmake-min=3.25 --preset=library
-llmtk init myproject --pic --no-sanitizers --preset=minimal
+llmtk init myproject --std 20 --cmake-min 3.25 --preset library
+llmtk init myproject --preset minimal
 
 # Available options:
---std {17,20,23,26}              # C++ standard version
---cmake-min VERSION              # Minimum CMake version
---pic                           # Enable position independent code
---no-sanitizers                 # Disable sanitizer variants
---preset {minimal,full,library} # Project template type
+--std VERSION                              # C++ standard (default: 17)
+--cmake-min VERSION                        # Minimum CMake version (default: 3.20)
+--preset {executable,library,full,minimal} # Project template (default: executable)
 ```
+
+Projects are scaffolded from Jinja2 templates under `templates/scaffold/`
+(`CMakeLists.txt`, `src/main.cpp` or a library layout, `.gitignore`,
+`CMakePresets.json`). See [Project Presets](#-project-presets) for what each
+preset generates.
 
 When adopting an existing workspace, `llmtk init --existing` also copies any top-level `compile_commands.json` into
 `exports/compile_commands.json` so downstream commands and agents can consume it immediately. Every init run also
@@ -170,35 +177,36 @@ The stable v1 agent backend surface is:
 - `llmtk capabilities`
 - `llmtk agent mcp`
 
+Over MCP (`llmtk agent mcp`), each of these is exposed as a tool
+(`llmtk.context_export`, `llmtk.preflight`, `llmtk.diagnostics`, `llmtk.test`,
+`llmtk.deps`, `llmtk.capabilities`, `llmtk.list_exports`), alongside the
+high-level **`llmtk.agent_prepare`** workflow tool, which runs capabilities →
+doctor → context export → preflight (plus an optional CTest step) in one call
+and returns a compact status with artifact paths, warnings, and recommended next
+actions.
+
 Planned commands such as `bench`, `reduce`, `diff-context`, `gate`, `format`, `tidy`, and `lsp-bridge` remain in the manifest as non-stable roadmap items until their CLI, docs, tests, and MCP contracts converge.
 
-## 🧪 Sanitizer Variants
+## 🎯 Project Presets
 
-Projects created with `llmtk init` include sophisticated sanitizer support with multiple isolated variants:
+`llmtk init --preset <name>` scaffolds one of four layouts from Jinja2 templates.
+The generated CMake is intentionally explicit and easy to inspect.
 
-```bash
-# Build different sanitizer combinations
-cmake --build build --target myapp_asan_ubsan  # AddressSanitizer + UBSan
-cmake --build build --target myapp_tsan        # ThreadSanitizer
-cmake --build build --target myapp             # Regular build
+| Preset       | Layout                                       | Tests | Sanitizers (Debug) | PIC |
+|--------------|----------------------------------------------|-------|--------------------|-----|
+| `minimal`    | single `src/main.cpp` executable             | no    | no                 | no  |
+| `executable` | single `src/main.cpp` executable (default)   | yes   | no                 | no  |
+| `library`    | `include/` + `src/` + `examples/` + `tests/` | yes   | no                 | yes |
+| `full`       | single `src/main.cpp` executable             | yes   | ASan + UBSan       | no  |
 
-# For library projects, both library and example get variants
-cmake --build build --target mylib_asan_ubsan
-cmake --build build --target mylib_example_asan_ubsan
-```
-
-### Sanitizer Features:
-- **🎯 Isolated Targets**: Each sanitizer combination gets its own target
-- **🔄 No Mutual Exclusion**: Can build AddressSanitizer and ThreadSanitizer variants simultaneously
-- **📁 Shared Dependencies**: Sanitized variants mirror all include paths and compile options
-- **⚡ Smart Building**: Use `EXCLUDE_FROM_ALL` to avoid building variants by default
-- **🏗️ Complete Coverage**: Works for both executables and libraries
-
-### Preset-Specific Behavior:
-- **`--preset=full`**: Includes sanitized variants of main executable
-- **`--preset=library`**: Includes sanitized variants of both library and example
-- **`--preset=minimal`**: No sanitizer complexity (basic executable only)
-- **`--no-sanitizers`**: Completely disables all sanitizer setup
+- The `full` preset adds `-fsanitize=address,undefined` to the target's compile
+  and link options for `Debug` builds; the other presets build without
+  sanitizers.
+- The `library` preset emits a `<project>` library target, a `<project>_example`
+  executable, and (with tests enabled) a `<project>_test` executable registered
+  via `add_test`.
+- Every preset sets `CMAKE_EXPORT_COMPILE_COMMANDS` and writes a default
+  `CMakePresets.json` configure preset (Ninja, Debug).
 
 ## ⚡ Preflight Checks
 
@@ -253,27 +261,24 @@ exports/
 ├── capabilities.json        # Toolkit commands/tools summary for agents
 ├── context.json             # Project context summary
 ├── compile_commands.json    # Compilation database
-├── init-existing.json       # Project adoption report (--existing only)
-├── cmake-file-api/         # CMake introspection data
-├── reports/                # Analysis reports
+├── cmake-file-api/          # CMake introspection data
+├── dependency_graphs/       # Target dependency graphs (llmtk deps)
+│   └── dependencies.json
+├── reports/                 # Analysis and preflight reports
 │   ├── clang-tidy.json
 │   ├── iwyu.json
 │   ├── cppcheck.json
-│   ├── analysis.sarif      # Merged SARIF from all analyzers (--sarif flag)
-│   ├── preflight.json      # Fast syntax check results
-│   └── preflight.sarif     # SARIF format for CI integration
-├── tests/                  # Structured CTest exports
+│   ├── analysis.sarif       # Merged SARIF from analyzers (--sarif)
+│   ├── preflight.json       # Fast syntax check results
+│   └── preflight.sarif      # SARIF format for CI integration
+├── tests/                   # Structured CTest exports
 │   ├── ctest_results.json
 │   ├── ctest_results.sarif
 │   ├── Test.xml
 │   └── ctest_stdout.txt
-├── diagnostics/            # Deterministic stderr thinning outputs
-│   ├── stderr-thin.json
-│   ├── stderr-thin.txt
-│   └── stderr-raw.txt
-└── repros/                 # Reduced test cases
-    ├── minimized.cpp
-    └── report.json
+└── diagnostics/             # Deterministic stderr thinning outputs
+    ├── stderr-thin.json
+    └── stderr-thin.txt
 ```
 
 The `capabilities.json` file is automatically generated during `llmtk init` and `llmtk capabilities` commands, providing a machine-readable summary of all available tools and commands for AI agents to consume.
@@ -324,7 +329,7 @@ The toolkit follows a manifest-driven architecture:
 2. Create a feature branch
 3. Make your changes
 4. Update manifests if adding tools/commands
-5. Run `llmtk docs` to regenerate documentation
+5. Run `uv run python -m unittest discover` and update docs as needed
 6. Submit a pull request
 
 ## 📦 Building Packages

@@ -26,7 +26,7 @@ git clone https://github.com/gregvw/llm-cpp-toolkit.git
 cd llm-cpp-toolkit
 uv sync
 uv run python cli/llmtk doctor
-uv run python -m pytest
+uv run python -m unittest discover
 uv build --no-sources
 ```
 

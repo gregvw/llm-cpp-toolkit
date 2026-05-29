@@ -133,7 +133,7 @@ Use the unified build script to build all or specific packages:
 
 ### Automated (Recommended)
 
-1. Update `VERSION` and regeneration artifacts (`llmtk docs`, etc.).
+1. Update `VERSION` and any generated artifacts.
 2. Update `src/llmtk_bootstrap/data/releases.json` with the new tarball URL and
    checksum (see `scripts/release/sign_artifacts.py`).
 3. Run `uv build --no-sources` to validate the publishable Python package without

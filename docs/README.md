@@ -213,9 +213,8 @@ See `DISTRIBUTION.md` for detailed build and packaging instructions.
 - See `docs/REFERENCE.md` for an auto-generated list of tools and commands derived from the manifests.
 - Try `docs/TUTORIAL.md` for a step-by-step walkthrough that pairs the toolkit with an agent-driven debug loop.
 
-### Regenerate Docs
+### Keeping Docs in Sync
 
-- Manually: `python3 cli/llmtk docs` (updates `docs/REFERENCE.md`).
-- With pre-commit: install and enable the hook to regenerate on manifest changes:
-  - `pip install pre-commit`
-  - `pre-commit install`
+`docs/REFERENCE.md` is derived from the YAML manifests under `manifest/`
+(`tools.yaml`, `commands.yaml`). Update it whenever you change those manifests so
+the reference stays accurate.
