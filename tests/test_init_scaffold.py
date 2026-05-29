@@ -197,5 +197,104 @@ class InitEndToEndTests(unittest.TestCase):
             self.assertNotIn("bench", caps["commands"])
 
 
+@contextlib.contextmanager
+def _temp_cwd():
+    """chdir into a fresh temp dir, restoring cwd and PATH afterwards."""
+    tmp = Path(tempfile.mkdtemp(prefix="llmtk-initgit-"))
+    saved_cwd = os.getcwd()
+    saved_path = os.environ.get("PATH")
+    try:
+        os.chdir(tmp)
+        yield tmp.resolve()
+    finally:
+        os.chdir(saved_cwd)
+        if saved_path is None:
+            os.environ.pop("PATH", None)
+        else:
+            os.environ["PATH"] = saved_path
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+class InitGitFallbackTests(unittest.TestCase):
+    """`llmtk init` must still produce a usable project when git fails."""
+
+    def _run_init(self, name):
+        args = argparse.Namespace(
+            project_name=name, existing=False, path=None,
+            std="17", cmake_min="3.20", preset="executable",
+        )
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            rc = init_cmd.cmd_init(args)
+        return rc, out.getvalue()
+
+    def _assert_scaffolded(self, project):
+        for rel in ("CMakeLists.txt", "src/main.cpp", ".gitignore",
+                    "CMakePresets.json", "exports/capabilities.json"):
+            self.assertTrue((project / rel).exists(), f"missing {rel}")
+
+    def test_succeeds_when_git_is_missing(self):
+        with _temp_cwd() as work:
+            empty_bin = work / "empty-bin"
+            empty_bin.mkdir()
+            os.environ["PATH"] = str(empty_bin)  # no git on PATH -> FileNotFoundError
+            rc, out = self._run_init("nogit")
+
+            self.assertEqual(rc, 0)
+            self._assert_scaffolded(work / "nogit")
+            self.assertFalse((work / "nogit" / ".git").exists())
+            self.assertIn("git", out.lower())
+
+    @unittest.skipUnless(os.name == "posix", "fake git shim needs a POSIX shell")
+    def test_succeeds_when_git_commit_fails(self):
+        with _temp_cwd() as work:
+            fake_bin = work / "fake-bin"
+            fake_bin.mkdir()
+            shim = fake_bin / "git"
+            # init/add succeed (no-ops); commit fails like an unconfigured author would.
+            shim.write_text(
+                "#!/bin/sh\n"
+                "case \"$1\" in\n"
+                "  commit) echo 'fatal: empty ident name not allowed' >&2; exit 128 ;;\n"
+                "  *) exit 0 ;;\n"
+                "esac\n"
+            )
+            shim.chmod(0o755)
+            os.environ["PATH"] = f"{fake_bin}{os.pathsep}{os.environ.get('PATH', '')}"
+            rc, out = self._run_init("commitfail")
+
+            self.assertEqual(rc, 0)
+            self._assert_scaffolded(work / "commitfail")
+            self.assertIn("git", out.lower())
+
+    @unittest.skipUnless(shutil.which("git"), "requires a real git")
+    def test_creates_repo_when_git_succeeds(self):
+        with _temp_cwd() as work:
+            git_env = dict(
+                GIT_AUTHOR_NAME="llmtk-test", GIT_AUTHOR_EMAIL="test@llmtk.invalid",
+                GIT_COMMITTER_NAME="llmtk-test", GIT_COMMITTER_EMAIL="test@llmtk.invalid",
+            )
+            saved = {k: os.environ.get(k) for k in git_env}
+            os.environ.update(git_env)
+            try:
+                rc, _ = self._run_init("withgit")
+            finally:
+                for key, value in saved.items():
+                    if value is None:
+                        os.environ.pop(key, None)
+                    else:
+                        os.environ[key] = value
+
+            project = work / "withgit"
+            self.assertEqual(rc, 0)
+            self._assert_scaffolded(project)
+            self.assertTrue((project / ".git").is_dir())
+            head = subprocess.run(
+                ["git", "-C", str(project), "rev-parse", "HEAD"],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(head.returncode, 0, "expected an initial commit")
+
+
 if __name__ == "__main__":
     unittest.main()

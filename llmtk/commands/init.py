@@ -1,7 +1,6 @@
 """Init command - create or upgrade projects for LLM workflows."""
 
 import argparse
-import os
 import pathlib
 import shutil
 from typing import Optional
@@ -51,15 +50,9 @@ def init_new_project(project_name: str, args: argparse.Namespace) -> int:
         )
         render_scaffold(ctx, project_path)
 
-        # Initialize git repository
-        original_cwd = os.getcwd()
-        try:
-            os.chdir(project_path)
-            run(["git", "init"])
-            run(["git", "add", "."])
-            run(["git", "commit", "-m", f"Initial commit: {project_name} project"])
-        finally:
-            os.chdir(original_cwd)
+        # Initialize git repository (best-effort: a generated project is usable
+        # without version control, so git failures only warn).
+        _try_init_git_repo(project_path, project_name)
 
         # Generate capabilities.json
         generate_capabilities(project_path)
@@ -81,6 +74,39 @@ def init_new_project(project_name: str, args: argparse.Namespace) -> int:
         if project_path.exists():
             shutil.rmtree(project_path)
         return 1
+
+
+def _try_init_git_repo(project_path: pathlib.Path, project_name: str) -> bool:
+    """Initialize a git repository for a new project on a best-effort basis.
+
+    A generated project is usable without version control, so a missing git
+    binary, an unconfigured author, or a failing commit is downgraded to a
+    warning rather than failing project creation. Returns True only when
+    init/add/commit all succeed.
+    """
+    commands = [
+        ["git", "init"],
+        ["git", "add", "."],
+        ["git", "commit", "-m", f"Initial commit: {project_name} project"],
+    ]
+    for cmd in commands:
+        printable = " ".join(cmd)
+        try:
+            result = run(cmd, cwd=project_path, check=False)
+        except FileNotFoundError:
+            print("⚠️  git not found on PATH; created the project without a git repository")
+            return False
+        except Exception as exc:  # noqa: BLE001 - never fail init because of git
+            print(f"⚠️  '{printable}' could not run ({exc}); created the project without a git repository")
+            return False
+        if result.returncode != 0:
+            print(f"⚠️  '{printable}' failed (exit {result.returncode}); created the project without a git repository")
+            detail = (result.stderr or result.stdout or "").strip().splitlines()
+            if detail:
+                print(f"    {detail[0]}")
+            return False
+    print("✅ Initialized git repository")
+    return True
 
 
 def init_existing_project(project_path: pathlib.Path) -> int:
