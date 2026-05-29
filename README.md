@@ -35,12 +35,12 @@ uv build --no-sources
 `uv` is the preferred development and release workflow. Published packages remain standards-compatible so `pipx install llm-cpp-toolkit` continues to work for users who do not have uv installed.
 
 ### Alternative Installation Methods
-- **Local (no sudo):** `git clone ... && llmtk install --local`
+- **Local (no sudo):** `git clone ... && cd llm-cpp-toolkit && python3 cli/llmtk install --local`
 - **Nix:** `nix develop github:gregvw/llm-cpp-toolkit`
 - **Docker:** `docker run ghcr.io/gregvw/llm-cpp-toolkit:latest`
 - **Homebrew:** `brew tap gregvw/llm-cpp-toolkit && brew install llmtk`
 
-📖 **[Complete Installation Guide](docs/INSTALLATION.md)** | 🚀 **[Quick Start Guide](QUICKSTART.md)** | 🎓 **[Agent Tutorial](docs/TUTORIAL.md)**
+📖 **[Complete Installation Guide](docs/INSTALLATION.md)** | 🚀 **[Quick Start Guide](docs/QUICKSTART.md)** | 🎓 **[Agent Tutorial](docs/TUTORIAL.md)**
 
 ## 🚀 90-Second New User Path
 
@@ -69,7 +69,7 @@ uv build --no-sources
 ```bash
 # Bootstrap a new project or adopt an existing one
 llmtk init my-cpp-project
-llmtk init --existing path/to/existing-project
+llmtk init --existing --path path/to/existing-project
 
 # Check system dependencies
 llmtk doctor
