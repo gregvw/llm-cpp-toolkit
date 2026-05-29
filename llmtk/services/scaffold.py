@@ -10,6 +10,7 @@ is only raised (with an actionable message) when a render is actually attempted.
 
 from __future__ import annotations
 
+import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Dict, List
@@ -29,12 +30,10 @@ _PRESET_PROFILES: Dict[str, Dict[str, object]] = {
     "full": {"target_type": "executable", "enable_tests": True, "enable_sanitizers": True, "pic": False},
 }
 
-# Template file -> output path relative to the project root.
-_TEMPLATE_OUTPUTS: Dict[str, str] = {
-    "CMakeLists.txt.j2": "CMakeLists.txt",
-    "main.cpp.j2": "src/main.cpp",
-    "gitignore.j2": ".gitignore",
-    "CMakePresets.json.j2": "CMakePresets.json",
+# Templates shared by every layout (template name -> output path).
+_COMMON_OUTPUTS: Dict[str, str] = {
+    "common/gitignore.j2": ".gitignore",
+    "common/CMakePresets.json.j2": "CMakePresets.json",
 }
 
 
@@ -43,6 +42,7 @@ class ScaffoldContext:
     """The single context model shared by every scaffold template."""
 
     project_name: str
+    identifier: str  # project_name as a valid C++ identifier (namespaces/symbols)
     cpp_standard: str
     cmake_minimum: str
     target_type: str  # "executable" | "library"
@@ -52,6 +52,14 @@ class ScaffoldContext:
 
     def as_dict(self) -> Dict[str, object]:
         return asdict(self)
+
+
+def _cpp_identifier(name: str) -> str:
+    """Derive a valid C++ identifier from a project name (e.g. 'my-lib' -> 'my_lib')."""
+    ident = re.sub(r"[^0-9A-Za-z_]", "_", name)
+    if not ident or ident[0].isdigit():
+        ident = "_" + ident
+    return ident
 
 
 def available_presets() -> List[str]:
@@ -70,6 +78,7 @@ def context_from_preset(
     profile = _PRESET_PROFILES.get(preset, _PRESET_PROFILES["executable"])
     return ScaffoldContext(
         project_name=project_name,
+        identifier=_cpp_identifier(project_name),
         cpp_standard=str(cpp_standard),
         cmake_minimum=str(cmake_minimum),
         target_type=str(profile["target_type"]),
@@ -77,6 +86,25 @@ def context_from_preset(
         enable_sanitizers=bool(profile["enable_sanitizers"]),
         pic=bool(profile["pic"]),
     )
+
+
+def _outputs_for(ctx: ScaffoldContext) -> Dict[str, str]:
+    """Return the template-name -> output-path map for the context's target type."""
+    name = ctx.project_name
+    if ctx.target_type == "library":
+        layout = {
+            "library/CMakeLists.txt.j2": "CMakeLists.txt",
+            "library/header.hpp.j2": f"include/{name}/{name}.hpp",
+            "library/source.cpp.j2": f"src/{name}.cpp",
+            "library/example.cpp.j2": f"examples/{name}_example.cpp",
+            "library/test.cpp.j2": f"tests/{name}_test.cpp",
+        }
+    else:
+        layout = {
+            "executable/CMakeLists.txt.j2": "CMakeLists.txt",
+            "executable/main.cpp.j2": "src/main.cpp",
+        }
+    return {**layout, **_COMMON_OUTPUTS}
 
 
 def _build_environment():
@@ -108,7 +136,7 @@ def render_scaffold(ctx: ScaffoldContext, dest: Path) -> List[Path]:
     dest = Path(dest)
 
     written: List[Path] = []
-    for template_name, rel_out in _TEMPLATE_OUTPUTS.items():
+    for template_name, rel_out in _outputs_for(ctx).items():
         rendered = env.get_template(template_name).render(**values)
         out_path = dest / rel_out
         out_path.parent.mkdir(parents=True, exist_ok=True)
