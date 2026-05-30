@@ -40,6 +40,8 @@ uv build --no-sources
 - **Docker:** `docker run ghcr.io/gregvw/llm-cpp-toolkit:latest`
 - **Homebrew:** `brew tap gregvw/llm-cpp-toolkit && brew install llmtk`
 
+Install methods are classified by maturity (Tier 1 / Experimental / Legacy) in **[docs/INSTALL_TIERS.md](docs/INSTALL_TIERS.md)**.
+
 📖 **[Complete Installation Guide](docs/INSTALLATION.md)** | 🚀 **[Quick Start Guide](docs/QUICKSTART.md)** | 🎓 **[Agent Tutorial](docs/TUTORIAL.md)**
 
 ## 🚀 90-Second New User Path
@@ -299,6 +301,7 @@ The `capabilities.json` file is automatically generated during `llmtk init` and 
 ## 📚 Documentation
 
 - **[Quickstart Guide](docs/QUICKSTART.md)** - Get up and running quickly
+- **[Install Method Tiers](docs/INSTALL_TIERS.md)** - Which install paths are supported vs. experimental
 - **[Full Documentation](docs/README.md)** - Complete toolkit overview
 - **[Tool Reference](docs/REFERENCE.md)** - Auto-generated from manifests
 - **[Distribution Guide](DISTRIBUTION.md)** - Building and packaging
@@ -322,7 +325,17 @@ The toolkit follows a manifest-driven architecture:
 - **`cli/llmtk`** - Python CLI entry point
 - **`modules/`** - Tool adapter scripts
 - **`presets/`** - Configuration templates
+- **`build_manager`** - Companion CLI (see below)
 - **`docs/AGENT_COLLABORATION.md`** - Planner/implementer/reviewer protocol for Codex and Claude
+
+### `build_manager` status
+
+`build_manager` is a **maintained companion CLI**, not part of the stable
+`llmtk` agent surface. It wraps `cmake` configure/build/test and writes
+JSON build logs under `logs/` for agents; it injects no flags of its own. It is
+shipped alongside `llmtk` and used in the [tutorial](docs/TUTORIAL.md). Longer
+term it is a candidate to fold into a first-party `llmtk build` command; until
+then, treat it as a convenience wrapper rather than a stable contract.
 
 ## 🤝 Contributing
 
