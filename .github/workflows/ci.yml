@@ -65,6 +65,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # Full history so the diff-check step can compare against the PR base.
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -83,4 +86,13 @@ jobs:
 
       - name: Run unit and integration tests
         run: uv run --locked python -m unittest discover -v
+        shell: bash
+
+      - name: Build sdist and wheel
+        run: uv build --no-sources
+        shell: bash
+
+      - name: Check diff for whitespace and conflict markers
+        if: github.event_name == 'pull_request'
+        run: git diff --check "origin/${{ github.base_ref }}...HEAD"
         shell: bash
