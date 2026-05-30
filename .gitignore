@@ -84,3 +84,6 @@ local/
 # Test artifacts
 test-results/
 test-output/
+test_proj/
+test_reports/
+test_merge/
