@@ -27,7 +27,9 @@ def _drive_mcp(requests):
     lines = []
     for req in requests:
         lines.append(req if isinstance(req, str) else json.dumps(req))
-    payload = "\n".join(lines) + "\n"
+    payload = "\n".join(lines)
+    if lines:
+        payload += "\n"
 
     with tempfile.TemporaryDirectory() as cwd:
         proc = subprocess.Popen(
@@ -44,6 +46,12 @@ def _drive_mcp(requests):
             proc.kill()
             proc.communicate()
             raise AssertionError("`llmtk agent mcp` did not exit after stdin closed")
+
+    # A clean stdio loop must also shut down cleanly.
+    if proc.returncode != 0:
+        raise AssertionError(
+            f"`llmtk agent mcp` exited nonzero ({proc.returncode}); stderr:\n{err}"
+        )
 
     messages = []
     for line in out.splitlines():
