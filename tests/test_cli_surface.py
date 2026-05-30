@@ -164,5 +164,64 @@ class ContextExportDeepCliTests(unittest.TestCase):
             self.assertIn("cache", data)
 
 
+_ANALYZE_STATUSES = {
+    "missing_binary", "missing_runner", "missing_compile_commands",
+    "no_translation_units", "completed", "completed_with_issues",
+}
+_ANALYZE_MISSING = {"missing_binary", "missing_runner", "missing_compile_commands"}
+
+
+class AnalyzeCliTests(unittest.TestCase):
+    @REQUIRES_TOOLCHAIN
+    def test_analyze_emits_real_tool_reports_not_stubs(self):
+        with sandbox(copy_fixture=True) as work:
+            # Make clang-tidy discoverable when the project's clang 20 is present,
+            # so the "tool ran for real" path is exercised on dev hosts; on CI
+            # without it the report is an honest missing_binary (no stub).
+            clang_tidy_present = bool(shutil.which("clang-tidy")) or (_CLANG20_BIN / "clang-tidy").exists()
+            saved_path = os.environ.get("PATH", "")
+            if (_CLANG20_BIN / "clang-tidy").exists():
+                os.environ["PATH"] = f"{_CLANG20_BIN}{os.pathsep}{saved_path}"
+            try:
+                with _silenced():
+                    self.assertEqual(_run_cli(["context", "export"]), 0)
+                    rc = _run_cli(["analyze", "--sarif", "src"])
+                self.assertEqual(rc, 0)
+            finally:
+                os.environ["PATH"] = saved_path
+
+            reports = work / "exports" / "reports"
+            expected = {
+                "clang-tidy.json": "clang-tidy",
+                "cppcheck.json": "cppcheck",
+                "iwyu.json": "include-what-you-use",
+            }
+            for filename, tool in expected.items():
+                report = json.loads((reports / filename).read_text())
+                self.assertEqual(report["tool"], tool)
+                self.assertIn("meta", report)
+                self.assertIn(report["status"], _ANALYZE_STATUSES)
+                if report["status"] in _ANALYZE_MISSING:
+                    # Honest "not run" — no fabricated findings, just a message.
+                    self.assertFalse(report.get("diagnostics"))
+                    self.assertFalse(report.get("issues"))
+                    self.assertIn("message", report)
+                if report["status"] in {"completed", "completed_with_issues"}:
+                    # A real run carries real execution metadata.
+                    self.assertIn("command", report)
+                    self.assertIn("duration_seconds", report)
+
+            # When clang-tidy is available it must actually run (never a stub).
+            if clang_tidy_present:
+                clang_tidy = json.loads((reports / "clang-tidy.json").read_text())
+                self.assertNotEqual(clang_tidy["status"], "missing_binary")
+                self.assertIn("diagnostic_counts", clang_tidy)
+                self.assertIn("files_processed", clang_tidy)
+
+            # --sarif converts the reports into a valid SARIF 2.1.0 document.
+            sarif = json.loads((reports / "analysis.sarif").read_text())
+            self.assertEqual(sarif["version"], "2.1.0")
+
+
 if __name__ == "__main__":
     unittest.main()

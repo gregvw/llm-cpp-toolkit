@@ -72,15 +72,33 @@ are covered too:
   per-tool entries).
 - `stderr-thin --log ... --json ...` produces structured diagnostics JSON.
 - `context export --deep` summarizes targets/toolchains/cache on the fixture.
+- `analyze --sarif src` produces real per-tool reports
+  (`exports/reports/{clang-tidy,cppcheck,iwyu}.json`) plus `analysis.sarif`.
 
 Adding the deep test surfaced and fixed a real bug: `_load_reply_json` looked up
 File API replies by bare kind (`"codemodel"`), but stateless queries are keyed
 by query name (`"codemodel-v2"`), so deep mode silently emitted empty
 targets/toolchains/cache. It now matches by the entry's `kind`.
 
+### `analyze` and tool availability
+
+`llmtk analyze` runs clang-tidy, IWYU, and cppcheck against the compile database
+and emits **real** parsed JSON — not placeholder/stub output. When a tool isn't
+installed it writes an honest report instead of fabricating findings:
+
+- `{"ok": false, "status": "missing_binary", "message": "..."}` (clang-tidy / cppcheck)
+- `{"ok": false, "status": "missing_runner", ...}` (IWYU)
+- `{"ok": false, "status": "missing_compile_commands", ...}` when there is no
+  compile database, and `"no_translation_units"` when the filters match nothing.
+
+The CLI test asserts that every report is either a real run (with `command` /
+`diagnostic_counts` / `duration_seconds`) or one of those honest "not run"
+statuses with no `diagnostics`/`issues`. It exercises the real clang-tidy path
+when clang-tidy is on `PATH` (e.g. the project's clang 20), and the
+missing-tool path otherwise, so it passes on minimal CI without the analyzers.
+
 ## Remaining gaps
 
-- `analyze` (CLI) is still only covered indirectly.
 - Preflight integration tests run with `--no-syntax` for determinism, so the
   external clang syntax-probe path is not covered.
 - `agent mcp` is tested at the message-handler level (`_handle_message`); the
