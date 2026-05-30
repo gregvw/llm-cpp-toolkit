@@ -213,11 +213,12 @@ The command emits JSON reports under `exports/reports/` for clang-tidy, IWYU, an
   llmtk analyze src/main.cpp
   ```
 
-- Want a different sanitizer? Configure a separate build directory with the flags you need, e.g. ThreadSanitizer:
+- Want a different sanitizer? Configure a separate build directory with the flags you need, e.g. ThreadSanitizer. Use a **non-Debug** config so TSan isn't combined with the `full` preset's Debug ASan/UBSan — AddressSanitizer and ThreadSanitizer are mutually exclusive:
 
   ```bash
-  cmake -S . -B build-tsan -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-        -DCMAKE_CXX_FLAGS="-fsanitize=thread" -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=thread"
+  cmake -S . -B build-tsan -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DCMAKE_CXX_FLAGS="-fsanitize=thread" \
+        -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=thread"
   cmake --build build-tsan && ./build-tsan/buglab
   ```
 
