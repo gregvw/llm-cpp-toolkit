@@ -92,7 +92,8 @@ installed it writes an honest report instead of fabricating findings:
   compile database, and `"no_translation_units"` when the filters match nothing.
 
 The CLI test asserts that every report is either a real run (with `command` /
-`diagnostic_counts` / `duration_seconds`) or one of those honest "not run"
+`duration_seconds` plus tool-specific counts or summaries — `diagnostic_counts`
+for clang-tidy, `summary` for cppcheck/IWYU) or one of those honest "not run"
 statuses with no `diagnostics`/`issues`. It exercises the real clang-tidy path
 when clang-tidy is on `PATH` (e.g. the project's clang 20), and the
 missing-tool path otherwise, so it passes on minimal CI without the analyzers.
